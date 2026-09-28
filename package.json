@@ -22,13 +22,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,css,html,yml,yaml}": [
-      "prettier --write"
-    ]
+    "*.{js,jsx,json,md,css,html,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",

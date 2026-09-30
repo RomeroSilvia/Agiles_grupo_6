@@ -8,7 +8,7 @@ Buscador de películas y series que muestra en qué plataformas de streaming est
 
 ## Stack
 
-- Monorepo con npm workspaces. Node >= 22.22.2, npm >= 11. JavaScript (ESM), **sin TypeScript**.
+- Monorepo con npm workspaces. Node >= 22.23.2, npm >= 11. JavaScript (ESM), **sin TypeScript**.
 - `apps/web`: React 19 + Vite + React Router + Tailwind CSS v4. Estado global con Context.
 - `apps/api`: Node + Express 5, patrón model / repository / service / controller / middleware.
 - `packages/shared`: esquemas Zod y constantes usados por front y back.

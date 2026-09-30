@@ -34,3 +34,28 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+
+  migraciones:
+    name: Migraciones en una base temporal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Actualizar npm
+        run: npm install -g npm@11
+
+      - run: npm ci
+
+      # Levanta un Postgres de Supabase descartable (los runners de GitHub tienen Docker)
+      # y aplica todas las migraciones y el seed desde cero. Si una migración tiene un
+      # error, el PR falla acá y no llega nunca a la base compartida.
+      - name: Levantar base temporal
+        run: npx supabase db start
+
+      - name: Aplicar migraciones y seed desde cero
+        run: npx supabase db reset

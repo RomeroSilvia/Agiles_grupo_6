@@ -14,5 +14,16 @@ describe('GET /api/health', () => {
     const res = await request(createApp()).get('/api/no-existe');
 
     expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  it('responde 400 si el cuerpo no es JSON válido', async () => {
+    const res = await request(createApp())
+      .post('/api/auth/sign-in')
+      .set('Content-Type', 'application/json')
+      .send('{"email":');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_JSON');
   });
 });

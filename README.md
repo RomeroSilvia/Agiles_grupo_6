@@ -20,7 +20,7 @@ Consumidores habituales de streaming que tienen 2 o más suscripciones activas (
 
 ## Requisitos
 
-- Node >= 22.22 y npm >= 11
+- Node >= 22.22.2 y npm >= 11
 
 ## Puesta en marcha
 

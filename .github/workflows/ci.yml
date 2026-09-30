@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verificar:
+    name: Lint, formato, tests y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Node 22 trae npm 10 y el proyecto exige npm >= 11
+      - name: Actualizar npm
+        run: npm install -g npm@11
+
+      - run: npm ci
+
+      # Los hooks locales se pueden saltear con --no-verify; el CI no
+      - name: Validar mensajes de commit
+        if: github.event_name == 'pull_request'
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build

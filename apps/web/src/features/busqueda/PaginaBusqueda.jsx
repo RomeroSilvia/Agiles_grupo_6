@@ -4,6 +4,15 @@ import { Attribution } from '../../components/ui/Attribution.jsx';
 
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
+function esAnioValido(anio) {
+  if (anio === '') {
+    return true;
+  }
+
+  const valor = Number(anio);
+  return /^\d{4}$/.test(anio) && valor >= ANIO_MINIMO && valor <= ANIO_MAXIMO;
+}
+
 function etiquetaTipo(tipo) {
   return tipo === 'pelicula' ? 'Película' : 'Serie';
 }
@@ -62,7 +71,11 @@ export function PaginaBusqueda() {
     const nextFiltros = { ...filtros, [event.target.name]: event.target.value };
     setFiltros(nextFiltros);
 
-    if (hasSearched && event.target.name !== 'q') {
+    if (
+      hasSearched &&
+      event.target.name !== 'q' &&
+      (event.target.name !== 'anio' || esAnioValido(nextFiltros.anio))
+    ) {
       buscar(nextFiltros);
     }
   }

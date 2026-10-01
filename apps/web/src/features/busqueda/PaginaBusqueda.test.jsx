@@ -58,7 +58,14 @@ describe('PaginaBusqueda', () => {
     await screen.findByRole('heading', { level: 2, name: 'Dune' });
 
     fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'serie' } });
-    fireEvent.change(screen.getByLabelText('Año'), { target: { value: '2024' } });
+    const campoAnio = screen.getByLabelText('Año');
+    fireEvent.change(campoAnio, { target: { value: '2' } });
+    fireEvent.change(campoAnio, { target: { value: '20' } });
+    fireEvent.change(campoAnio, { target: { value: '202' } });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    fireEvent.change(campoAnio, { target: { value: '2024' } });
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
     const [url] = fetch.mock.calls[2];

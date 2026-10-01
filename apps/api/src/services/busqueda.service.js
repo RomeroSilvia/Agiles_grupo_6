@@ -1,49 +1,32 @@
-import { respuestaBusquedaSchema } from '@buscador/shared/schemas';
+import { TIPO_TITULO } from '@buscador/shared/constants';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import { ExternalServiceError } from '../errors/index.js';
+import { respuestaBusquedaSchema } from '../models/busqueda.model.js';
 
-function obtenerAnio(fecha) {
-  const anio = fecha?.slice(0, 4);
-  return /^\d{4}$/.test(anio ?? '') ? Number(anio) : null;
-}
+function validarRespuesta(respuesta) {
+  const resultado = respuestaBusquedaSchema.safeParse(respuesta);
 
-function normalizarResultado(item, tipo) {
-  const fecha = tipo === 'pelicula' ? item.release_date : item.first_air_date;
-  const puntuacion = Number.isFinite(item.vote_average) ? Number(item.vote_average) : null;
+  if (!resultado.success) {
+    throw new ExternalServiceError('TMDB', resultado.error);
+  }
 
-  return {
-    tmdbId: item.id,
-    tipo,
-    nombre: item.title ?? item.name ?? 'Sin título',
-    anio: obtenerAnio(fecha),
-    posterPath: item.poster_path ?? null,
-    puntuacion,
-    relevancia: Number.isFinite(item.popularity) ? item.popularity : 0,
-  };
-}
-
-function normalizarRespuesta(response, tipo) {
-  return {
-    resultados: (response.results ?? []).map((item) => normalizarResultado(item, tipo)),
-    totalResultados: response.total_results ?? 0,
-    totalPaginas: response.total_pages ?? 0,
-  };
+  return resultado.data;
 }
 
 export async function buscarTitulos({ q, tipo, anio, pagina }) {
   const params = { q, anio, pagina };
   let respuestas;
 
-  if (tipo === 'pelicula') {
-    respuestas = [normalizarRespuesta(await tmdbIntegration.buscarPeliculas(params), 'pelicula')];
-  } else if (tipo === 'serie') {
-    respuestas = [normalizarRespuesta(await tmdbIntegration.buscarSeries(params), 'serie')];
+  if (tipo === TIPO_TITULO.PELICULA) {
+    respuestas = [validarRespuesta(await tmdbIntegration.buscarPeliculas(params))];
+  } else if (tipo === TIPO_TITULO.SERIE) {
+    respuestas = [validarRespuesta(await tmdbIntegration.buscarSeries(params))];
   } else {
     const [peliculas, series] = await Promise.all([
       tmdbIntegration.buscarPeliculas(params),
       tmdbIntegration.buscarSeries(params),
     ]);
-    respuestas = [normalizarRespuesta(peliculas, 'pelicula'), normalizarRespuesta(series, 'serie')];
+    respuestas = [validarRespuesta(peliculas), validarRespuesta(series)];
   }
 
   const resultados = respuestas

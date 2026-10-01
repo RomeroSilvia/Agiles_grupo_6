@@ -10,36 +10,38 @@ vi.mock('../integrations/tmdb.integration.js', () => ({
 }));
 
 const pelicula = {
-  id: 1,
-  title: 'Dune',
-  release_date: '2021-10-22',
-  poster_path: '/dune.jpg',
-  vote_average: 8.1,
-  popularity: 100,
+  tmdbId: 1,
+  tipo: 'pelicula',
+  nombre: 'Dune',
+  anio: 2021,
+  posterUrl: 'https://image.tmdb.org/t/p/w500/dune.jpg',
+  puntuacion: 8.1,
+  relevancia: 100,
 };
 
 const serie = {
-  id: 2,
-  name: 'Dune: Prophecy',
-  first_air_date: '2024-11-17',
-  poster_path: '/prophecy.jpg',
-  vote_average: 7.4,
-  popularity: 80,
+  tmdbId: 2,
+  tipo: 'serie',
+  nombre: 'Dune: Prophecy',
+  anio: 2024,
+  posterUrl: 'https://image.tmdb.org/t/p/w500/prophecy.jpg',
+  puntuacion: 7.4,
+  relevancia: 80,
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   tmdbIntegration.buscarPeliculas.mockResolvedValue({
-    page: 1,
-    results: [pelicula],
-    total_results: 1,
-    total_pages: 1,
+    resultados: [pelicula],
+    pagina: 1,
+    totalResultados: 1,
+    totalPaginas: 1,
   });
   tmdbIntegration.buscarSeries.mockResolvedValue({
-    page: 1,
-    results: [serie],
-    total_results: 1,
-    total_pages: 1,
+    resultados: [serie],
+    pagina: 1,
+    totalResultados: 1,
+    totalPaginas: 1,
   });
 });
 
@@ -60,7 +62,7 @@ describe('GET /api/busqueda', () => {
             tipo: 'pelicula',
             nombre: 'Dune',
             anio: 2021,
-            posterPath: '/dune.jpg',
+            posterUrl: 'https://image.tmdb.org/t/p/w500/dune.jpg',
             puntuacion: 8.1,
           },
         ],
@@ -95,16 +97,43 @@ describe('GET /api/busqueda', () => {
     });
   });
 
+  it('busca solo series cuando se selecciona el tipo', async () => {
+    const response = await request(createApp()).get('/api/busqueda').query({
+      q: 'dune',
+      tipo: 'serie',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.resultados).toEqual([
+      {
+        tmdbId: 2,
+        tipo: 'serie',
+        nombre: 'Dune: Prophecy',
+        anio: 2024,
+        posterUrl: 'https://image.tmdb.org/t/p/w500/prophecy.jpg',
+        puntuacion: 7.4,
+      },
+    ]);
+    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith({
+      q: 'dune',
+      anio: undefined,
+      pagina: 1,
+    });
+    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
+  });
+
   it('responde una lista vacía cuando no hay resultados', async () => {
     tmdbIntegration.buscarPeliculas.mockResolvedValueOnce({
-      results: [],
-      total_results: 0,
-      total_pages: 0,
+      resultados: [],
+      pagina: 1,
+      totalResultados: 0,
+      totalPaginas: 0,
     });
     tmdbIntegration.buscarSeries.mockResolvedValueOnce({
-      results: [],
-      total_results: 0,
-      total_pages: 0,
+      resultados: [],
+      pagina: 1,
+      totalResultados: 0,
+      totalPaginas: 0,
     });
 
     const response = await request(createApp()).get('/api/busqueda').query({ q: 'inexistente' });
@@ -165,9 +194,10 @@ describe('GET /api/busqueda', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     tmdbIntegration.buscarPeliculas.mockResolvedValueOnce({
       page: 1,
-      results: [{ ...pelicula, id: 'incorrecto' }],
-      total_results: 1,
-      total_pages: 1,
+      resultados: [{ ...pelicula, tmdbId: 'incorrecto' }],
+      pagina: 1,
+      totalResultados: 1,
+      totalPaginas: 1,
     });
 
     const response = await request(createApp()).get('/api/busqueda').query({

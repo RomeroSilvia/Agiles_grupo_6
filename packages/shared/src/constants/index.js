@@ -1,6 +1,12 @@
 // Valores del negocio: deben coincidir con los enums de la base (supabase/migrations).
-export const TIPOS_TITULO = ['pelicula', 'serie'];
+export const TIPO_TITULO = Object.freeze({
+  PELICULA: 'pelicula',
+  SERIE: 'serie',
+});
 
+export const TIPOS_TITULO = Object.values(TIPO_TITULO);
+
+// Límites técnicos del formulario de búsqueda.
 export const ANIO_MINIMO = 1888;
 export const ANIO_MAXIMO = 2100;
 

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  TMDB_API_TOKEN: z.string().optional(),
+  TMDB_API_KEY: z.string().optional(),
 });
 
 const result = envSchema.safeParse(process.env);

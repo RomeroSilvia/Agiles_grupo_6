@@ -5,11 +5,12 @@ const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
 
 async function tmdbRequest(path, params = {}) {
-  if (!env.TMDB_API_TOKEN) {
-    throw new ExternalServiceError('TMDB', new Error('Falta configurar TMDB_API_TOKEN'));
+  if (!env.TMDB_API_KEY) {
+    throw new ExternalServiceError('TMDB', new Error('Falta configurar TMDB_API_KEY'));
   }
 
   const url = new URL(BASE_URL + path);
+  url.searchParams.set('api_key', env.TMDB_API_KEY);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) {
       url.searchParams.set(key, String(value));
@@ -19,10 +20,7 @@ async function tmdbRequest(path, params = {}) {
   let response;
   try {
     response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${env.TMDB_API_TOKEN}`,
-        Accept: 'application/json',
-      },
+      headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {

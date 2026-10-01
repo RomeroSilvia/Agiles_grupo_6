@@ -31,7 +31,7 @@ npm run check
 ```
 
 Para habilitar la búsqueda, copiar `apps/api/.env.example` como `apps/api/.env` y completar
-`TMDB_API_TOKEN`. El servidor carga ese archivo automáticamente en desarrollo.
+`TMDB_API_KEY`. El servidor carga ese archivo automáticamente en desarrollo.
 
 ## Búsqueda
 

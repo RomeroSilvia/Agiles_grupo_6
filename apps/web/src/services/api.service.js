@@ -8,6 +8,13 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Único punto de acceso del front a la API. Las cookies de sesión viajan solas
+ * (mismo origen gracias al proxy de Vite). Devuelve `data` o lanza ApiError.
+ *
+ * @param {string} path Ej: '/plataformas'
+ * @param {{ method?: string, body?: unknown, params?: Record<string, unknown>, signal?: AbortSignal }} [options]
+ */
 export async function request(path, { method = 'GET', body, params, signal } = {}) {
   const url = new URL(`/api${path}`, window.location.origin);
 
@@ -17,13 +24,26 @@ export async function request(path, { method = 'GET', body, params, signal } = {
     }
   }
 
-  const response = await fetch(url, {
-    method,
-    credentials: 'same-origin',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    signal,
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      method,
+      credentials: 'same-origin',
+      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw error;
+    }
+
+    throw new ApiError({
+      status: 0,
+      code: 'NETWORK',
+      message: 'No pudimos conectarnos. Revisá tu conexión y probá de nuevo.',
+    });
+  }
 
   const content = await response.json().catch(() => null);
 

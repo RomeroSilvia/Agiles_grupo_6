@@ -4,29 +4,21 @@ export function notFoundHandler(req, _res, next) {
   next(new NotFoundError(`No existe la ruta ${req.method} ${req.originalUrl}`));
 }
 
+// Express reconoce el manejador de errores por tener 4 parámetros: no quitar `_next`.
 export function errorHandler(error, _req, res, _next) {
   if (error instanceof AppError) {
     if (error.status >= 500) {
       console.error(error, error.cause);
     }
-
-    const response = {
-      error: {
-        code: error.code,
-        message: error.message,
-      },
-    };
-
-    if (error.details !== undefined) {
-      response.error.details = error.details;
-    }
-
-    return res.status(error.status).json(response);
+    return res.status(error.status).json({
+      error: { code: error.code, message: error.message, details: error.details },
+    });
   }
 
-  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+  // JSON mal formado en el body
+  if (error?.type === 'entity.parse.failed') {
     return res.status(400).json({
-      error: { code: 'VALIDATION', message: 'El cuerpo de la solicitud no es válido' },
+      error: { code: 'INVALID_JSON', message: 'El cuerpo del request no es JSON válido' },
     });
   }
 

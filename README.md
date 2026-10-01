@@ -26,7 +26,26 @@ Consumidores habituales de streaming que tienen 2 o más suscripciones activas (
 
 ```bash
 npm install
+npm run dev
 npm run check
 ```
+
+Para habilitar la búsqueda, copiar `apps/api/.env.example` como `apps/api/.env` y completar
+`TMDB_API_TOKEN`. El servidor carga ese archivo automáticamente en desarrollo.
+
+## Búsqueda
+
+La API expone `GET /api/busqueda` con estos parámetros:
+
+- `q`: título obligatorio.
+- `tipo`: `pelicula` o `serie`.
+- `anio`: año entre 1888 y 2100.
+- `pagina`: página de resultados, opcional; por defecto es `1`.
+
+La respuesta contiene resultados resumidos con título, tipo, año, póster y puntuación.
+La pantalla actual no incluye detalle, disponibilidad, watchlist ni redirección a plataformas.
+
+Los tokens visuales basados en el Figma están definidos en
+`apps/web/src/styles.css` y contemplan los modos claro y oscuro.
 
 Las convenciones del proyecto están en [AGENTS.md](./AGENTS.md).

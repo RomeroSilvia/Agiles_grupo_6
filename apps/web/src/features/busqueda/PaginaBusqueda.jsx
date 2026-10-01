@@ -1,53 +1,17 @@
-import { ANIO_MAXIMO, ANIO_MINIMO } from '@buscador/shared/constants';
+import { busquedaSchema } from '@buscador/shared/schemas';
+import { ANIO_MAXIMO, ANIO_MINIMO, TIPOS_TITULO } from '@buscador/shared/constants';
 import { useBusqueda } from '../../hooks/useBusqueda.js';
 import { Attribution } from '../../components/ui/Attribution.jsx';
+import { ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
+import { ResultadoCard } from './ResultadoCard.jsx';
 
-const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
-
-function esAnioValido(anio) {
-  if (anio === '') {
-    return true;
-  }
-
-  const valor = Number(anio);
-  return /^\d{4}$/.test(anio) && valor >= ANIO_MINIMO && valor <= ANIO_MAXIMO;
-}
-
-function etiquetaTipo(tipo) {
-  return tipo === 'pelicula' ? 'Película' : 'Serie';
-}
-
-function ResultadoCard({ resultado }) {
-  return (
-    <article className="overflow-hidden rounded-2xl border border-surface-100 bg-surface-0 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-surface-700 dark:bg-surface-800">
-      <div className="aspect-[2/3] bg-surface-100 dark:bg-surface-700">
-        {resultado.posterPath ? (
-          <img
-            src={`${TMDB_IMAGE_BASE_URL}${resultado.posterPath}`}
-            alt={`Póster de ${resultado.nombre}`}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center p-4 text-center text-sm text-ink-muted dark:text-surface-200">
-            Sin imagen disponible
-          </div>
-        )}
-      </div>
-      <div className="space-y-2 p-4">
-        <span className="inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-700/30 dark:text-brand-100">
-          {etiquetaTipo(resultado.tipo)}
-        </span>
-        <h2 className="line-clamp-2 text-base font-semibold text-surface-900 dark:text-surface-0">
-          {resultado.nombre}
-        </h2>
-        <p className="text-sm text-ink-muted dark:text-surface-200">
-          {resultado.anio ?? 'Año desconocido'}
-          {resultado.puntuacion !== null && ` · ${resultado.puntuacion.toFixed(1)}/10`}
-        </p>
-      </div>
-    </article>
-  );
+function esBusquedaValida(filtros) {
+  return busquedaSchema.safeParse({
+    q: filtros.q,
+    tipo: filtros.tipo || undefined,
+    anio: filtros.anio || undefined,
+    pagina: 1,
+  }).success;
 }
 
 export function PaginaBusqueda() {
@@ -55,11 +19,17 @@ export function PaginaBusqueda() {
     filtros,
     setFiltros,
     buscar,
+    buscarConFiltros,
+    cargarMas,
     resultados,
+    pagina,
     totalResultados,
+    totalPaginas,
     isLoading,
+    isLoadingMore,
     error,
     hasSearched,
+    ultimaBusqueda,
   } = useBusqueda();
 
   function handleSubmit(event) {
@@ -71,14 +41,17 @@ export function PaginaBusqueda() {
     const nextFiltros = { ...filtros, [event.target.name]: event.target.value };
     setFiltros(nextFiltros);
 
-    if (
-      hasSearched &&
-      event.target.name !== 'q' &&
-      (event.target.name !== 'anio' || esAnioValido(nextFiltros.anio))
-    ) {
-      buscar(nextFiltros);
+    const filtrosParaValidar = {
+      ...nextFiltros,
+      q: ultimaBusqueda?.q ?? '',
+    };
+
+    if (hasSearched && event.target.name !== 'q' && esBusquedaValida(filtrosParaValidar)) {
+      buscarConFiltros(nextFiltros);
     }
   }
+
+  const tituloBuscado = ultimaBusqueda?.q ?? filtros.q.trim();
 
   return (
     <main className="min-h-screen bg-surface-50 text-surface-900 dark:bg-surface-900 dark:text-surface-0">
@@ -87,7 +60,9 @@ export function PaginaBusqueda() {
           <p className="text-sm font-bold tracking-[0.2em] text-brand-600 dark:text-brand-100">
             STREAMLY
           </p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">Encontrá qué ver</h1>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
+            Una búsqueda. Todas tus plataformas.
+          </h1>
           <p className="text-base leading-7 text-ink-muted sm:text-lg dark:text-surface-200">
             Buscá películas y series por título, tipo o año.
           </p>
@@ -127,8 +102,11 @@ export function PaginaBusqueda() {
                 className="w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 transition outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-surface-700 dark:bg-surface-900"
               >
                 <option value="">Todos</option>
-                <option value="pelicula">Películas</option>
-                <option value="serie">Series</option>
+                {TIPOS_TITULO.map((tipo) => (
+                  <option key={tipo} value={tipo}>
+                    {ETIQUETAS_TIPO_TITULO[tipo]}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -159,9 +137,13 @@ export function PaginaBusqueda() {
           </div>
         </form>
 
-        <section aria-live="polite" className="flex-1">
-          {isLoading && (
-            <p className="rounded-2xl border border-brand-100 bg-brand-50 p-5 text-brand-700 dark:border-brand-700/50 dark:bg-brand-700/20 dark:text-brand-100">
+        <section className="flex-1">
+          {isLoading && !isLoadingMore && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="rounded-2xl border border-brand-100 bg-brand-50 p-5 text-brand-700 dark:border-brand-700/50 dark:bg-brand-700/20 dark:text-brand-100"
+            >
               Buscando títulos...
             </p>
           )}
@@ -176,17 +158,24 @@ export function PaginaBusqueda() {
           )}
 
           {!isLoading && !error && hasSearched && resultados.length === 0 && (
-            <p className="rounded-2xl border border-surface-100 bg-surface-0 p-5 text-ink-muted dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200">
+            <p
+              role="status"
+              aria-live="polite"
+              className="rounded-2xl border border-surface-100 bg-surface-0 p-5 text-ink-muted dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200"
+            >
               No encontramos contenido disponible con esos filtros.
             </p>
           )}
 
-          {!isLoading && !error && resultados.length > 0 && (
+          {!error && resultados.length > 0 && (
             <>
               <div className="mb-5 flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold">Resultados</h2>
+                <h2 className="text-xl font-semibold">
+                  Resultados para &quot;{tituloBuscado}&quot;
+                </h2>
                 <p className="text-sm text-ink-muted dark:text-surface-200">
-                  {totalResultados} {totalResultados === 1 ? 'título' : 'títulos'}
+                  Mostrando {resultados.length} de {totalResultados}{' '}
+                  {totalResultados === 1 ? 'título' : 'títulos'}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -197,6 +186,16 @@ export function PaginaBusqueda() {
                   />
                 ))}
               </div>
+              {pagina < totalPaginas && (
+                <button
+                  type="button"
+                  onClick={cargarMas}
+                  disabled={isLoading}
+                  className="mx-auto mt-8 block rounded-xl border border-brand-600 px-6 py-3 font-semibold text-brand-700 transition hover:bg-brand-50 focus:ring-4 focus:ring-brand-500/30 focus:outline-none disabled:cursor-wait disabled:opacity-60 dark:border-brand-100 dark:text-brand-100 dark:hover:bg-brand-700/20"
+                >
+                  {isLoadingMore ? 'Cargando...' : 'Cargar más'}
+                </button>
+              )}
             </>
           )}
         </section>

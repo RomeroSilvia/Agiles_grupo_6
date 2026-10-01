@@ -160,4 +160,24 @@ describe('GET /api/busqueda', () => {
 
     consoleError.mockRestore();
   });
+
+  it('responde 502 cuando TMDB devuelve datos inválidos', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    tmdbIntegration.buscarPeliculas.mockResolvedValueOnce({
+      page: 1,
+      results: [{ ...pelicula, id: 'incorrecto' }],
+      total_results: 1,
+      total_pages: 1,
+    });
+
+    const response = await request(createApp()).get('/api/busqueda').query({
+      q: 'dune',
+      tipo: 'pelicula',
+    });
+
+    expect(response.status).toBe(502);
+    expect(response.body.error.code).toBe('EXTERNAL_SERVICE');
+
+    consoleError.mockRestore();
+  });
 });

@@ -1,5 +1,6 @@
 import { respuestaBusquedaSchema } from '@buscador/shared/schemas';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
+import { ExternalServiceError } from '../errors/index.js';
 
 function obtenerAnio(fecha) {
   const anio = fecha?.slice(0, 4);
@@ -50,10 +51,16 @@ export async function buscarTitulos({ q, tipo, anio, pagina }) {
     .sort((a, b) => b.relevancia - a.relevancia)
     .map(({ relevancia: _relevancia, ...resultado }) => resultado);
 
-  return respuestaBusquedaSchema.parse({
+  const respuesta = respuestaBusquedaSchema.safeParse({
     resultados,
     pagina,
     totalResultados: respuestas.reduce((total, respuesta) => total + respuesta.totalResultados, 0),
     totalPaginas: Math.max(...respuestas.map((respuesta) => respuesta.totalPaginas)),
   });
+
+  if (!respuesta.success) {
+    throw new ExternalServiceError('TMDB', respuesta.error);
+  }
+
+  return respuesta.data;
 }

@@ -38,13 +38,12 @@ async function tmdbRequest(path, params = {}) {
   }
 }
 
-function searchParams({ q, anio, pagina }) {
+function searchParams({ q, pagina }) {
   return {
     query: q,
     language: 'es-AR',
     include_adult: false,
     page: pagina,
-    ...(anio === undefined ? {} : { year: anio }),
   };
 }
 

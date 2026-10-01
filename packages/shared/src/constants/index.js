@@ -1,6 +1,9 @@
 // Valores del negocio: deben coincidir con los enums de la base (supabase/migrations).
 export const TIPOS_TITULO = ['pelicula', 'serie'];
 
+export const ANIO_MINIMO = 1888;
+export const ANIO_MAXIMO = 2100;
+
 export const TIPOS_OFERTA = ['suscripcion', 'gratis', 'con_anuncios', 'alquiler', 'compra'];
 
 export const ESTADOS_NOTIFICACION = ['pendiente', 'enviada', 'fallida'];

@@ -3,7 +3,7 @@ import request from 'supertest';
 import { createApp } from '../app.js';
 import * as authRepository from '../repositories/auth.repository.js';
 import * as intentoLoginRepository from '../repositories/intentoLogin.repository.js';
-import { ConflictError } from '../errors/index.js';
+import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/index.js';
 
 // La base es compartida: los tests nunca llegan a Supabase
 vi.mock('../repositories/auth.repository.js');
@@ -133,6 +133,18 @@ describe('POST /api/auth/sign-in', () => {
     expect(res.body.error.message).toMatch(/1 minuto\./);
     expect(authRepository.iniciarSesionConPassword).not.toHaveBeenCalled();
   });
+
+  it('no cuenta como intento fallido el límite de solicitudes de Supabase', async () => {
+    authRepository.iniciarSesionConPassword.mockRejectedValue(new RateLimitError());
+
+    const res = await request(createApp())
+      .post('/api/auth/sign-in')
+      .send({ email: USUARIO.email, password: PASSWORD_VALIDA });
+
+    expect(res.status).toBe(429);
+    expect(res.body.error.code).toBe('RATE_LIMITED');
+    expect(intentoLoginRepository.registrarFallido).not.toHaveBeenCalled();
+  });
 });
 
 describe('GET /api/auth/session', () => {
@@ -164,16 +176,103 @@ describe('GET /api/auth/session', () => {
     expect(res.body).toEqual({ data: { user: USUARIO } });
     expect(cookiesDe(res)).toMatch(/access_token=access-nuevo/);
   });
+
+  it('renueva una sola vez si llegan dos requests simultáneos con el mismo refresh token', async () => {
+    // La renovación recién termina cuando el segundo request ya llegó
+    let terminarRenovacion;
+    authRepository.refrescarSesion.mockReturnValue(
+      new Promise((resolve) => {
+        terminarRenovacion = resolve;
+      }),
+    );
+    let consultas = 0;
+    authRepository.obtenerUsuarioPorToken.mockImplementation(async () => {
+      consultas += 1;
+      if (consultas === 2) {
+        setImmediate(() => terminarRenovacion({ ...SESION, accessToken: 'access-nuevo' }));
+      }
+      return null;
+    });
+    const app = createApp();
+    const pedirSesion = () =>
+      request(app)
+        .get('/api/auth/session')
+        .set('Cookie', 'access_token=vencido; refresh_token=refresh-simultaneo');
+
+    const [primera, segunda] = await Promise.all([pedirSesion(), pedirSesion()]);
+
+    expect(authRepository.refrescarSesion).toHaveBeenCalledTimes(1);
+    expect(primera.body).toEqual({ data: { user: USUARIO } });
+    expect(segunda.body).toEqual({ data: { user: USUARIO } });
+    expect(cookiesDe(segunda)).toMatch(/access_token=access-nuevo/);
+  });
+
+  it('no borra las cookies si Supabase limita las solicitudes', async () => {
+    authRepository.obtenerUsuarioPorToken.mockRejectedValue(new RateLimitError());
+
+    const res = await request(createApp())
+      .get('/api/auth/session')
+      .set('Cookie', 'access_token=access-de-prueba; refresh_token=refresh-de-prueba');
+
+    expect(res.status).toBe(429);
+    expect(cookiesDe(res)).toBe('');
+    expect(authRepository.refrescarSesion).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/auth/sign-out', () => {
   it('cierra la sesión y borra las cookies', async () => {
+    authRepository.cerrarSesion.mockResolvedValue(true);
+
     const res = await request(createApp())
       .post('/api/auth/sign-out')
-      .set('Cookie', 'access_token=access-de-prueba');
+      .set('Cookie', 'access_token=access-de-prueba; refresh_token=refresh-de-prueba');
 
     expect(res.status).toBe(204);
     expect(authRepository.cerrarSesion).toHaveBeenCalledWith('access-de-prueba');
+    expect(authRepository.refrescarSesion).not.toHaveBeenCalled();
     expect(cookiesDe(res)).toMatch(/access_token=;/);
+    expect(cookiesDe(res)).toMatch(/refresh_token=;/);
+  });
+
+  it('renueva la sesión para revocar el refresh token si el access token venció', async () => {
+    authRepository.cerrarSesion.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    authRepository.refrescarSesion.mockResolvedValue({ ...SESION, accessToken: 'access-nuevo' });
+
+    const res = await request(createApp())
+      .post('/api/auth/sign-out')
+      .set('Cookie', 'access_token=vencido; refresh_token=refresh-de-prueba');
+
+    expect(res.status).toBe(204);
+    expect(authRepository.refrescarSesion).toHaveBeenCalledWith('refresh-de-prueba');
+    expect(authRepository.cerrarSesion).toHaveBeenLastCalledWith('access-nuevo');
+    expect(cookiesDe(res)).not.toMatch(/access_token=access-nuevo/);
+  });
+
+  it('revoca con el refresh token aunque ya no haya access token', async () => {
+    authRepository.refrescarSesion.mockResolvedValue({ ...SESION, accessToken: 'access-nuevo' });
+    authRepository.cerrarSesion.mockResolvedValue(true);
+
+    const res = await request(createApp())
+      .post('/api/auth/sign-out')
+      .set('Cookie', 'refresh_token=refresh-de-prueba');
+
+    expect(res.status).toBe(204);
+    expect(authRepository.cerrarSesion).toHaveBeenCalledWith('access-nuevo');
+  });
+
+  it('informa el error pero igual borra las cookies si la revocación falla', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    authRepository.cerrarSesion.mockRejectedValue(new ExternalServiceError('de autenticación'));
+
+    const res = await request(createApp())
+      .post('/api/auth/sign-out')
+      .set('Cookie', 'access_token=access-de-prueba; refresh_token=refresh-de-prueba');
+
+    expect(res.status).toBe(502);
+    expect(res.body.error.code).toBe('EXTERNAL_SERVICE');
+    expect(cookiesDe(res)).toMatch(/access_token=;/);
+    expect(cookiesDe(res)).toMatch(/refresh_token=;/);
+    consoleError.mockRestore();
   });
 });

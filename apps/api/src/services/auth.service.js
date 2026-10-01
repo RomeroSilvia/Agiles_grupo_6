@@ -70,7 +70,7 @@ export async function obtenerSesion({ accessToken, refreshToken }) {
   }
 
   if (refreshToken) {
-    const sesionRenovada = await authRepository.refrescarSesion(refreshToken);
+    const sesionRenovada = await renovarSesion(refreshToken);
     if (sesionRenovada) {
       return { user: sesionRenovada.user, sesionRenovada };
     }
@@ -79,8 +79,34 @@ export async function obtenerSesion({ accessToken, refreshToken }) {
   return { user: null };
 }
 
-export async function cerrarSesion(accessToken) {
-  if (accessToken) {
-    await authRepository.cerrarSesion(accessToken);
+/**
+ * Cierra la sesión de este dispositivo revocando su refresh token. Si el access token
+ * venció, primero lo renueva: Supabase necesita un access token válido para revocar.
+ */
+export async function cerrarSesion({ accessToken, refreshToken }) {
+  if (accessToken && (await authRepository.cerrarSesion(accessToken))) {
+    return;
   }
+
+  const sesion = refreshToken ? await renovarSesion(refreshToken) : null;
+  if (sesion) {
+    await authRepository.cerrarSesion(sesion.accessToken);
+  }
+}
+
+// Renovaciones en curso por refresh token. Si llegan dos requests a la vez con el mismo
+// refresh token, el segundo espera la renovación del primero en lugar de usar un token que
+// Supabase ya rotó. (Entre instancias distintas de la API lo cubre el intervalo de reuso
+// del refresh token que tiene Supabase, 10 segundos por defecto.)
+const renovacionesEnCurso = new Map();
+
+function renovarSesion(refreshToken) {
+  let renovacion = renovacionesEnCurso.get(refreshToken);
+  if (!renovacion) {
+    renovacion = authRepository
+      .refrescarSesion(refreshToken)
+      .finally(() => renovacionesEnCurso.delete(refreshToken));
+    renovacionesEnCurso.set(refreshToken, renovacion);
+  }
+  return renovacion;
 }

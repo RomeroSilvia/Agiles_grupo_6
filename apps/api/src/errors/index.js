@@ -65,6 +65,17 @@ export class TooManyAttemptsError extends AppError {
   }
 }
 
+/** Un servicio externo (por ejemplo Supabase Auth) limitó las solicitudes. */
+export class RateLimitError extends AppError {
+  constructor(cause) {
+    super('Hay demasiadas solicitudes en este momento. Probá de nuevo en unos minutos.', {
+      status: 429,
+      code: 'RATE_LIMITED',
+      cause,
+    });
+  }
+}
+
 export class DatabaseError extends AppError {
   constructor(cause) {
     super('Error al acceder a los datos', { status: 500, code: 'DATABASE', cause });

@@ -1,5 +1,6 @@
 import {
   ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
   clearSessionCookies,
   setSessionCookies,
 } from '../config/cookies.config.js';
@@ -17,9 +18,19 @@ export async function iniciarSesion(req, res) {
   res.json({ data: { user: sesion.user } });
 }
 
+/**
+ * Las cookies se borran aunque falle la revocación: el usuario pidió salir de este dispositivo.
+ * El error igual se propaga para que quede registrado y el front se entere.
+ */
 export async function cerrarSesion(req, res) {
-  await authService.cerrarSesion(req.cookies?.[ACCESS_TOKEN_COOKIE]);
-  clearSessionCookies(res);
+  try {
+    await authService.cerrarSesion({
+      accessToken: req.cookies?.[ACCESS_TOKEN_COOKIE],
+      refreshToken: req.cookies?.[REFRESH_TOKEN_COOKIE],
+    });
+  } finally {
+    clearSessionCookies(res);
+  }
   res.status(204).end();
 }
 

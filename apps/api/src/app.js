@@ -1,14 +1,24 @@
 import express from 'express';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { routes } from './routes/index.js';
+import { detectRegion } from './middlewares/detectRegion.middleware.js';
+import { errorHandler, notFoundHandler } from './middlewares/errorHandler.middleware.js';
 
+/** Crea la app sin levantar el servidor, para poder testearla con supertest. */
 export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
+  app.use(helmet());
   app.use(express.json({ limit: '100kb' }));
+  app.use(cookieParser());
+  app.use(detectRegion);
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ data: { status: 'ok' } });
-  });
+  app.use('/api', routes);
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
   return app;
 }

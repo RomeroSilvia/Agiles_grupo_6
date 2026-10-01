@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react';
 import { App } from './App.jsx';
 
 describe('App', () => {
-  it('muestra el nombre del producto', () => {
+  it('muestra la pantalla de búsqueda', () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Streamly' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Encontrá qué ver' })).toBeInTheDocument();
   });
 });

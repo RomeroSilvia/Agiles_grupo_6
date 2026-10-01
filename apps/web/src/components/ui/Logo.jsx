@@ -1,3 +1,7 @@
 export function Logo({ className = '' }) {
-  return <span className={`text-xl font-extrabold tracking-tight ${className}`}>STREAMLY</span>;
+  return (
+    <span className={`font-display text-xl font-extrabold tracking-tight ${className}`}>
+      STREAMLY
+    </span>
+  );
 }

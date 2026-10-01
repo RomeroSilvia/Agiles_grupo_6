@@ -90,7 +90,9 @@ describe('Registro (E4HU2)', () => {
     await completarFormulario(user, { email: 'ana@mail.com', password: 'Segura#2026' });
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
-    expect(await screen.findByRole('heading', { name: 'Encontrá qué ver' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Una búsqueda. Todas tus plataformas.' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
     expect(request).toHaveBeenCalledWith('/auth/sign-up', {
       method: 'POST',

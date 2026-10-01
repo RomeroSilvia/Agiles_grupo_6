@@ -44,7 +44,9 @@ describe('Inicio de sesión (E4HU2)', () => {
 
     await ingresar(user);
 
-    expect(await screen.findByRole('heading', { name: 'Encontrá qué ver' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Una búsqueda. Todas tus plataformas.' }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('Sesión iniciada como ana@mail.com')).toBeInTheDocument();
   });
 
@@ -96,6 +98,8 @@ describe('Inicio de sesión (E4HU2)', () => {
     mockApi({ session: { user: USUARIO } });
     renderRoute('/iniciar-sesion');
 
-    expect(await screen.findByRole('heading', { name: 'Encontrá qué ver' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Una búsqueda. Todas tus plataformas.' }),
+    ).toBeInTheDocument();
   });
 });

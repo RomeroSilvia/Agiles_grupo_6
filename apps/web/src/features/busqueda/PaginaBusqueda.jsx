@@ -54,27 +54,28 @@ export function PaginaBusqueda() {
   const tituloBuscado = ultimaBusqueda?.q ?? filtros.q.trim();
 
   return (
-    <main className="min-h-screen bg-surface-50 text-surface-900 dark:bg-surface-900 dark:text-surface-0">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-5 py-8 sm:px-8 lg:py-12">
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-12 px-5 py-8 sm:px-8 lg:py-12">
         <header className="max-w-2xl space-y-3">
-          <p className="text-sm font-bold tracking-[0.2em] text-brand-600 dark:text-brand-100">
-            STREAMLY
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
+          <p className="font-mono text-xs font-medium tracking-[0.2em] text-primary">STREAMLY</p>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">
             Una búsqueda. Todas tus plataformas.
           </h1>
-          <p className="text-base leading-7 text-ink-muted sm:text-lg dark:text-surface-200">
+          <p className="text-base leading-7 text-muted sm:text-lg">
             Buscá películas y series por título, tipo o año.
           </p>
         </header>
 
         <form
           aria-label="Buscar títulos"
-          className="space-y-5 rounded-3xl border border-surface-100 bg-surface-0 p-5 shadow-sm sm:p-6 dark:border-surface-700 dark:bg-surface-800"
+          className="space-y-5 rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-6"
           onSubmit={handleSubmit}
         >
           <div className="space-y-2">
-            <label htmlFor="q" className="text-sm font-semibold">
+            <label
+              htmlFor="q"
+              className="font-mono text-xs font-medium tracking-wide text-muted uppercase"
+            >
               Título
             </label>
             <input
@@ -85,13 +86,16 @@ export function PaginaBusqueda() {
               onChange={handleChange}
               placeholder="Ej.: Dune, The Office..."
               required
-              className="w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 transition outline-none placeholder:text-ink-muted focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-surface-700 dark:bg-surface-900 dark:placeholder:text-surface-200"
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground transition outline-none placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/20"
             />
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
             <div className="space-y-2">
-              <label htmlFor="tipo" className="text-sm font-semibold">
+              <label
+                htmlFor="tipo"
+                className="font-mono text-xs font-medium tracking-wide text-muted uppercase"
+              >
                 Tipo
               </label>
               <select
@@ -99,7 +103,7 @@ export function PaginaBusqueda() {
                 name="tipo"
                 value={filtros.tipo}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 transition outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-surface-700 dark:bg-surface-900"
+                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground transition outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
               >
                 <option value="">Todos</option>
                 {TIPOS_TITULO.map((tipo) => (
@@ -111,7 +115,10 @@ export function PaginaBusqueda() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="anio" className="text-sm font-semibold">
+              <label
+                htmlFor="anio"
+                className="font-mono text-xs font-medium tracking-wide text-muted uppercase"
+              >
                 Año
               </label>
               <input
@@ -123,14 +130,14 @@ export function PaginaBusqueda() {
                 value={filtros.anio}
                 onChange={handleChange}
                 placeholder="Cualquier año"
-                className="w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 transition outline-none placeholder:text-ink-muted focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 dark:border-surface-700 dark:bg-surface-900 dark:placeholder:text-surface-200"
+                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground transition outline-none placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="rounded-xl bg-brand-500 px-6 py-3 font-semibold text-surface-0 transition hover:bg-brand-600 focus:ring-4 focus:ring-brand-500/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
+              className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:bg-primary-hover focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
             >
               {isLoading ? 'Buscando...' : 'Buscar'}
             </button>
@@ -142,7 +149,7 @@ export function PaginaBusqueda() {
             <p
               role="status"
               aria-live="polite"
-              className="rounded-2xl border border-brand-100 bg-brand-50 p-5 text-brand-700 dark:border-brand-700/50 dark:bg-brand-700/20 dark:text-brand-100"
+              className="rounded-2xl border border-primary/30 bg-primary/10 p-5 text-primary"
             >
               Buscando títulos...
             </p>
@@ -151,7 +158,7 @@ export function PaginaBusqueda() {
           {!isLoading && error && (
             <p
               role="alert"
-              className="rounded-2xl border border-danger-500/30 bg-danger-500/10 p-5 text-danger-500"
+              className="rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
             >
               {error}
             </p>
@@ -161,7 +168,7 @@ export function PaginaBusqueda() {
             <p
               role="status"
               aria-live="polite"
-              className="rounded-2xl border border-surface-100 bg-surface-0 p-5 text-ink-muted dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200"
+              className="rounded-2xl border border-border bg-surface p-5 text-muted"
             >
               No encontramos contenido disponible con esos filtros.
             </p>
@@ -173,7 +180,7 @@ export function PaginaBusqueda() {
                 <h2 className="text-xl font-semibold">
                   Resultados para &quot;{tituloBuscado}&quot;
                 </h2>
-                <p className="text-sm text-ink-muted dark:text-surface-200">
+                <p className="text-sm text-muted">
                   Mostrando {resultados.length} de {totalResultados}{' '}
                   {totalResultados === 1 ? 'título' : 'títulos'}
                 </p>
@@ -191,7 +198,7 @@ export function PaginaBusqueda() {
                   type="button"
                   onClick={cargarMas}
                   disabled={isLoading}
-                  className="mx-auto mt-8 block rounded-xl border border-brand-600 px-6 py-3 font-semibold text-brand-700 transition hover:bg-brand-50 focus:ring-4 focus:ring-brand-500/30 focus:outline-none disabled:cursor-wait disabled:opacity-60 dark:border-brand-100 dark:text-brand-100 dark:hover:bg-brand-700/20"
+                  className="mx-auto mt-8 block rounded-xl border border-primary px-6 py-3 font-semibold text-primary transition hover:bg-primary/10 focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
                 >
                   {isLoadingMore ? 'Cargando...' : 'Cargar más'}
                 </button>
@@ -204,6 +211,6 @@ export function PaginaBusqueda() {
           <Attribution />
         </footer>
       </div>
-    </main>
+    </div>
   );
 }

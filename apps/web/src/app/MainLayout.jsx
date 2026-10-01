@@ -3,6 +3,7 @@ import { useSession } from '../contexts/session/SessionContext.js';
 import { useRegion } from '../contexts/region/RegionContext.js';
 import { Logo } from '../components/ui/Logo.jsx';
 import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
+import { SearchIcon } from '../components/ui/icons.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
 
 const focusRing =
@@ -61,12 +62,16 @@ export function MainLayout() {
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3">
+          <Link to="/" aria-label="Streamly, ir al inicio" className={`rounded-sm ${focusRing}`}>
+            <Logo />
+          </Link>
           <Link
             to="/"
-            aria-label="Streamly, ir al inicio"
-            className={`mr-auto rounded-sm ${focusRing}`}
+            aria-label="Buscar títulos"
+            className={`mr-auto hidden min-h-11 max-w-md flex-1 items-center gap-2 rounded-full border border-border bg-background px-4 text-sm text-muted transition-colors hover:border-primary hover:text-foreground sm:flex ${focusRing}`}
           >
-            <Logo />
+            <SearchIcon className="size-4 shrink-0" />
+            <span className="truncate">¿Qué querés ver?</span>
           </Link>
           <span
             aria-label={`Región: ${region}`}

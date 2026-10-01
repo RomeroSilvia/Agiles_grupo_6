@@ -8,8 +8,8 @@ export function Attribution() {
       Datos de títulos provistos por{' '}
       <a href="https://www.themoviedb.org" className="underline" target="_blank" rel="noreferrer">
         TMDB
-      </a>
-      . Datos de disponibilidad provistos por{' '}
+      </a>{' '}
+      y datos de disponibilidad provistos por{' '}
       <a href="https://www.justwatch.com" className="underline" target="_blank" rel="noreferrer">
         JustWatch
       </a>

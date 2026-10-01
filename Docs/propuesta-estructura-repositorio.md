@@ -1836,7 +1836,7 @@ export function NotFoundPage() {
   return (
     <section className="space-y-2">
       <h1 className="text-xl font-semibold">Página no encontrada</h1>
-      <Link to="/" className="text-brand-600 underline dark:text-brand-500">
+      <Link to="/" className="text-brand-600 dark:text-brand-500 underline">
         Volver al inicio
       </Link>
     </section>

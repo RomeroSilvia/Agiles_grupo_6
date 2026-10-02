@@ -56,6 +56,7 @@ describe('PaginaBusqueda', () => {
     const [url] = fetch.mock.calls[0];
     expect(url.toString()).toContain('/api/busqueda?q=Dune&pagina=1');
     expect(screen.queryByRole('button', { name: 'Cargar más' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Datos de títulos provistos por/)).not.toBeInTheDocument();
   });
 
   it('no busca con un año incompleto cuando cambia el tipo', async () => {
@@ -163,6 +164,37 @@ describe('PaginaBusqueda', () => {
     expect(new URL(fetchMock.mock.calls[1][0]).searchParams.get('pagina')).toBe('2');
     expect(screen.getByText('Mostrando 2 de 2 títulos')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cargar más' })).not.toBeInTheDocument();
+  });
+
+  it('conserva los resultados si falla al cargar más', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            resultados: respuestaConResultados.data.resultados,
+            pagina: 1,
+            totalResultados: 2,
+            totalPaginas: 2,
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          error: { code: 'EXTERNAL_SERVICE', message: 'No se pudo consultar TMDB' },
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PaginaBusqueda />);
+
+    await ejecutarBusqueda();
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo consultar TMDB');
+    expect(screen.getByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+    expect(screen.getByText('Mostrando 1 de 2 títulos')).toBeInTheDocument();
   });
 
   it('muestra un mensaje cuando no hay resultados', async () => {

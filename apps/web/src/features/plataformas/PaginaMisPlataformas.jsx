@@ -1,3 +1,4 @@
+import { Button } from '../../components/ui/Button.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
 import { TarjetaPlataforma } from './TarjetaPlataforma.jsx';
 import { TarjetaPlataformaCargando } from './TarjetaPlataformaCargando.jsx';
@@ -6,8 +7,16 @@ import { usePlataformas } from './usePlataformas.js';
 const TARJETAS_CARGANDO = 6;
 
 export function PaginaMisPlataformas() {
-  const { plataformas, seleccionadas, guardando, loading, cargaFallida, error, alternar } =
-    usePlataformas();
+  const {
+    plataformas,
+    seleccionadas,
+    guardando,
+    loading,
+    cargaFallida,
+    error,
+    alternar,
+    reintentar,
+  } = usePlataformas();
   const listo = !loading && !cargaFallida;
   const sinSeleccion = listo && plataformas.length > 0 && seleccionadas.size === 0;
 
@@ -21,6 +30,12 @@ export function PaginaMisPlataformas() {
       </header>
 
       <FormError>{error}</FormError>
+
+      {cargaFallida && !loading && (
+        <Button onClick={reintentar} className="md:w-auto">
+          Reintentar
+        </Button>
+      )}
 
       {sinSeleccion && (
         <p className="rounded-xl bg-chip px-4 py-3 text-sm font-medium text-chip-foreground">

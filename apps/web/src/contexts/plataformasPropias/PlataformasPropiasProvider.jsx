@@ -22,6 +22,7 @@ export function PlataformasPropiasProvider({ children }) {
   const [cargadasPara, setCargadasPara] = useState(null);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(new Set());
+  const [intento, setIntento] = useState(0);
   const enCurso = useRef(new Set());
 
   useEffect(() => {
@@ -50,7 +51,12 @@ export function PlataformasPropiasProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [usuarioId]);
+  }, [usuarioId, intento]);
+
+  const recargar = useCallback(() => {
+    setCargadasPara(null);
+    setIntento((actual) => actual + 1);
+  }, []);
 
   const alternar = useCallback(async (plataformaId, activa) => {
     if (enCurso.current.has(plataformaId)) {
@@ -79,8 +85,9 @@ export function PlataformasPropiasProvider({ children }) {
       loading: usuarioId !== null && !cargadas,
       error: cargadas ? error : '',
       alternar,
+      recargar,
     }),
-    [cargadas, seleccionadas, guardando, usuarioId, error, alternar],
+    [cargadas, seleccionadas, guardando, usuarioId, error, alternar, recargar],
   );
 
   return (

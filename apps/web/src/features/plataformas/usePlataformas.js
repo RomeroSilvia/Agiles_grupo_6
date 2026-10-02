@@ -8,6 +8,8 @@ export function usePlataformas() {
   const [loading, setLoading] = useState(true);
   const [errorCatalogo, setErrorCatalogo] = useState('');
   const [errorGuardado, setErrorGuardado] = useState('');
+  const [intentoCatalogo, setIntentoCatalogo] = useState(0);
+  const [propiasFallaronAlEntrar] = useState(() => Boolean(propias.error));
 
   useEffect(() => {
     let cancelled = false;
@@ -15,6 +17,7 @@ export function usePlataformas() {
       .then((catalogo) => {
         if (!cancelled) {
           setPlataformas(catalogo);
+          setErrorCatalogo('');
         }
       })
       .catch((cause) => {
@@ -30,9 +33,15 @@ export function usePlataformas() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [intentoCatalogo]);
 
-  const { alternar: alternarPropia } = propias;
+  const { alternar: alternarPropia, recargar: recargarPropias, error: errorPropias } = propias;
+
+  useEffect(() => {
+    if (propiasFallaronAlEntrar) {
+      recargarPropias();
+    }
+  }, [propiasFallaronAlEntrar, recargarPropias]);
 
   const alternar = useCallback(
     async (plataformaId, activa) => {
@@ -46,7 +55,19 @@ export function usePlataformas() {
     [alternarPropia],
   );
 
-  const errorCarga = errorCatalogo || propias.error;
+  const reintentar = useCallback(() => {
+    setErrorGuardado('');
+    if (errorCatalogo) {
+      setErrorCatalogo('');
+      setLoading(true);
+      setIntentoCatalogo((actual) => actual + 1);
+    }
+    if (errorPropias) {
+      recargarPropias();
+    }
+  }, [errorCatalogo, errorPropias, recargarPropias]);
+
+  const errorCarga = errorCatalogo || errorPropias;
 
   return {
     plataformas,
@@ -56,5 +77,6 @@ export function usePlataformas() {
     cargaFallida: Boolean(errorCarga),
     error: errorCarga || errorGuardado,
     alternar,
+    reintentar,
   };
 }

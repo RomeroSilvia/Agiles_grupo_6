@@ -227,6 +227,87 @@ describe('Mis plataformas', () => {
     expect(request.mock.calls.filter(([path]) => path === '/plataformas/propias')).toHaveLength(1);
   });
 
+  it('si falló la carga de la selección, la vuelve a pedir al volver a la pantalla', async () => {
+    let fallar = true;
+    mockApi({
+      propias: async () => {
+        if (fallar) {
+          throw ERROR_API;
+        }
+        return [1];
+      },
+    });
+    const router = renderRoute('/mis-plataformas');
+    await screen.findByRole('alert');
+
+    fallar = false;
+    await act(() => router.navigate('/'));
+    await act(() => router.navigate('/mis-plataformas'));
+
+    expect(await switchDe('Netflix')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(request.mock.calls.filter(([path]) => path === '/plataformas/propias')).toHaveLength(2);
+  });
+
+  it('reintenta cargar la selección con el botón Reintentar', async () => {
+    let fallar = true;
+    mockApi({
+      propias: async () => {
+        if (fallar) {
+          throw ERROR_API;
+        }
+        return [1];
+      },
+    });
+    const user = userEvent.setup();
+    renderRoute('/mis-plataformas');
+
+    const boton = await screen.findByRole('button', { name: 'Reintentar' });
+    fallar = false;
+    await user.click(boton);
+
+    expect(await switchDe('Netflix')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+  });
+
+  it('reintenta cargar el catálogo con el botón Reintentar', async () => {
+    let fallar = true;
+    mockApi({
+      catalogo: async () => {
+        if (fallar) {
+          throw ERROR_API;
+        }
+        return PLATAFORMAS;
+      },
+    });
+    const user = userEvent.setup();
+    renderRoute('/mis-plataformas');
+
+    const boton = await screen.findByRole('button', { name: 'Reintentar' });
+    fallar = false;
+    await user.click(boton);
+
+    expect(await switchDe('Disney Plus')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('si el reintento vuelve a fallar, sigue mostrando el error y el botón', async () => {
+    mockApi({
+      propias: async () => {
+        throw ERROR_API;
+      },
+    });
+    const user = userEvent.setup();
+    renderRoute('/mis-plataformas');
+
+    await user.click(await screen.findByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Error al acceder a los datos');
+    expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
+    expect(request.mock.calls.filter(([path]) => path === '/plataformas/propias')).toHaveLength(2);
+  });
+
   it('sin sesión lleva a iniciar sesión', async () => {
     mockApi({ session: null });
     renderRoute('/mis-plataformas');

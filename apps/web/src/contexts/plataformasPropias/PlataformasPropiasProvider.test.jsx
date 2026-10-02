@@ -46,7 +46,7 @@ function mockApi({ session = ANA, guardar = async () => undefined, propias } = {
 }
 
 function Consumidor() {
-  const { seleccionadas, loading, error, alternar } = usePlataformasPropias();
+  const { seleccionadas, loading, error, alternar, recargar } = usePlataformasPropias();
   const { signIn, signOut } = useSession();
 
   return (
@@ -68,6 +68,9 @@ function Consumidor() {
       </button>
       <button type="button" onClick={() => signIn({ email: BRUNO.email, password: 'x' })}>
         Entrar como Bruno
+      </button>
+      <button type="button" onClick={recargar}>
+        Recargar
       </button>
     </>
   );
@@ -174,5 +177,27 @@ describe('PlataformasPropiasProvider', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Error al acceder a los datos');
     expect(screen.getByText('seleccionadas: ninguna')).toBeInTheDocument();
+  });
+
+  it('al recargar vuelve a pedir la selección y limpia el error', async () => {
+    let fallar = true;
+    mockApi({
+      propias: async () => {
+        if (fallar) {
+          throw ERROR_API;
+        }
+        return [1, 2];
+      },
+    });
+    const user = userEvent.setup();
+    renderConProviders();
+    await screen.findByRole('alert');
+
+    fallar = false;
+    await user.click(screen.getByRole('button', { name: 'Recargar' }));
+
+    expect(await screen.findByText('seleccionadas: 1,2')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(llamadasA('/plataformas/propias')).toHaveLength(2);
   });
 });

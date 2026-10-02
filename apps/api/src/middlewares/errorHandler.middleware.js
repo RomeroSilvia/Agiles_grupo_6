@@ -1,14 +1,14 @@
 import { AppError, NotFoundError } from '../errors/index.js';
 
-export function notFoundHandler(req, _res, next) {
-  next(new NotFoundError(`No existe la ruta ${req.method} ${req.originalUrl}`));
+export function notFoundHandler(_req, _res, next) {
+  next(new NotFoundError());
 }
 
 // Express reconoce el manejador de errores por tener 4 parámetros: no quitar `_next`.
 export function errorHandler(error, _req, res, _next) {
   if (error instanceof AppError) {
     if (error.status >= 500) {
-      console.error(error, error.cause);
+      console.error(error);
     }
     return res.status(error.status).json({
       error: { code: error.code, message: error.message, details: error.details },

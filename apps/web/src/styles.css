@@ -1,71 +1,69 @@
 @import 'tailwindcss';
 
-/* Modo oscuro por clase: ThemeProvider agrega/quita .dark en <html> */
+/* Modo oscuro por clase: ThemeProvider agrega/quita .dark en <html>. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/*
- * Tokens de diseño (paleta del Figma). En los componentes usar SIEMPRE las clases
- * semánticas (bg-surface, text-muted, bg-primary...), nunca colores sueltos:
- * así el modo oscuro sale solo cambiando las variables de abajo.
- * Todos los pares texto/fondo cumplen contraste AA (4.5:1).
- */
+/* Tokens de la matriz visual de STREAMLY. */
 :root {
-  --background: #f3f5f4;
+  --background: #f4f6f5;
   --surface: #ffffff;
-  --foreground: #111916;
-  --muted: #56615c;
-  --border: #d5dbd8;
+  --foreground: #16211d;
+  --muted: #55635d;
+  --border: #dce2df;
   --border-strong: #b3bdb8;
 
-  /* Verde: acción principal (Ingresar, Enviar) y links */
-  --primary: #0e7a57;
-  --primary-hover: #0b6346;
+  --primary: #0b7a5b;
+  --primary-hover: #075c44;
   --primary-foreground: #ffffff;
-  --link: #0e7a57;
+  --link: #075c44;
 
-  /* Coral: crear cuenta. Más oscuro que el del Figma (#E8553B) para que el texto blanco sea legible */
-  --accent: #c8452b;
-  --accent-hover: #ad3a23;
-  --accent-foreground: #ffffff;
+  --accent: #e8543a;
+  --accent-hover: #c44530;
+  --accent-foreground: #16211d;
 
-  --chip: #dcf2e7;
-  --chip-foreground: #0b5c41;
-
+  --chip: #e4f0eb;
+  --chip-foreground: #075c44;
   --danger: #b42318;
   --danger-surface: #fef3f2;
-  --success: #0e7a57;
+  --success: #0b7a5b;
 
-  /* Panel oscuro de las pantallas de ingreso: igual en los dos temas */
-  --panel: #18221e;
-  --panel-foreground: #eef3f0;
+  --panel: #16211d;
+  --panel-foreground: #f4f6f5;
   --panel-muted: #a7b4ae;
-  --panel-accent: #4cc794;
+  --panel-accent: #6fd3a8;
 }
 
 .dark {
-  --background: #0f1714;
-  --surface: #17201c;
-  --foreground: #e8eeeb;
-  --muted: #9aa8a1;
-  --border: #2a3631;
-  --border-strong: #3d4b45;
+  --background: #0d1712;
+  --surface: #16211d;
+  --foreground: #f4f6f5;
+  --muted: #a7b4ae;
+  --border: #2c3b34;
+  --border-strong: #42534a;
 
-  --primary: #0e7a57;
-  --primary-hover: #12916a;
+  --primary: #0b7a5b;
+  --primary-hover: #075c44;
   --primary-foreground: #ffffff;
-  --link: #6fd3a8;
+  --link: #8be0ba;
+
+  --accent: #e8543a;
+  --accent-hover: #f06a53;
+  --accent-foreground: #16211d;
 
   --chip: #173a2c;
   --chip-foreground: #8be0ba;
-
-  --danger: #f97066;
+  --danger: #ff8a7d;
   --danger-surface: #2d1614;
   --success: #6fd3a8;
 
-  --panel: #0a100e;
+  --panel: #07100c;
+  --panel-foreground: #f4f6f5;
+  --panel-muted: #a7b4ae;
+  --panel-accent: #72d9ad;
 }
 
 @theme inline {
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
@@ -104,6 +102,12 @@
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -1,9 +1,9 @@
 import express from 'express';
+import { errorHandler, notFoundHandler } from './middlewares/errorHandler.middleware.js';
+import { routes } from './routes/index.js';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { routes } from './routes/index.js';
 import { detectRegion } from './middlewares/detectRegion.middleware.js';
-import { errorHandler, notFoundHandler } from './middlewares/errorHandler.middleware.js';
 
 /** Crea la app sin levantar el servidor, para poder testearla con supertest. */
 export function createApp() {
@@ -16,7 +16,6 @@ export function createApp() {
   app.use(detectRegion);
 
   app.use('/api', routes);
-
   app.use(notFoundHandler);
   app.use(errorHandler);
 

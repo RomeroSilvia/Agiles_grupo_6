@@ -4,12 +4,12 @@
  */
 export function Attribution() {
   return (
-    <p className="text-xs text-muted">
+    <p className="text-xs leading-5 text-muted">
       Datos de títulos provistos por{' '}
       <a href="https://www.themoviedb.org" className="underline" target="_blank" rel="noreferrer">
         TMDB
-      </a>
-      . Datos de disponibilidad provistos por{' '}
+      </a>{' '}
+      y datos de disponibilidad provistos por{' '}
       <a href="https://www.justwatch.com" className="underline" target="_blank" rel="noreferrer">
         JustWatch
       </a>

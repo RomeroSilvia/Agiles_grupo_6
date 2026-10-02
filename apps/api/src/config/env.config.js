@@ -9,7 +9,7 @@ const envSchema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(1),
   FRONTEND_URL: z.url().default('http://localhost:5173'),
   DEFAULT_REGION: z.string().regex(REGION_PATTERN).default('AR'),
-  TMDB_API_TOKEN: z.string().optional(),
+  TMDB_API_KEY: z.string().optional(),
   STREAMING_AVAILABILITY_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM: z.string().optional(),

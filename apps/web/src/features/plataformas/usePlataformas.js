@@ -1,34 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../services/api.service.js';
-
-function conCambio(seleccionadas, plataformaId, activa) {
-  const nuevas = new Set(seleccionadas);
-  if (activa) {
-    nuevas.add(plataformaId);
-  } else {
-    nuevas.delete(plataformaId);
-  }
-  return nuevas;
-}
+import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 
 export function usePlataformas() {
+  const propias = usePlataformasPropias();
   const [plataformas, setPlataformas] = useState([]);
-  const [seleccionadas, setSeleccionadas] = useState(new Set());
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [errorCatalogo, setErrorCatalogo] = useState('');
+  const [errorGuardado, setErrorGuardado] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([request('/plataformas'), request('/plataformas/propias')])
-      .then(([catalogo, propias]) => {
+    request('/plataformas')
+      .then((catalogo) => {
         if (!cancelled) {
           setPlataformas(catalogo);
-          setSeleccionadas(new Set(propias));
         }
       })
       .catch((cause) => {
         if (!cancelled) {
-          setError(cause.message);
+          setErrorCatalogo(cause.message);
         }
       })
       .finally(() => {
@@ -41,16 +32,29 @@ export function usePlataformas() {
     };
   }, []);
 
-  const alternar = useCallback(async (plataformaId, activa) => {
-    setError('');
-    setSeleccionadas((actuales) => conCambio(actuales, plataformaId, activa));
-    try {
-      await request(`/plataformas/propias/${plataformaId}`, { method: activa ? 'PUT' : 'DELETE' });
-    } catch (cause) {
-      setSeleccionadas((actuales) => conCambio(actuales, plataformaId, !activa));
-      setError(cause.message);
-    }
-  }, []);
+  const { alternar: alternarPropia } = propias;
 
-  return { plataformas, seleccionadas, loading, error, alternar };
+  const alternar = useCallback(
+    async (plataformaId, activa) => {
+      setErrorGuardado('');
+      try {
+        await alternarPropia(plataformaId, activa);
+      } catch (cause) {
+        setErrorGuardado(cause.message);
+      }
+    },
+    [alternarPropia],
+  );
+
+  const errorCarga = errorCatalogo || propias.error;
+
+  return {
+    plataformas,
+    seleccionadas: propias.seleccionadas,
+    guardando: propias.guardando,
+    loading: loading || propias.loading,
+    cargaFallida: Boolean(errorCarga),
+    error: errorCarga || errorGuardado,
+    alternar,
+  };
 }

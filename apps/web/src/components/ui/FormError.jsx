@@ -1,4 +1,4 @@
-import { AlertIcon } from '../../components/ui/icons.jsx';
+import { AlertIcon } from './icons.jsx';
 
 /** Error general del formulario (el que devuelve la API), arriba del botón de envío. */
 export function FormError({ children }) {

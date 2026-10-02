@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiError, request } from '../../services/api.service.js';
 import { renderRoute } from '../../test/renderRoute.jsx';
@@ -126,6 +126,68 @@ describe('Mis plataformas', () => {
     expect(await switchDe('Disney Plus')).toHaveAttribute('aria-checked', 'false');
   });
 
+  it('si no se puede quitar, vuelve a marcar la plataforma y muestra el error', async () => {
+    mockApi({
+      guardar: async () => {
+        throw ERROR_API;
+      },
+    });
+    const user = userEvent.setup();
+    renderRoute('/mis-plataformas');
+
+    await user.click(await switchDe('Netflix'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Error al acceder a los datos');
+    expect(await switchDe('Netflix')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('mientras guarda deshabilita el switch y no manda un segundo pedido', async () => {
+    let terminarGuardado;
+    mockApi({
+      guardar: () =>
+        new Promise((resolve) => {
+          terminarGuardado = resolve;
+        }),
+    });
+    const user = userEvent.setup();
+    renderRoute('/mis-plataformas');
+
+    const control = await switchDe('Disney Plus');
+    await user.click(control);
+    await user.click(control);
+
+    expect(control).toHaveAttribute('aria-disabled', 'true');
+    expect(control).toHaveAttribute('aria-checked', 'true');
+    const guardados = request.mock.calls.filter(([path]) =>
+      path.startsWith('/plataformas/propias/'),
+    );
+    expect(guardados).toEqual([['/plataformas/propias/2', { method: 'PUT' }]]);
+
+    terminarGuardado();
+
+    expect(await switchDe('Disney Plus')).toHaveAttribute('aria-disabled', 'false');
+  });
+
+  it('solo deshabilita la plataforma que se está guardando', async () => {
+    mockApi({ guardar: () => new Promise(() => {}) });
+    const user = userEvent.setup();
+    renderRoute('/mis-plataformas');
+
+    await user.click(await switchDe('Disney Plus'));
+
+    expect(await switchDe('Disney Plus')).toHaveAttribute('aria-disabled', 'true');
+    expect(await switchDe('Netflix')).toHaveAttribute('aria-disabled', 'false');
+  });
+
+  it('si no hay plataformas disponibles no muestra switches ni el aviso de selección vacía', async () => {
+    mockApi({ catalogo: async () => [], propias: async () => [] });
+    renderRoute('/mis-plataformas');
+
+    expect(await screen.findByText('Se guarda automáticamente.')).toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Todavía no elegiste ninguna plataforma/)).not.toBeInTheDocument();
+  });
+
   it('muestra el error si no se pueden cargar las plataformas', async () => {
     mockApi({
       catalogo: async () => {
@@ -136,6 +198,33 @@ describe('Mis plataformas', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Error al acceder a los datos');
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByText('Se guarda automáticamente.')).not.toBeInTheDocument();
+  });
+
+  it('si no se puede cargar la selección, muestra el error y no la lista sin marcar', async () => {
+    mockApi({
+      propias: async () => {
+        throw ERROR_API;
+      },
+    });
+    renderRoute('/mis-plataformas');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Error al acceder a los datos');
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Todavía no elegiste ninguna plataforma/)).not.toBeInTheDocument();
+  });
+
+  it('mantiene la selección al ir a otra pantalla y volver, sin volver a pedirla', async () => {
+    const user = userEvent.setup();
+    const router = renderRoute('/mis-plataformas');
+
+    await user.click(await switchDe('Disney Plus'));
+    await act(() => router.navigate('/'));
+    await act(() => router.navigate('/mis-plataformas'));
+
+    expect(await switchDe('Netflix')).toHaveAttribute('aria-checked', 'true');
+    expect(await switchDe('Disney Plus')).toHaveAttribute('aria-checked', 'true');
+    expect(request.mock.calls.filter(([path]) => path === '/plataformas/propias')).toHaveLength(1);
   });
 
   it('sin sesión lleva a iniciar sesión', async () => {
@@ -154,6 +243,15 @@ describe('Link "Mis plataformas" del header', () => {
     expect(await screen.findByRole('link', { name: 'Mis plataformas' })).toHaveAttribute(
       'href',
       '/mis-plataformas',
+    );
+  });
+
+  it('se marca como página actual en Mis plataformas', async () => {
+    renderRoute('/mis-plataformas');
+
+    expect(await screen.findByRole('link', { name: 'Mis plataformas' })).toHaveAttribute(
+      'aria-current',
+      'page',
     );
   });
 

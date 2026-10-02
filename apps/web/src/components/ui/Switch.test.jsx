@@ -36,4 +36,16 @@ describe('Switch', () => {
 
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('conserva el foco mientras está deshabilitado', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Switch checked={false} onChange={vi.fn()} label="Netflix" />);
+
+    await user.tab();
+    rerender(<Switch checked={false} onChange={vi.fn()} label="Netflix" disabled />);
+
+    const control = screen.getByRole('switch', { name: 'Netflix' });
+    expect(control).toHaveFocus();
+    expect(control).toHaveAttribute('aria-disabled', 'true');
+  });
 });

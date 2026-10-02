@@ -1,12 +1,15 @@
-import { FormError } from '../auth/FormError.jsx';
-import { TarjetaPlataforma, TarjetaPlataformaCargando } from './TarjetaPlataforma.jsx';
+import { FormError } from '../../components/ui/FormError.jsx';
+import { TarjetaPlataforma } from './TarjetaPlataforma.jsx';
+import { TarjetaPlataformaCargando } from './TarjetaPlataformaCargando.jsx';
 import { usePlataformas } from './usePlataformas.js';
 
 const TARJETAS_CARGANDO = 6;
 
 export function PaginaMisPlataformas() {
-  const { plataformas, seleccionadas, loading, error, alternar } = usePlataformas();
-  const sinSeleccion = !loading && plataformas.length > 0 && seleccionadas.size === 0;
+  const { plataformas, seleccionadas, guardando, loading, cargaFallida, error, alternar } =
+    usePlataformas();
+  const listo = !loading && !cargaFallida;
+  const sinSeleccion = listo && plataformas.length > 0 && seleccionadas.size === 0;
 
   return (
     <section className="max-w-4xl space-y-5">
@@ -26,32 +29,31 @@ export function PaginaMisPlataformas() {
         </p>
       )}
 
-      {loading ? (
-        <>
-          <p role="status" className="sr-only">
-            Cargando plataformas
-          </p>
-          <ul className="grid gap-3 md:grid-cols-2">
-            {Array.from({ length: TARJETAS_CARGANDO }, (_, indice) => (
-              <TarjetaPlataformaCargando key={indice} />
-            ))}
-          </ul>
-        </>
-      ) : (
-        <>
-          <ul className="grid gap-3 md:grid-cols-2">
-            {plataformas.map((plataforma) => (
-              <TarjetaPlataforma
-                key={plataforma.id}
-                plataforma={plataforma}
-                seleccionada={seleccionadas.has(plataforma.id)}
-                onChange={alternar}
-              />
-            ))}
-          </ul>
-          <p className="text-xs text-muted">Se guarda automáticamente.</p>
-        </>
+      {loading && (
+        <p role="status" className="sr-only">
+          Cargando plataformas
+        </p>
       )}
+
+      {(loading || listo) && (
+        <ul className="grid gap-3 md:grid-cols-2">
+          {loading
+            ? Array.from({ length: TARJETAS_CARGANDO }, (_, indice) => (
+                <TarjetaPlataformaCargando key={indice} />
+              ))
+            : plataformas.map((plataforma) => (
+                <TarjetaPlataforma
+                  key={plataforma.id}
+                  plataforma={plataforma}
+                  seleccionada={seleccionadas.has(plataforma.id)}
+                  guardando={guardando.has(plataforma.id)}
+                  onChange={alternar}
+                />
+              ))}
+        </ul>
+      )}
+
+      {listo && <p className="text-xs text-muted">Se guarda automáticamente.</p>}
     </section>
   );
 }

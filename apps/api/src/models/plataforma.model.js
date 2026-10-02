@@ -2,6 +2,9 @@ import { z } from 'zod';
 
 export const PLATAFORMA_COLUMNS = 'id, tmdb_provider_id, nombre, logo_path, url_home';
 
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
+const PLATAFORMA_INVALIDA = 'La plataforma no es válida';
+
 export function fromRow(row) {
   return {
     id: row.id,
@@ -13,8 +16,9 @@ export function fromRow(row) {
 }
 
 export const plataformaIdParamsSchema = z.object({
-  plataformaId: z.coerce
-    .number('La plataforma no es válida')
-    .int('La plataforma no es válida')
-    .positive('La plataforma no es válida'),
+  plataformaId: z
+    .string()
+    .regex(/^[1-9]\d{0,9}$/, PLATAFORMA_INVALIDA)
+    .transform(Number)
+    .pipe(z.number().max(POSTGRES_INTEGER_MAX, PLATAFORMA_INVALIDA)),
 });

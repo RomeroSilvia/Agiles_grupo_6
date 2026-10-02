@@ -1,16 +1,22 @@
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
+import {
+  USUARIO_PLATAFORMA_COLUMNS,
+  USUARIO_PLATAFORMA_PRIMARY_KEY,
+  fromRow,
+} from '../models/usuarioPlataforma.model.js';
 
-export async function listarPlataformaIds(usuarioId) {
+export async function listarActivasPorUsuario(usuarioId) {
   const { data, error } = await supabaseAdmin
     .from('usuario_plataforma')
-    .select('plataforma_id')
-    .eq('usuario_id', usuarioId);
+    .select(`${USUARIO_PLATAFORMA_COLUMNS}, plataforma!inner()`)
+    .eq('usuario_id', usuarioId)
+    .eq('plataforma.activa', true);
 
   if (error) {
     throw new DatabaseError(error);
   }
-  return data.map((row) => row.plataforma_id);
+  return data.map(fromRow);
 }
 
 export async function agregar(usuarioId, plataformaId) {
@@ -18,7 +24,7 @@ export async function agregar(usuarioId, plataformaId) {
     .from('usuario_plataforma')
     .upsert(
       { usuario_id: usuarioId, plataforma_id: plataformaId },
-      { onConflict: 'usuario_id,plataforma_id', ignoreDuplicates: true },
+      { onConflict: USUARIO_PLATAFORMA_PRIMARY_KEY, ignoreDuplicates: true },
     );
 
   if (error) {

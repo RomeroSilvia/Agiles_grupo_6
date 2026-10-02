@@ -1,25 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
-import { mockearConsulta } from '../test/queryBuilderMock.js';
+import { FALLO, SIN_DATOS, mockearConsulta } from '../test/queryBuilderMock.js';
+import { FILA_NETFLIX, NETFLIX } from '../test/fixtures.js';
 import * as plataformaRepository from './plataforma.repository.js';
 
 vi.mock('../config/supabase.config.js', () => ({ supabaseAdmin: { from: vi.fn() } }));
-
-const FILA_NETFLIX = {
-  id: 1,
-  tmdb_provider_id: 8,
-  nombre: 'Netflix',
-  logo_path: null,
-  url_home: 'https://www.netflix.com',
-};
-const NETFLIX = {
-  id: 1,
-  tmdbProviderId: 8,
-  nombre: 'Netflix',
-  logoPath: null,
-  urlHome: 'https://www.netflix.com',
-};
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -35,8 +21,14 @@ describe('listarActivas', () => {
     expect(builder.order).toHaveBeenCalledWith('nombre');
   });
 
+  it('devuelve una lista vacía si no hay plataformas activas', async () => {
+    mockearConsulta(supabaseAdmin.from, { data: [], error: null });
+
+    await expect(plataformaRepository.listarActivas()).resolves.toEqual([]);
+  });
+
   it('lanza DatabaseError si falla la consulta', async () => {
-    mockearConsulta(supabaseAdmin.from, { data: null, error: { message: 'caída' } });
+    mockearConsulta(supabaseAdmin.from, FALLO);
 
     await expect(plataformaRepository.listarActivas()).rejects.toBeInstanceOf(DatabaseError);
   });
@@ -52,13 +44,13 @@ describe('obtenerActivaPorId', () => {
   });
 
   it('devuelve null si no existe o no está activa', async () => {
-    mockearConsulta(supabaseAdmin.from, { data: null, error: null });
+    mockearConsulta(supabaseAdmin.from, SIN_DATOS);
 
     await expect(plataformaRepository.obtenerActivaPorId(99)).resolves.toBeNull();
   });
 
   it('lanza DatabaseError si falla la consulta', async () => {
-    mockearConsulta(supabaseAdmin.from, { data: null, error: { message: 'caída' } });
+    mockearConsulta(supabaseAdmin.from, FALLO);
 
     await expect(plataformaRepository.obtenerActivaPorId(1)).rejects.toBeInstanceOf(DatabaseError);
   });

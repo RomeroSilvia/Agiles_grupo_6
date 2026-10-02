@@ -850,7 +850,7 @@ FRONTEND_URL=http://localhost:5173
 DEFAULT_REGION=AR
 
 # Integraciones externas (opcionales hasta que se implemente la HU que las usa)
-TMDB_API_TOKEN=
+TMDB_API_KEY=
 STREAMING_AVAILABILITY_API_KEY=
 RESEND_API_KEY=
 RESEND_FROM="Buscador Streaming <avisos@tu-dominio.com>"
@@ -937,7 +937,7 @@ const envSchema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(1),
   FRONTEND_URL: z.url().default('http://localhost:5173'),
   DEFAULT_REGION: z.string().regex(REGION_PATTERN).default('AR'),
-  TMDB_API_TOKEN: z.string().optional(),
+  TMDB_API_KEY: z.string().optional(),
   STREAMING_AVAILABILITY_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM: z.string().optional(),
@@ -1347,11 +1347,12 @@ const TIMEOUT_MS = 8000;
  * @param {Record<string, string | number | undefined>} [params]
  */
 export async function tmdbRequest(path, params = {}) {
-  if (!env.TMDB_API_TOKEN) {
-    throw new ExternalServiceError('TMDB', new Error('Falta configurar TMDB_API_TOKEN'));
+  if (!env.TMDB_API_KEY) {
+    throw new ExternalServiceError('TMDB', new Error('Falta configurar TMDB_API_KEY'));
   }
 
   const url = new URL(BASE_URL + path);
+  url.searchParams.set('api_key', env.TMDB_API_KEY);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) {
       url.searchParams.set(key, String(value));
@@ -1361,10 +1362,7 @@ export async function tmdbRequest(path, params = {}) {
   let response;
   try {
     response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${env.TMDB_API_TOKEN}`,
-        Accept: 'application/json',
-      },
+      headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {

@@ -84,7 +84,7 @@ export class DatabaseError extends AppError {
 
 export class ExternalServiceError extends AppError {
   constructor(service, cause) {
-    super(`El servicio ${service} no está disponible`, {
+    super(`No se pudo consultar ${service}`, {
       status: 502,
       code: 'EXTERNAL_SERVICE',
       cause,

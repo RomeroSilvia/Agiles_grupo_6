@@ -13,10 +13,11 @@ export class ApiError extends Error {
  * (mismo origen gracias al proxy de Vite). Devuelve `data` o lanza ApiError.
  *
  * @param {string} path Ej: '/plataformas'
- * @param {{ method?: string, body?: unknown, params?: Record<string, unknown> }} [options]
+ * @param {{ method?: string, body?: unknown, params?: Record<string, unknown>, signal?: AbortSignal }} [options]
  */
-export async function request(path, { method = 'GET', body, params } = {}) {
+export async function request(path, { method = 'GET', body, params, signal } = {}) {
   const url = new URL(`/api${path}`, window.location.origin);
+
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined && value !== null && value !== '') {
       url.searchParams.set(key, String(value));
@@ -30,8 +31,13 @@ export async function request(path, { method = 'GET', body, params } = {}) {
       credentials: 'same-origin',
       headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
     });
-  } catch {
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw error;
+    }
+
     throw new ApiError({
       status: 0,
       code: 'NETWORK',
@@ -49,5 +55,6 @@ export async function request(path, { method = 'GET', body, params } = {}) {
       details: content?.error?.details,
     });
   }
+
   return content?.data;
 }

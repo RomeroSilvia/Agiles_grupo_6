@@ -15,6 +15,7 @@ describe('GET /api/health', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.message).not.toContain('/api/no-existe');
   });
 
   it('responde 400 si el cuerpo no es JSON válido', async () => {

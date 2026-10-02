@@ -119,3 +119,12 @@ export function SpinnerIcon({ className = 'size-5', ...props }) {
     </Icon>
   );
 }
+
+export function SearchIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </Icon>
+  );
+}

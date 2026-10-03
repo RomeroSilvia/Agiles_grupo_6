@@ -54,6 +54,24 @@ function obtenerAnio(fecha) {
   return /^\d{4}$/.test(anio ?? '') ? Number(anio) : null;
 }
 
+function obtenerTexto(valor) {
+  return typeof valor === 'string' && valor.trim() ? valor : null;
+}
+
+function normalizarDetalle(item, tipo) {
+  const fecha = tipo === TIPO_TITULO.PELICULA ? item?.release_date : item?.first_air_date;
+
+  return {
+    tmdbId: item?.id,
+    tipo,
+    nombre: obtenerTexto(item?.title) ?? obtenerTexto(item?.name),
+    sinopsis: obtenerTexto(item?.overview),
+    posterUrl: item?.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : null,
+    anio: obtenerAnio(fecha),
+    puntuacion: Number.isFinite(item?.vote_average) ? Number(item.vote_average) : null,
+  };
+}
+
 function normalizarResultado(item, tipo) {
   const fecha = tipo === TIPO_TITULO.PELICULA ? item?.release_date : item?.first_air_date;
 
@@ -96,3 +114,16 @@ export async function buscarSeries({ q, anio, pagina }) {
 
   return normalizarRespuesta(response, TIPO_TITULO.SERIE);
 }
+
+export async function obtenerPelicula(tmdbId) {
+  const response = await tmdbRequest(`/movie/${tmdbId}`, { language: 'es-AR' });
+  return normalizarDetalle(response, TIPO_TITULO.PELICULA);
+}
+
+export async function obtenerSerie(tmdbId) {
+  const response = await tmdbRequest(`/tv/${tmdbId}`, { language: 'es-AR' });
+  return normalizarDetalle(response, TIPO_TITULO.SERIE);
+}
+
+export const obtenerDetallePelicula = obtenerPelicula;
+export const obtenerDetalleSerie = obtenerSerie;

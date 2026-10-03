@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiError, request } from '../../services/api.service.js';
 import { SessionProvider } from '../session/SessionProvider.jsx';
@@ -165,6 +165,44 @@ describe('PlataformasPropiasProvider', () => {
       expect(request).toHaveBeenCalledWith('/plataformas/propias/1', { method: 'DELETE' }),
     );
     expect(await screen.findByText('seleccionadas: 1,2')).toBeInTheDocument();
+  });
+
+  it('si cambia el usuario, un guardado tardío del anterior no modifica la selección del nuevo', async () => {
+    let fallarGuardado;
+    mockApi({
+      guardar: () =>
+        new Promise((_, reject) => {
+          fallarGuardado = () => reject(ERROR_API);
+        }),
+    });
+    const user = userEvent.setup();
+    renderConProviders();
+    await screen.findByText('seleccionadas: 1,2');
+
+    await user.click(screen.getByRole('button', { name: 'Agregar 3' }));
+    await user.click(screen.getByRole('button', { name: 'Salir' }));
+    await user.click(screen.getByRole('button', { name: 'Entrar como Bruno' }));
+    await screen.findByText('seleccionadas: 3');
+
+    await act(async () => fallarGuardado());
+
+    expect(screen.getByText('seleccionadas: 3')).toBeInTheDocument();
+  });
+
+  it('si cambia el usuario, un guardado pendiente del anterior no bloquea al nuevo', async () => {
+    mockApi({ guardar: () => new Promise(() => {}) });
+    const user = userEvent.setup();
+    renderConProviders();
+    await screen.findByText('seleccionadas: 1,2');
+
+    await user.click(screen.getByRole('button', { name: 'Agregar 3' }));
+    await user.click(screen.getByRole('button', { name: 'Salir' }));
+    await user.click(screen.getByRole('button', { name: 'Entrar como Bruno' }));
+    await screen.findByText('seleccionadas: 3');
+
+    await user.click(screen.getByRole('button', { name: 'Agregar 3' }));
+
+    expect(llamadasA('/plataformas/propias/3')).toHaveLength(2);
   });
 
   it('expone el error si no se puede cargar la selección', async () => {

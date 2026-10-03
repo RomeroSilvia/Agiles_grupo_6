@@ -26,6 +26,10 @@ export function PlataformasPropiasProvider({ children }) {
   const enCurso = useRef(new Set());
 
   useEffect(() => {
+    enCurso.current = new Set();
+  }, [usuarioId]);
+
+  useEffect(() => {
     if (!usuarioId) {
       return undefined;
     }
@@ -45,6 +49,7 @@ export function PlataformasPropiasProvider({ children }) {
       })
       .finally(() => {
         if (!cancelled) {
+          setGuardando(new Set(enCurso.current));
           setCargadasPara(usuarioId);
         }
       });
@@ -59,20 +64,26 @@ export function PlataformasPropiasProvider({ children }) {
   }, []);
 
   const alternar = useCallback(async (plataformaId, activa) => {
-    if (enCurso.current.has(plataformaId)) {
+    const pendientes = enCurso.current;
+    if (pendientes.has(plataformaId)) {
       return;
     }
-    enCurso.current.add(plataformaId);
-    setGuardando(new Set(enCurso.current));
+    const sigueLaMismaSesion = () => enCurso.current === pendientes;
+    pendientes.add(plataformaId);
+    setGuardando(new Set(pendientes));
     setSeleccionadas((actuales) => conCambio(actuales, plataformaId, activa));
     try {
       await request(`/plataformas/propias/${plataformaId}`, { method: activa ? 'PUT' : 'DELETE' });
     } catch (cause) {
-      setSeleccionadas((actuales) => conCambio(actuales, plataformaId, !activa));
-      throw cause;
+      if (sigueLaMismaSesion()) {
+        setSeleccionadas((actuales) => conCambio(actuales, plataformaId, !activa));
+        throw cause;
+      }
     } finally {
-      enCurso.current.delete(plataformaId);
-      setGuardando(new Set(enCurso.current));
+      pendientes.delete(plataformaId);
+      if (sigueLaMismaSesion()) {
+        setGuardando(new Set(pendientes));
+      }
     }
   }, []);
 
@@ -81,7 +92,7 @@ export function PlataformasPropiasProvider({ children }) {
   const value = useMemo(
     () => ({
       seleccionadas: cargadas ? seleccionadas : SIN_SELECCION,
-      guardando,
+      guardando: cargadas ? guardando : SIN_SELECCION,
       loading: usuarioId !== null && !cargadas,
       error: cargadas ? error : '',
       alternar,

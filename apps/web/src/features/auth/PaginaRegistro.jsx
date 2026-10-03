@@ -8,7 +8,7 @@ import { TextField } from '../../components/ui/TextField.jsx';
 import { PasswordField } from '../../components/ui/PasswordField.jsx';
 import { CheckIcon } from '../../components/ui/icons.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
-import { FormError } from './FormError.jsx';
+import { FormError } from '../../components/ui/FormError.jsx';
 import { PasswordRequirements } from './PasswordRequirements.jsx';
 
 const BENEFICIOS = [

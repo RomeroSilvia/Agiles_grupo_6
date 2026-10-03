@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button.jsx';
 import { TextField } from '../../components/ui/TextField.jsx';
 import { PasswordField } from '../../components/ui/PasswordField.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
-import { FormError } from './FormError.jsx';
+import { FormError } from '../../components/ui/FormError.jsx';
 
 const linkClassName =
   'rounded-sm font-semibold text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';

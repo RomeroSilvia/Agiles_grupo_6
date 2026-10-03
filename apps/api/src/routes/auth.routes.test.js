@@ -4,12 +4,12 @@ import { createApp } from '../app.js';
 import * as authRepository from '../repositories/auth.repository.js';
 import * as intentoLoginRepository from '../repositories/intentoLogin.repository.js';
 import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/index.js';
+import { USUARIO } from '../test/fixtures.js';
 
 // La base es compartida: los tests nunca llegan a Supabase
 vi.mock('../repositories/auth.repository.js');
 vi.mock('../repositories/intentoLogin.repository.js');
 
-const USUARIO = { id: 'b7d8e1c2-0000-4000-8000-000000000001', email: 'ana@mail.com' };
 const SESION = {
   accessToken: 'access-de-prueba',
   refreshToken: 'refresh-de-prueba',

@@ -5,6 +5,8 @@ import { PaginaBusqueda } from '../features/busqueda/PaginaBusqueda.jsx';
 import { SoloSinSesion } from '../features/auth/SoloSinSesion.jsx';
 import { PaginaInicioSesion } from '../features/auth/PaginaInicioSesion.jsx';
 import { PaginaRegistro } from '../features/auth/PaginaRegistro.jsx';
+import { SoloConSesion } from '../features/auth/SoloConSesion.jsx';
+import { PaginaMisPlataformas } from '../features/plataformas/PaginaMisPlataformas.jsx';
 
 export const routes = [
   {
@@ -12,6 +14,10 @@ export const routes = [
     Component: MainLayout,
     children: [
       { index: true, Component: PaginaBusqueda },
+      {
+        Component: SoloConSesion,
+        children: [{ path: 'mis-plataformas', Component: PaginaMisPlataformas }],
+      },
       { path: '*', Component: NotFoundPage },
     ],
   },

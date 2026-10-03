@@ -1,12 +1,34 @@
-import { Link, Outlet } from 'react-router';
+import { useState } from 'react';
+import { Link, NavLink, Outlet } from 'react-router';
 import { useSession } from '../contexts/session/SessionContext.js';
 import { useRegion } from '../contexts/region/RegionContext.js';
 import { Logo } from '../components/ui/Logo.jsx';
 import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
+import { IconButton } from '../components/ui/IconButton.jsx';
+import { MenuIcon, XIcon } from '../components/ui/icons.jsx';
 
 const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+
+const cerrarSesionClassName = `cursor-pointer items-center text-sm font-semibold text-muted transition-colors duration-150 hover:text-foreground ${focusRing}`;
+
+const ENLACES = [{ to: '/mis-plataformas', label: 'Mis plataformas' }];
+
+function Enlaces({ onNavigate }) {
+  return ENLACES.map(({ to, label }) => (
+    <NavLink
+      key={to}
+      to={to}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        `inline-flex min-h-11 items-center rounded-sm text-sm transition-colors duration-150 hover:text-foreground ${isActive ? 'font-bold text-foreground' : 'text-muted'} ${focusRing}`
+      }
+    >
+      {label}
+    </NavLink>
+  ));
+}
 
 function AccionesDeSesion() {
   const { user, loading, signOut } = useSession();
@@ -28,7 +50,7 @@ function AccionesDeSesion() {
         <button
           type="button"
           onClick={signOut}
-          className={`inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-sm font-semibold text-muted transition-colors duration-150 hover:text-foreground ${focusRing}`}
+          className={`hidden min-h-11 rounded-full px-3 md:inline-flex ${cerrarSesionClassName}`}
         >
           Cerrar sesión
         </button>
@@ -56,27 +78,67 @@ function AccionesDeSesion() {
 
 export function MainLayout() {
   const { region } = useRegion();
+  const { user, signOut } = useSession();
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
+  const cerrarMenu = () => setMenuAbierto(false);
+
+  function cerrarSesionDesdeMenu() {
+    cerrarMenu();
+    signOut();
+  }
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3">
-          <Link
-            to="/"
-            aria-label="Streamly, ir al inicio"
-            className={`mr-auto rounded-sm ${focusRing}`}
-          >
+          <Link to="/" aria-label="Streamly, ir al inicio" className={`rounded-sm ${focusRing}`}>
             <Logo />
           </Link>
-          <span
-            aria-label={`Región: ${region}`}
-            className="hidden rounded-full bg-chip px-3 py-1 font-mono text-xs font-medium text-chip-foreground sm:inline-flex"
-          >
-            {region}
-          </span>
-          <ThemeToggle />
-          <AccionesDeSesion />
+          {user && (
+            <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
+              <Enlaces />
+            </nav>
+          )}
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <span
+              aria-label={`Región: ${region}`}
+              className="hidden rounded-full bg-chip px-3 py-1 font-mono text-xs font-medium text-chip-foreground sm:inline-flex"
+            >
+              {region}
+            </span>
+            <ThemeToggle />
+            <AccionesDeSesion />
+            {user && (
+              <IconButton
+                onClick={() => setMenuAbierto((abierto) => !abierto)}
+                aria-expanded={menuAbierto}
+                aria-controls="menu-mobile"
+                aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+                className="md:hidden"
+              >
+                {menuAbierto ? <XIcon /> : <MenuIcon />}
+              </IconButton>
+            )}
+          </div>
         </div>
+
+        {user && menuAbierto && (
+          <nav
+            id="menu-mobile"
+            aria-label="Menú"
+            className="flex flex-col border-t border-border px-4 py-2 md:hidden"
+          >
+            <Enlaces onNavigate={cerrarMenu} />
+            <button
+              type="button"
+              onClick={cerrarSesionDesdeMenu}
+              className={`inline-flex min-h-11 rounded-sm ${cerrarSesionClassName}`}
+            >
+              Cerrar sesión
+            </button>
+          </nav>
+        )}
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">

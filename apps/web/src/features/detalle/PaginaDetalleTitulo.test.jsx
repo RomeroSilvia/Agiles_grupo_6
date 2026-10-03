@@ -1,0 +1,115 @@
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { PaginaDetalleTitulo } from './PaginaDetalleTitulo.jsx';
+
+const detallePelicula = {
+  tmdbId: 1,
+  tipo: 'pelicula',
+  nombre: 'Dune',
+  sinopsis: 'En un futuro lejano...',
+  posterUrl: 'https://image.tmdb.org/t/p/w500/dune.jpg',
+  anio: 2021,
+  puntuacion: 8.1,
+};
+
+function renderDetalle(path = '/titulos/pelicula/1') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetalleTitulo />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+function configurarFetch(data = detallePelicula) {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ data }),
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('PaginaDetalleTitulo', () => {
+  it('muestra la información principal del título', async () => {
+    const fetchMock = configurarFetch();
+
+    renderDetalle();
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dune' })).toBeInTheDocument();
+    expect(screen.getByText('En un futuro lejano...')).toBeInTheDocument();
+    expect(screen.getByText('2021')).toBeInTheDocument();
+    expect(screen.getByText('8.1/10')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Póster de Dune' })).toHaveAttribute(
+      'src',
+      detallePelicula.posterUrl,
+    );
+    expect(fetchMock.mock.calls[0][0].toString()).toContain('/api/titulos/pelicula/1');
+  });
+
+  it('muestra el estado de carga', async () => {
+    let resolver;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockReturnValue(
+        new Promise((resolve) => {
+          resolver = resolve;
+        }),
+      ),
+    );
+
+    renderDetalle();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando detalle del título...');
+
+    resolver({
+      ok: true,
+      json: async () => ({ data: detallePelicula }),
+    });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dune' })).toBeInTheDocument();
+  });
+
+  it('muestra el error de la API', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          error: { code: 'EXTERNAL_SERVICE', message: 'No se pudo consultar TMDB' },
+        }),
+      }),
+    );
+
+    renderDetalle();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo consultar TMDB');
+  });
+
+  it('muestra mensajes explícitos para los campos faltantes', async () => {
+    configurarFetch({
+      tmdbId: 3,
+      tipo: 'pelicula',
+      nombre: null,
+      sinopsis: null,
+      posterUrl: null,
+      anio: null,
+      puntuacion: null,
+    });
+
+    renderDetalle('/titulos/pelicula/3');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Título no disponible' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Sin imagen disponible')).toBeInTheDocument();
+    expect(screen.getByText('Sinopsis no disponible')).toBeInTheDocument();
+    expect(screen.getByText('Año no disponible')).toBeInTheDocument();
+    expect(screen.getByText('Puntuación no disponible')).toBeInTheDocument();
+  });
+});

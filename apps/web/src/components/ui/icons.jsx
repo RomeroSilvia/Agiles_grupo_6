@@ -93,6 +93,25 @@ export function MoonIcon(props) {
   );
 }
 
+export function MenuIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+    </Icon>
+  );
+}
+
+export function XIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Icon>
+  );
+}
+
 export function SpinnerIcon({ className = 'size-5', ...props }) {
   return (
     <Icon className={`animate-spin ${className}`} {...props}>

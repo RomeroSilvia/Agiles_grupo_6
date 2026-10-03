@@ -19,3 +19,5 @@ export const DEFAULT_REGION = 'AR';
 
 // Código de país ISO 3166-1 alfa-2, igual que el CHECK de perfil.region
 export const REGION_PATTERN = /^[A-Z]{2}$/;
+
+export const TMDB_LOGO_BASE_URL = 'https://image.tmdb.org/t/p/w92';

@@ -4,6 +4,7 @@ import { routes } from '../app/router.js';
 import { ThemeProvider } from '../contexts/theme/ThemeProvider.jsx';
 import { SessionProvider } from '../contexts/session/SessionProvider.jsx';
 import { RegionProvider } from '../contexts/region/RegionProvider.jsx';
+import { PlataformasPropiasProvider } from '../contexts/plataformasPropias/PlataformasPropiasProvider.jsx';
 
 /** Renderiza la app completa en una ruta, con los mismos providers que main.jsx. */
 export function renderRoute(path) {
@@ -12,7 +13,9 @@ export function renderRoute(path) {
     <ThemeProvider>
       <SessionProvider>
         <RegionProvider>
-          <RouterProvider router={router} />
+          <PlataformasPropiasProvider>
+            <RouterProvider router={router} />
+          </PlataformasPropiasProvider>
         </RegionProvider>
       </SessionProvider>
     </ThemeProvider>,

@@ -62,6 +62,64 @@
   --panel-accent: #72d9ad;
 }
 
+/*
+ * Paleta de plataformas: color de marca y texto legible encima (contraste AA).
+ * Se elige con data-plataforma="<tmdb_provider_id>"; sin entrada, queda el color neutro.
+ * Igual en los dos temas.
+ */
+:root {
+  --plataforma: var(--chip);
+  --plataforma-foreground: var(--chip-foreground);
+}
+
+/* Netflix */
+[data-plataforma='8'] {
+  --plataforma: #b20710;
+  --plataforma-foreground: #ffffff;
+}
+
+/* Amazon Prime Video */
+[data-plataforma='119'] {
+  --plataforma: #00a8e1;
+  --plataforma-foreground: #0f171e;
+}
+
+/* Disney Plus */
+[data-plataforma='337'] {
+  --plataforma: #113ccf;
+  --plataforma-foreground: #ffffff;
+}
+
+/* HBO Max */
+[data-plataforma='1899'] {
+  --plataforma: #000000;
+  --plataforma-foreground: #ffffff;
+}
+
+/* Apple TV+ */
+[data-plataforma='350'] {
+  --plataforma: #1d1d1f;
+  --plataforma-foreground: #ffffff;
+}
+
+/* Paramount Plus */
+[data-plataforma='531'] {
+  --plataforma: #0064ff;
+  --plataforma-foreground: #ffffff;
+}
+
+/* Crunchyroll */
+[data-plataforma='283'] {
+  --plataforma: #f47521;
+  --plataforma-foreground: #000000;
+}
+
+/* MUBI */
+[data-plataforma='11'] {
+  --plataforma: #001489;
+  --plataforma-foreground: #ffffff;
+}
+
 @theme inline {
   --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
@@ -89,6 +147,8 @@
   --color-panel-foreground: var(--panel-foreground);
   --color-panel-muted: var(--panel-muted);
   --color-panel-accent: var(--panel-accent);
+  --color-plataforma: var(--plataforma);
+  --color-plataforma-foreground: var(--plataforma-foreground);
 }
 
 @layer base {

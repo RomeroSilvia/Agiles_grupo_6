@@ -1,10 +1,11 @@
 import { Link } from 'react-router';
 import { ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
 
-export function ResultadoCard({ resultado }) {
+export function ResultadoCard({ resultado, estadoBusqueda }) {
   return (
     <Link
       to={`/titulos/${resultado.tipo}/${resultado.tmdbId}`}
+      state={{ busqueda: estadoBusqueda }}
       aria-label={`Ver detalle de ${resultado.nombre}`}
       className="group block rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >

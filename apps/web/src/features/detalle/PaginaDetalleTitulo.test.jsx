@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { PaginaDetalleTitulo } from './PaginaDetalleTitulo.jsx';
 
 const detallePelicula = {
@@ -13,10 +13,11 @@ const detallePelicula = {
   puntuacion: 8.1,
 };
 
-function renderDetalle(path = '/titulos/pelicula/1') {
+function renderDetalle(path = '/titulos/pelicula/1', state) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
       <Routes>
+        <Route path="/" element={<p>Resultados de la búsqueda</p>} />
         <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetalleTitulo />} />
       </Routes>
     </MemoryRouter>,
@@ -111,5 +112,91 @@ describe('PaginaDetalleTitulo', () => {
     expect(screen.getByText('Sinopsis no disponible')).toBeInTheDocument();
     expect(screen.getByText('Año no disponible')).toBeInTheDocument();
     expect(screen.getByText('Puntuación no disponible')).toBeInTheDocument();
+  });
+
+  it('vuelve a la búsqueda conservando el estado de navegación', async () => {
+    configurarFetch();
+    renderDetalle('/titulos/pelicula/1', {
+      busqueda: {
+        filtros: { q: 'Dune', tipo: '', anio: '' },
+        resultados: [detallePelicula],
+        pagina: 1,
+        totalResultados: 1,
+        totalPaginas: 1,
+        hasSearched: true,
+        ultimaBusqueda: { q: 'Dune', tipo: '', anio: '' },
+      },
+    });
+
+    await screen.findByRole('heading', { level: 1, name: 'Dune' });
+    fireEvent.click(screen.getByRole('link', { name: 'Volver a la búsqueda' }));
+
+    expect(await screen.findByText('Resultados de la búsqueda')).toBeInTheDocument();
+  });
+
+  it('aborta la consulta anterior al navegar rápidamente a otro título', async () => {
+    let llamada = 0;
+    let resolverSegundoTitulo;
+    const señales = [];
+    const fetchMock = vi.fn((_url, options) => {
+      llamada += 1;
+      señales.push(options.signal);
+
+      if (llamada === 1) {
+        return new Promise((_resolve, reject) => {
+          options.signal.addEventListener('abort', () => {
+            const error = new Error('Request abortado');
+            error.name = 'AbortError';
+            reject(error);
+          });
+        });
+      }
+
+      return new Promise((resolve) => {
+        resolverSegundoTitulo = resolve;
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    function CambiarTitulo() {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate('/titulos/serie/2')}>
+          Ver otro título
+        </button>
+      );
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/titulos/pelicula/1']}>
+        <Routes>
+          <Route
+            path="/titulos/:tipo/:tmdbId"
+            element={
+              <>
+                <PaginaDetalleTitulo />
+                <CambiarTitulo />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver otro título' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(señales[0].aborted).toBe(true);
+
+    resolverSegundoTitulo({
+      ok: true,
+      json: async () => ({
+        data: { ...detallePelicula, tmdbId: 2, tipo: 'serie', nombre: 'The Office' },
+      }),
+    });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'The Office' }),
+    ).toBeInTheDocument();
   });
 });

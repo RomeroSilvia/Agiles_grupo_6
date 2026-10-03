@@ -43,7 +43,16 @@ La API expone `GET /api/busqueda` con estos parámetros:
 - `pagina`: página de resultados, opcional; por defecto es `1`.
 
 La respuesta contiene resultados resumidos con título, tipo, año, póster y puntuación.
-La pantalla actual no incluye detalle, disponibilidad, watchlist ni redirección a plataformas.
+
+## Detalle de títulos
+
+La API expone `GET /api/titulos/:tipo/:tmdbId` para consultar el detalle de una película o
+serie. `tipo` puede ser `pelicula` o `serie`, y `tmdbId` es el identificador numérico de TMDB.
+La respuesta contiene `{ data: ... }` con nombre, sinopsis, póster, año y puntuación. Si TMDB no
+encuentra el título, la API responde `404` con el código `NOT_FOUND`.
+
+La pantalla actual incluye la búsqueda y el detalle de títulos; todavía no incluye disponibilidad,
+watchlist ni redirección a plataformas.
 
 Los tokens visuales basados en el Figma están definidos en
 `apps/web/src/styles.css` y contemplan los modos claro y oscuro.

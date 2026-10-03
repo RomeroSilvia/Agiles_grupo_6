@@ -1,5 +1,8 @@
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
+
+const LINK_VOLVER_CLASS_NAME =
+  'font-semibold text-link underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const ETIQUETAS_TIPO = {
   pelicula: 'Película',
@@ -13,8 +16,10 @@ function formatearPuntuacion(puntuacion) {
 }
 
 export function PaginaDetalleTitulo() {
+  const location = useLocation();
   const { tipo, tmdbId } = useParams();
   const { titulo, isLoading, error } = useDetalleTitulo({ tipo, tmdbId });
+  const estadoBusqueda = location.state?.busqueda;
 
   if (isLoading) {
     return (
@@ -31,7 +36,11 @@ export function PaginaDetalleTitulo() {
   if (error) {
     return (
       <section className="space-y-6">
-        <Link to="/" className="font-semibold text-link underline underline-offset-4">
+        <Link
+          to="/"
+          state={estadoBusqueda ? { busqueda: estadoBusqueda } : undefined}
+          className={LINK_VOLVER_CLASS_NAME}
+        >
           Volver a la búsqueda
         </Link>
         <p
@@ -52,7 +61,11 @@ export function PaginaDetalleTitulo() {
 
   return (
     <section className="space-y-8">
-      <Link to="/" className="font-semibold text-link underline underline-offset-4">
+      <Link
+        to="/"
+        state={estadoBusqueda ? { busqueda: estadoBusqueda } : undefined}
+        className={LINK_VOLVER_CLASS_NAME}
+      >
         Volver a la búsqueda
       </Link>
 

@@ -97,12 +97,28 @@ describe('tmdb.integration', () => {
     });
   });
 
-  it('convierte un error del endpoint de detalle en un error externo', async () => {
+  it('devuelve null cuando la fecha del detalle no es texto', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 3, title: 'Dune', release_date: 2021 }),
+      }),
+    );
+
+    await expect(obtenerPelicula(3)).resolves.toMatchObject({
+      tmdbId: 3,
+      anio: null,
+    });
+  });
+
+  it('convierte un 404 del endpoint de detalle en un recurso no encontrado', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
 
     await expect(obtenerSerie(999)).rejects.toMatchObject({
-      code: 'EXTERNAL_SERVICE',
-      status: 502,
+      code: 'NOT_FOUND',
+      status: 404,
+      message: 'No se encontró el título solicitado',
     });
   });
 

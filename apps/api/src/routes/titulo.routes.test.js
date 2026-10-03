@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
-import { ExternalServiceError } from '../errors/index.js';
+import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 
 vi.mock('../integrations/tmdb.integration.js', () => ({
   buscarPeliculas: vi.fn(),
@@ -84,6 +84,39 @@ describe('GET /api/titulos/:tipo/:tmdbId', () => {
     tmdbIntegration.obtenerPelicula.mockRejectedValueOnce(
       new ExternalServiceError('TMDB', new Error('sin conexión')),
     );
+
+    const response = await request(createApp()).get('/api/titulos/pelicula/1');
+
+    expect(response.status).toBe(502);
+    expect(response.body).toEqual({
+      error: {
+        code: 'EXTERNAL_SERVICE',
+        message: 'No se pudo consultar TMDB',
+      },
+    });
+
+    consoleError.mockRestore();
+  });
+
+  it('responde 404 cuando TMDB no encuentra el título', async () => {
+    tmdbIntegration.obtenerPelicula.mockRejectedValueOnce(
+      new NotFoundError('No se encontró el título solicitado'),
+    );
+
+    const response = await request(createApp()).get('/api/titulos/pelicula/999');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'No se encontró el título solicitado',
+      },
+    });
+  });
+
+  it('responde 502 cuando TMDB devuelve una estructura inválida', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    tmdbIntegration.obtenerPelicula.mockResolvedValueOnce({ id: 1 });
 
     const response = await request(createApp()).get('/api/titulos/pelicula/1');
 

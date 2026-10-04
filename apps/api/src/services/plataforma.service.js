@@ -7,8 +7,8 @@ export function listarPlataformasDisponibles() {
 }
 
 export async function listarPlataformasPropias(usuarioId) {
-  const propias = await usuarioPlataformaRepository.listarActivasPorUsuario(usuarioId);
-  return propias.map(({ plataformaId }) => plataformaId);
+  const propias = await usuarioPlataformaRepository.listarPlataformasActivasPorUsuario(usuarioId);
+  return propias.map(({ id }) => id);
 }
 
 export async function agregarPlataformaPropia(usuarioId, plataformaId) {

@@ -1,5 +1,7 @@
 import { busquedaSchema } from '@buscador/shared/schemas';
 import { ANIO_MAXIMO, ANIO_MINIMO, TIPOS_TITULO } from '@buscador/shared/constants';
+import { useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { useBusqueda } from '../../hooks/useBusqueda.js';
 import { ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
 import { ResultadoCard } from './ResultadoCard.jsx';
@@ -14,6 +16,8 @@ function esBusquedaValida(filtros) {
 }
 
 export function PaginaBusqueda() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     filtros,
     setFiltros,
@@ -29,7 +33,28 @@ export function PaginaBusqueda() {
     error,
     hasSearched,
     ultimaBusqueda,
-  } = useBusqueda();
+  } = useBusqueda(location.state?.busqueda);
+
+  const estadoBusqueda = useMemo(
+    () => ({
+      filtros,
+      resultados,
+      pagina,
+      totalResultados,
+      totalPaginas,
+      hasSearched,
+      ultimaBusqueda,
+    }),
+    [filtros, resultados, pagina, totalResultados, totalPaginas, hasSearched, ultimaBusqueda],
+  );
+
+  useEffect(() => {
+    navigate(location.pathname + location.search, {
+      replace: true,
+      state: { busqueda: estadoBusqueda },
+      preventScrollReset: true,
+    });
+  }, [navigate, location.pathname, location.search, estadoBusqueda]);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -186,6 +211,7 @@ export function PaginaBusqueda() {
                 <ResultadoCard
                   key={`${resultado.tipo}-${resultado.tmdbId}`}
                   resultado={resultado}
+                  estadoBusqueda={estadoBusqueda}
                 />
               ))}
             </div>

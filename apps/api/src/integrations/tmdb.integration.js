@@ -1,5 +1,5 @@
 import { env } from '../config/env.config.js';
-import { ExternalServiceError } from '../errors/index.js';
+import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 import { TIPO_TITULO } from '@buscador/shared/constants';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -30,6 +30,10 @@ async function tmdbRequest(path, params = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 404) {
+      throw new NotFoundError('No se encontró el título solicitado');
+    }
+
     throw new ExternalServiceError('TMDB', new Error(`HTTP ${response.status} en ${path}`));
   }
 
@@ -50,8 +54,26 @@ function searchParams({ q, pagina }) {
 }
 
 function obtenerAnio(fecha) {
-  const anio = fecha?.slice(0, 4);
+  const anio = typeof fecha === 'string' ? fecha.slice(0, 4) : null;
   return /^\d{4}$/.test(anio ?? '') ? Number(anio) : null;
+}
+
+function obtenerTexto(valor) {
+  return typeof valor === 'string' && valor.trim() ? valor : null;
+}
+
+function normalizarDetalle(item, tipo) {
+  const fecha = tipo === TIPO_TITULO.PELICULA ? item?.release_date : item?.first_air_date;
+
+  return {
+    tmdbId: item?.id,
+    tipo,
+    nombre: obtenerTexto(item?.title) ?? obtenerTexto(item?.name),
+    sinopsis: obtenerTexto(item?.overview),
+    posterUrl: item?.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : null,
+    anio: obtenerAnio(fecha),
+    puntuacion: Number.isFinite(item?.vote_average) ? Number(item.vote_average) : null,
+  };
 }
 
 function normalizarResultado(item, tipo) {
@@ -96,3 +118,16 @@ export async function buscarSeries({ q, anio, pagina }) {
 
   return normalizarRespuesta(response, TIPO_TITULO.SERIE);
 }
+
+export async function obtenerPelicula(tmdbId) {
+  const response = await tmdbRequest(`/movie/${tmdbId}`, { language: 'es-AR' });
+  return normalizarDetalle(response, TIPO_TITULO.PELICULA);
+}
+
+export async function obtenerSerie(tmdbId) {
+  const response = await tmdbRequest(`/tv/${tmdbId}`, { language: 'es-AR' });
+  return normalizarDetalle(response, TIPO_TITULO.SERIE);
+}
+
+export const obtenerDetallePelicula = obtenerPelicula;
+export const obtenerDetalleSerie = obtenerSerie;

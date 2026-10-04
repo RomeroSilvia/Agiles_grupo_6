@@ -8,6 +8,41 @@ const FILTROS_INICIALES = {
   anio: '',
 };
 
+function obtenerEstadoInicial(estadoGuardado) {
+  if (!estadoGuardado || typeof estadoGuardado !== 'object') {
+    return {
+      filtros: FILTROS_INICIALES,
+      resultados: [],
+      pagina: 1,
+      totalResultados: 0,
+      totalPaginas: 0,
+      hasSearched: false,
+      ultimaBusqueda: null,
+    };
+  }
+
+  const filtrosGuardados = estadoGuardado.filtros;
+
+  return {
+    filtros: {
+      q: typeof filtrosGuardados?.q === 'string' ? filtrosGuardados.q : '',
+      tipo: typeof filtrosGuardados?.tipo === 'string' ? filtrosGuardados.tipo : '',
+      anio: typeof filtrosGuardados?.anio === 'string' ? filtrosGuardados.anio : '',
+    },
+    resultados: Array.isArray(estadoGuardado.resultados) ? estadoGuardado.resultados : [],
+    pagina: Number.isInteger(estadoGuardado.pagina) ? estadoGuardado.pagina : 1,
+    totalResultados: Number.isInteger(estadoGuardado.totalResultados)
+      ? estadoGuardado.totalResultados
+      : 0,
+    totalPaginas: Number.isInteger(estadoGuardado.totalPaginas) ? estadoGuardado.totalPaginas : 0,
+    hasSearched: Boolean(estadoGuardado.hasSearched),
+    ultimaBusqueda:
+      estadoGuardado.ultimaBusqueda && typeof estadoGuardado.ultimaBusqueda === 'object'
+        ? estadoGuardado.ultimaBusqueda
+        : null,
+  };
+}
+
 function prepararFiltros(filtrosConsulta, pagina) {
   return {
     q: filtrosConsulta.q?.trim() ?? '',
@@ -29,19 +64,20 @@ function obtenerMensajeValidacion(error) {
   return error.issues[0]?.message ?? 'Revisá los datos ingresados';
 }
 
-export function useBusqueda() {
-  const [filtros, setFiltros] = useState(FILTROS_INICIALES);
-  const [resultados, setResultados] = useState([]);
-  const [pagina, setPagina] = useState(1);
-  const [totalResultados, setTotalResultados] = useState(0);
-  const [totalPaginas, setTotalPaginas] = useState(0);
+export function useBusqueda(estadoGuardado) {
+  const estadoInicial = obtenerEstadoInicial(estadoGuardado);
+  const [filtros, setFiltros] = useState(estadoInicial.filtros);
+  const [resultados, setResultados] = useState(estadoInicial.resultados);
+  const [pagina, setPagina] = useState(estadoInicial.pagina);
+  const [totalResultados, setTotalResultados] = useState(estadoInicial.totalResultados);
+  const [totalPaginas, setTotalPaginas] = useState(estadoInicial.totalPaginas);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [ultimaBusqueda, setUltimaBusqueda] = useState(null);
+  const [hasSearched, setHasSearched] = useState(estadoInicial.hasSearched);
+  const [ultimaBusqueda, setUltimaBusqueda] = useState(estadoInicial.ultimaBusqueda);
   const abortControllerRef = useRef(null);
-  const ultimaBusquedaRef = useRef(null);
+  const ultimaBusquedaRef = useRef(estadoInicial.ultimaBusqueda);
 
   const ejecutarBusqueda = useCallback(
     async (filtrosConsulta, { pagina: paginaConsulta = 1, acumular = false } = {}) => {

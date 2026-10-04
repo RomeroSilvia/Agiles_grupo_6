@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as renderComponent, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { PaginaBusqueda } from './PaginaBusqueda.jsx';
 
 const respuestaConResultados = {
@@ -27,6 +28,10 @@ function configurarFetch(respuesta = respuestaConResultados) {
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
+}
+
+function render(ui) {
+  return renderComponent(<MemoryRouter>{ui}</MemoryRouter>);
 }
 
 async function ejecutarBusqueda(nombre = 'Dune') {
@@ -57,6 +62,17 @@ describe('PaginaBusqueda', () => {
     expect(url.toString()).toContain('/api/busqueda?q=Dune&pagina=1');
     expect(screen.queryByRole('button', { name: 'Cargar más' })).not.toBeInTheDocument();
     expect(screen.queryByText(/Datos de títulos provistos por/)).not.toBeInTheDocument();
+  });
+
+  it('enlaza el resultado con el detalle usando tipo e identificador', async () => {
+    render(<PaginaBusqueda />);
+
+    await ejecutarBusqueda();
+
+    expect(screen.getByRole('link', { name: 'Ver detalle de Dune' })).toHaveAttribute(
+      'href',
+      '/titulos/pelicula/1',
+    );
   });
 
   it('no busca con un año incompleto cuando cambia el tipo', async () => {

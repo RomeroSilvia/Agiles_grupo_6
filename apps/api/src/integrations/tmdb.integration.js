@@ -1,12 +1,39 @@
 import { env } from '../config/env.config.js';
+import { FILTRO_PLATAFORMAS } from '../config/busqueda.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
-import { TIPO_TITULO } from '@buscador/shared/constants';
+import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
+import { createTtlCache } from '../utils/ttlCache.js';
+import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
-async function tmdbRequest(path, params = {}) {
+const RUTA_TMDB_POR_TIPO = Object.freeze({
+  [TIPO_TITULO.PELICULA]: 'movie',
+  [TIPO_TITULO.SERIE]: 'tv',
+});
+
+const TIPO_OFERTA_POR_CLAVE_TMDB = Object.freeze({
+  flatrate: TIPO_OFERTA.SUSCRIPCION,
+  free: TIPO_OFERTA.GRATIS,
+  ads: TIPO_OFERTA.CON_ANUNCIOS,
+  rent: TIPO_OFERTA.ALQUILER,
+  buy: TIPO_OFERTA.COMPRA,
+});
+
+const limitarConcurrencia = createConcurrencyLimiter(FILTRO_PLATAFORMAS.CONCURRENCIA_TMDB);
+
+const ofertasCache = createTtlCache({
+  ttlMs: FILTRO_PLATAFORMAS.TTL_CACHE_MS,
+  maxEntries: FILTRO_PLATAFORMAS.MAX_ENTRADAS_CACHE,
+});
+
+function tmdbRequest(path, params) {
+  return limitarConcurrencia(() => tmdbFetch(path, params));
+}
+
+async function tmdbFetch(path, params = {}) {
   if (!env.TMDB_API_KEY) {
     throw new ExternalServiceError('TMDB', new Error('Falta configurar TMDB_API_KEY'));
   }
@@ -119,14 +146,58 @@ export async function buscarSeries({ q, anio, pagina }) {
   return normalizarRespuesta(response, TIPO_TITULO.SERIE);
 }
 
-export async function obtenerPelicula(tmdbId) {
-  const response = await tmdbRequest(`/movie/${tmdbId}`, { language: 'es-AR' });
-  return normalizarDetalle(response, TIPO_TITULO.PELICULA);
+async function obtenerDetalle(tipo, tmdbId) {
+  const response = await tmdbRequest(`/${RUTA_TMDB_POR_TIPO[tipo]}/${tmdbId}`, {
+    language: 'es-AR',
+  });
+  return normalizarDetalle(response, tipo);
 }
 
-export async function obtenerSerie(tmdbId) {
-  const response = await tmdbRequest(`/tv/${tmdbId}`, { language: 'es-AR' });
-  return normalizarDetalle(response, TIPO_TITULO.SERIE);
+export function obtenerPelicula(tmdbId) {
+  return obtenerDetalle(TIPO_TITULO.PELICULA, tmdbId);
+}
+
+export function obtenerSerie(tmdbId) {
+  return obtenerDetalle(TIPO_TITULO.SERIE, tmdbId);
+}
+
+function normalizarOfertasDeRegion(datosRegion) {
+  return Object.entries(TIPO_OFERTA_POR_CLAVE_TMDB).flatMap(([clave, tipoOferta]) => {
+    const proveedores = Array.isArray(datosRegion?.[clave]) ? datosRegion[clave] : [];
+    return proveedores
+      .filter((proveedor) => Number.isInteger(proveedor?.provider_id))
+      .map((proveedor) => ({ tmdbProviderId: proveedor.provider_id, tipoOferta }));
+  });
+}
+
+function normalizarOfertas(response) {
+  const regiones = response?.results;
+  if (!regiones || typeof regiones !== 'object') {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(regiones).map(([region, datosRegion]) => [
+      region,
+      normalizarOfertasDeRegion(datosRegion),
+    ]),
+  );
+}
+
+async function consultarOfertas(tipo, tmdbId) {
+  try {
+    const response = await tmdbRequest(`/${RUTA_TMDB_POR_TIPO[tipo]}/${tmdbId}/watch/providers`);
+    return normalizarOfertas(response);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return {};
+    }
+    throw error;
+  }
+}
+
+export function obtenerOfertas({ tipo, tmdbId }) {
+  return ofertasCache.getOrSet(`${tipo}:${tmdbId}`, () => consultarOfertas(tipo, tmdbId));
 }
 
 export const obtenerDetallePelicula = obtenerPelicula;

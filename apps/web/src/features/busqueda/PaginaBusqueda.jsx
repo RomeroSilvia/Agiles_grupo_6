@@ -1,10 +1,17 @@
 import { busquedaSchema } from '@buscador/shared/schemas';
 import { ANIO_MAXIMO, ANIO_MINIMO, TIPOS_TITULO } from '@buscador/shared/constants';
-import { useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router';
-import { useBusqueda } from '../../hooks/useBusqueda.js';
-import { ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router';
+import { useLocationStateSync } from '../../hooks/useLocationStateSync.js';
+import { useBusqueda } from './useBusqueda.js';
+import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
+import { CARDS_CARGANDO, ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
+import { EstadoSinResultadosPropios } from './EstadoSinResultadosPropios.jsx';
+import { FiltroPlataformasPropias } from './FiltroPlataformasPropias.jsx';
 import { ResultadoCard } from './ResultadoCard.jsx';
+import { ResultadoCardCargando } from './ResultadoCardCargando.jsx';
+
+const CARDS_ESQUELETO = Array.from({ length: CARDS_CARGANDO }, (_, indice) => indice);
 
 function esBusquedaValida(filtros) {
   return busquedaSchema.safeParse({
@@ -17,7 +24,6 @@ function esBusquedaValida(filtros) {
 
 export function PaginaBusqueda() {
   const location = useLocation();
-  const navigate = useNavigate();
   const {
     filtros,
     setFiltros,
@@ -33,36 +39,22 @@ export function PaginaBusqueda() {
     error,
     hasSearched,
     ultimaBusqueda,
+    verificacionIncompleta,
+    estadoGuardable,
   } = useBusqueda(location.state?.busqueda);
+  const filtroPropias = useFiltroPlataformasPropias();
 
-  const estadoBusqueda = useMemo(
-    () => ({
-      filtros,
-      resultados,
-      pagina,
-      totalResultados,
-      totalPaginas,
-      hasSearched,
-      ultimaBusqueda,
-    }),
-    [filtros, resultados, pagina, totalResultados, totalPaginas, hasSearched, ultimaBusqueda],
-  );
+  useLocationStateSync('busqueda', estadoGuardable);
 
-  useEffect(() => {
-    navigate(location.pathname + location.search, {
-      replace: true,
-      state: { busqueda: estadoBusqueda },
-      preventScrollReset: true,
-    });
-  }, [navigate, location.pathname, location.search, estadoBusqueda]);
-
-  function handleSubmit(event) {
-    event.preventDefault();
-    buscar(filtros);
+  function conFiltroDisponible(filtrosConsulta) {
+    return {
+      ...filtrosConsulta,
+      soloPropias: filtrosConsulta.soloPropias && filtroPropias.disponible,
+    };
   }
 
-  function handleChange(event) {
-    const nextFiltros = { ...filtros, [event.target.name]: event.target.value };
+  function actualizarFiltro(nombre, valor) {
+    const nextFiltros = { ...filtros, [nombre]: valor };
     setFiltros(nextFiltros);
 
     const filtrosParaValidar = {
@@ -70,12 +62,35 @@ export function PaginaBusqueda() {
       q: ultimaBusqueda?.q ?? '',
     };
 
-    if (hasSearched && event.target.name !== 'q' && esBusquedaValida(filtrosParaValidar)) {
-      buscarConFiltros(nextFiltros);
+    if (hasSearched && nombre !== 'q' && esBusquedaValida(filtrosParaValidar)) {
+      buscarConFiltros(conFiltroDisponible(nextFiltros));
     }
   }
 
+  function handleSubmit(event) {
+    event.preventDefault();
+    buscar(conFiltroDisponible(filtros));
+  }
+
+  function handleChange(event) {
+    actualizarFiltro(event.target.name, event.target.value);
+  }
+
+  const filtroPerdido = filtros.soloPropias && filtroPropias.resuelto && !filtroPropias.disponible;
+
+  useEffect(() => {
+    if (!filtroPerdido) {
+      return;
+    }
+    const nextFiltros = { ...filtros, soloPropias: false };
+    setFiltros(nextFiltros);
+    if (ultimaBusqueda?.soloPropias && esBusquedaValida({ ...nextFiltros, q: ultimaBusqueda.q })) {
+      buscarConFiltros(nextFiltros);
+    }
+  }, [filtroPerdido, filtros, setFiltros, ultimaBusqueda, buscarConFiltros]);
+
   const tituloBuscado = ultimaBusqueda?.q ?? filtros.q.trim();
+  const busquedaFiltrada = Boolean(ultimaBusqueda?.soloPropias);
 
   return (
     <>
@@ -113,7 +128,9 @@ export function PaginaBusqueda() {
           />
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+        <div
+          className={`grid gap-5 sm:grid-cols-2 lg:items-end ${filtroPropias.visible ? 'lg:grid-cols-[1fr_1fr_auto_auto]' : 'lg:grid-cols-[1fr_1fr_auto]'}`}
+        >
           <div className="space-y-2">
             <label
               htmlFor="tipo"
@@ -157,6 +174,12 @@ export function PaginaBusqueda() {
             />
           </div>
 
+          <FiltroPlataformasPropias
+            filtro={filtroPropias}
+            activo={filtros.soloPropias}
+            onChange={(activo) => actualizarFiltro('soloPropias', activo)}
+          />
+
           <button
             type="submit"
             disabled={isLoading}
@@ -169,25 +192,46 @@ export function PaginaBusqueda() {
 
       <section>
         {isLoading && !isLoadingMore && (
-          <p
-            role="status"
-            aria-live="polite"
-            className="rounded-2xl border border-primary/30 bg-primary/10 p-5 text-primary"
-          >
-            Buscando títulos...
-          </p>
+          <>
+            <p role="status" aria-live="polite" className="sr-only">
+              {busquedaFiltrada ? 'Buscando en tus plataformas...' : 'Buscando títulos...'}
+            </p>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              {CARDS_ESQUELETO.map((indice) => (
+                <ResultadoCardCargando key={indice} />
+              ))}
+            </div>
+          </>
         )}
 
         {!isLoading && error && resultados.length === 0 && (
-          <p
+          <div
             role="alert"
-            className="rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
+            className="space-y-4 rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
           >
-            {error}
-          </p>
+            <p>{error}</p>
+            {busquedaFiltrada && (
+              <button
+                type="button"
+                onClick={() => buscar(ultimaBusqueda)}
+                className="rounded-xl border border-danger px-5 py-3 font-semibold transition hover:bg-danger/10 focus:ring-4 focus:ring-danger/30 focus:outline-none"
+              >
+                Reintentar
+              </button>
+            )}
+          </div>
         )}
 
-        {!isLoading && !error && hasSearched && resultados.length === 0 && (
+        {!isLoading && !error && hasSearched && resultados.length === 0 && busquedaFiltrada && (
+          <EstadoSinResultadosPropios
+            puedeSeguirBuscando={pagina < totalPaginas}
+            buscando={isLoadingMore}
+            onSeguirBuscando={cargarMas}
+            onVerTodos={() => actualizarFiltro('soloPropias', false)}
+          />
+        )}
+
+        {!isLoading && !error && hasSearched && resultados.length === 0 && !busquedaFiltrada && (
           <p
             role="status"
             aria-live="polite"
@@ -201,19 +245,29 @@ export function PaginaBusqueda() {
           <>
             <div className="mb-5 flex items-center justify-between gap-4">
               <h2 className="text-xl font-semibold">Resultados para &quot;{tituloBuscado}&quot;</h2>
-              <p className="text-sm text-muted">
-                Mostrando {resultados.length} de {totalResultados}{' '}
-                {totalResultados === 1 ? 'título' : 'títulos'}
+              <p role="status" aria-live="polite" className="text-sm text-muted">
+                {busquedaFiltrada
+                  ? 'Resultados encontrados para tus plataformas'
+                  : `Mostrando ${resultados.length} de ${totalResultados} ${totalResultados === 1 ? 'título' : 'títulos'}`}
               </p>
             </div>
+            {verificacionIncompleta && (
+              <p className="mb-5 rounded-xl bg-chip px-4 py-3 text-sm font-medium text-chip-foreground">
+                No pudimos verificar algunos títulos, puede que falten resultados.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               {resultados.map((resultado) => (
                 <ResultadoCard
                   key={`${resultado.tipo}-${resultado.tmdbId}`}
                   resultado={resultado}
-                  estadoBusqueda={estadoBusqueda}
+                  estadoBusqueda={estadoGuardable}
                 />
               ))}
+              {isLoadingMore &&
+                CARDS_ESQUELETO.map((indice) => (
+                  <ResultadoCardCargando key={`cargando-${indice}`} />
+                ))}
             </div>
             {pagina < totalPaginas && (
               <>

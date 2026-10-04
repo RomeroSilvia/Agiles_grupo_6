@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { renderRoute } from '../test/renderRoute.jsx';
 
 const resultadoDune = {
@@ -78,6 +78,51 @@ describe('router de la aplicación', () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Título')).toHaveValue('Dune');
     expect(screen.getByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+
+    const llamadasDeBusqueda = fetchMock.mock.calls.filter(([input]) => {
+      const url = new URL(input.toString(), window.location.origin);
+      return url.pathname === '/api/busqueda';
+    });
+    expect(llamadasDeBusqueda).toHaveLength(1);
+  });
+
+  it('restaura la búsqueda y su desplazamiento al usar Atrás del navegador', async () => {
+    const fetchMock = configurarFetch();
+    const user = userEvent.setup();
+    let scrollPosition = 0;
+    vi.stubGlobal('scrollY', 0);
+    vi.stubGlobal(
+      'scrollTo',
+      vi.fn((_x, y) => {
+        scrollPosition = y;
+        window.scrollY = y;
+      }),
+    );
+
+    const router = renderRoute('/');
+
+    await user.type(screen.getByLabelText('Título'), 'Dune');
+    await user.selectOptions(screen.getByLabelText('Tipo'), 'pelicula');
+    await user.type(screen.getByLabelText('Año'), '2021');
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+
+    scrollPosition = 640;
+    window.scrollY = scrollPosition;
+    await user.click(screen.getByRole('link', { name: 'Ver detalle de Dune' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dune' })).toBeInTheDocument();
+    await waitFor(() => expect(scrollPosition).toBe(0));
+
+    await act(async () => {
+      await router.navigate(-1);
+    });
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Título')).toHaveValue('Dune');
+    expect(screen.getByLabelText('Tipo')).toHaveValue('pelicula');
+    expect(screen.getByLabelText('Año')).toHaveValue(2021);
+    expect(screen.getByText('Mostrando 1 de 1 título')).toBeInTheDocument();
+    await waitFor(() => expect(scrollPosition).toBe(640));
 
     const llamadasDeBusqueda = fetchMock.mock.calls.filter(([input]) => {
       const url = new URL(input.toString(), window.location.origin);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
 import { useSession } from '../contexts/session/SessionContext.js';
 import { useRegion } from '../contexts/region/RegionContext.js';
 import { Logo } from '../components/ui/Logo.jsx';
@@ -90,6 +90,7 @@ export function MainLayout() {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <ScrollRestoration />
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3">
           <Link to="/" aria-label="Streamly, ir al inicio" className={`rounded-sm ${focusRing}`}>

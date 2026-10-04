@@ -114,26 +114,6 @@ describe('PaginaDetalleTitulo', () => {
     expect(screen.getByText('Puntuación no disponible')).toBeInTheDocument();
   });
 
-  it('vuelve a la búsqueda conservando el estado de navegación', async () => {
-    configurarFetch();
-    renderDetalle('/titulos/pelicula/1', {
-      busqueda: {
-        filtros: { q: 'Dune', tipo: '', anio: '' },
-        resultados: [detallePelicula],
-        pagina: 1,
-        totalResultados: 1,
-        totalPaginas: 1,
-        hasSearched: true,
-        ultimaBusqueda: { q: 'Dune', tipo: '', anio: '' },
-      },
-    });
-
-    await screen.findByRole('heading', { level: 1, name: 'Dune' });
-    fireEvent.click(screen.getByRole('link', { name: 'Volver a la búsqueda' }));
-
-    expect(await screen.findByText('Resultados de la búsqueda')).toBeInTheDocument();
-  });
-
   it('aborta la consulta anterior al navegar rápidamente a otro título', async () => {
     let llamada = 0;
     let resolverSegundoTitulo;

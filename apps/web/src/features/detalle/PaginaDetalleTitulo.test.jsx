@@ -340,4 +340,35 @@ describe('PaginaDetalleTitulo', () => {
       expect(await screen.findByText('Netflix')).toBeInTheDocument();
     });
   });
+
+  describe('Atribución a fuente de datos (E6HU3)', () => {
+    it('muestra de forma visible la atribución a TMDB y JustWatch junto a la disponibilidad', async () => {
+      configurarFetch(detallePelicula, {
+        region: 'AR',
+        plataformas: [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+          },
+        ],
+      });
+
+      renderDetalle();
+
+      expect(await screen.findByText('Netflix')).toBeInTheDocument();
+      expect(screen.getByText(/Datos de títulos provistos por/i)).toBeInTheDocument();
+      expect(screen.getByText(/datos de disponibilidad provistos por/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'TMDB' })).toHaveAttribute(
+        'href',
+        'https://www.themoviedb.org',
+      );
+      expect(screen.getByRole('link', { name: 'JustWatch' })).toHaveAttribute(
+        'href',
+        'https://www.justwatch.com',
+      );
+    });
+  });
 });

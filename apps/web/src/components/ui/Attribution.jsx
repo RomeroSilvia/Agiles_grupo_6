@@ -2,9 +2,9 @@
  * Atribución obligatoria por los términos de uso de TMDB y JustWatch (E6HU3).
  * No quitar: su ausencia puede derivar en la revocación del acceso a la API.
  */
-export function Attribution() {
+export function Attribution({ className = 'text-xs leading-5 text-muted' } = {}) {
   return (
-    <p className="text-xs leading-5 text-muted">
+    <p className={className}>
       Datos de títulos provistos por{' '}
       <a href="https://www.themoviedb.org" className="underline" target="_blank" rel="noreferrer">
         TMDB

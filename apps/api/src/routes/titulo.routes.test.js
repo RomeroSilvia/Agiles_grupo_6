@@ -9,6 +9,7 @@ vi.mock('../integrations/tmdb.integration.js', () => ({
   buscarSeries: vi.fn(),
   obtenerPelicula: vi.fn(),
   obtenerSerie: vi.fn(),
+  obtenerDisponibilidad: vi.fn(),
 }));
 
 const detallePelicula = {
@@ -35,6 +36,58 @@ beforeEach(() => {
   vi.clearAllMocks();
   tmdbIntegration.obtenerPelicula.mockResolvedValue(detallePelicula);
   tmdbIntegration.obtenerSerie.mockResolvedValue(detalleSerie);
+  tmdbIntegration.obtenerDisponibilidad.mockResolvedValue({
+    region: 'BR',
+    ofertas: [
+      {
+        tipoOferta: 'suscripcion',
+        plataformas: [
+          { tmdbProviderId: 8, nombre: 'Netflix', logoUrl: 'https://image.tmdb.org/t/p/w92/n.jpg' },
+        ],
+      },
+    ],
+    enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch?locale=BR',
+  });
+});
+
+describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
+  it('consulta la disponibilidad con la región recibida del contexto', async () => {
+    const res = await request(createApp())
+      .get('/api/titulos/pelicula/1/disponibilidad')
+      .query({ region: 'BR' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.region).toBe('BR');
+    expect(res.body.data.ofertas[0].plataformas[0].nombre).toBe('Netflix');
+    expect(tmdbIntegration.obtenerDisponibilidad).toHaveBeenCalledWith({
+      tipo: 'pelicula',
+      tmdbId: 1,
+      region: 'BR',
+    });
+  });
+
+  it('rechaza una región inválida antes de consultar TMDB', async () => {
+    const res = await request(createApp())
+      .get('/api/titulos/serie/2/disponibilidad')
+      .query({ region: 'Argentina' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
+    expect(tmdbIntegration.obtenerDisponibilidad).not.toHaveBeenCalled();
+  });
+
+  it('devuelve un error cuando falla la consulta de disponibilidad', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    tmdbIntegration.obtenerDisponibilidad.mockRejectedValueOnce(new ExternalServiceError('TMDB'));
+
+    const res = await request(createApp())
+      .get('/api/titulos/serie/2/disponibilidad')
+      .query({ region: 'BR' });
+
+    expect(res.status).toBe(502);
+    expect(res.body.error.code).toBe('EXTERNAL_SERVICE');
+    consoleError.mockRestore();
+  });
 });
 
 describe('GET /api/titulos/:tipo/:tmdbId', () => {

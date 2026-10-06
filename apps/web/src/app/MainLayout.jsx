@@ -77,7 +77,7 @@ function AccionesDeSesion() {
 }
 
 export function MainLayout() {
-  const { region } = useRegion();
+  const { region, source, loading: regionLoading } = useRegion();
   const { user, signOut } = useSession();
   const [menuAbierto, setMenuAbierto] = useState(false);
 
@@ -102,12 +102,14 @@ export function MainLayout() {
             </nav>
           )}
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <span
-              aria-label={`Región: ${region}`}
-              className="hidden rounded-full bg-chip px-3 py-1 font-mono text-xs font-medium text-chip-foreground sm:inline-flex"
-            >
-              {region}
-            </span>
+            {!regionLoading && (
+              <span
+                aria-label={`${source === 'default' ? 'Región predeterminada' : 'Región'}: ${region}`}
+                className="hidden rounded-full bg-chip px-3 py-1 font-mono text-xs font-medium text-chip-foreground sm:inline-flex"
+              >
+                {region}
+              </span>
+            )}
             <ThemeToggle />
             <AccionesDeSesion />
             {user && (

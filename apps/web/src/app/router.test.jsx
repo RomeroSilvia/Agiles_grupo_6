@@ -47,6 +47,13 @@ function configurarFetch() {
       return Promise.resolve({ ok: true, json: async () => ({ data: detalleDune }) });
     }
 
+    if (url.pathname === '/api/titulos/pelicula/1/disponibilidad') {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: { region: 'AR', ofertas: [], enlaceTmdb: null } }),
+      });
+    }
+
     throw new Error(`URL no mockeada: ${url.pathname}`);
   });
 

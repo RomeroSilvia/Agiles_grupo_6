@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-const METODOS = ['select', 'eq', 'order', 'upsert', 'delete', 'maybeSingle'];
+const METODOS = ['select', 'eq', 'is', 'order', 'upsert', 'update', 'delete', 'maybeSingle'];
 
 export const SIN_DATOS = { data: null, error: null };
 export const FALLO = { data: null, error: { message: 'caída' } };

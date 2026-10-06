@@ -51,8 +51,18 @@ serie. `tipo` puede ser `pelicula` o `serie`, y `tmdbId` es el identificador num
 La respuesta contiene `{ data: ... }` con nombre, sinopsis, póster, año y puntuación. Si TMDB no
 encuentra el título, la API responde `404` con el código `NOT_FOUND`.
 
-La pantalla actual incluye la búsqueda y el detalle de títulos; todavía no incluye disponibilidad,
-watchlist ni redirección a plataformas.
+La pantalla de detalle también muestra la disponibilidad de TMDB/JustWatch para la región del usuario.
+La API expone `GET /api/region`, que consulta la IP desde el backend y devuelve
+`{ data: { region, source } }`. Para usuarios autenticados reutiliza `perfil.region`; si aún está
+vacío, guarda el país detectado. El servicio de país usado es `https://api.country.is` y no
+requiere una clave nueva. Si no se puede detectar, devuelve `DEFAULT_REGION` con
+`source: "default"` y la pantalla lo indica. En desarrollo local, la IP suele ser local y se
+aplica ese respaldo. Si la API corre detrás de un proxy, configurar `TRUST_PROXY` en
+`apps/api/.env` con la IP o subred del proxy de confianza.
+
+`GET /api/titulos/:tipo/:tmdbId/disponibilidad?region=BR` consulta la disponibilidad del país
+indicado por el contexto de región. La página de detalle ofrece el enlace de TMDB cuando
+está disponible. Los deep links directos a las plataformas y la watchlist todavía no están implementados.
 
 Los tokens visuales basados en el Figma están definidos en
 `apps/web/src/styles.css` y contemplan los modos claro y oscuro.

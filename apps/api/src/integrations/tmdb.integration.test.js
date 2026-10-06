@@ -9,12 +9,62 @@ import {
   buscarSeries,
   obtenerPelicula,
   obtenerSerie,
+  obtenerDisponibilidad,
 } from './tmdb.integration.js';
 import { env } from '../config/env.config.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
   env.TMDB_API_KEY = 'clave-prueba';
+});
+
+describe('disponibilidad de TMDB', () => {
+  it('selecciona solamente el país solicitado y normaliza las ofertas', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: {
+          AR: { flatrate: [{ provider_id: 337, provider_name: 'Disney Plus' }] },
+          BR: {
+            link: 'https://www.themoviedb.org/movie/1/watch?locale=BR',
+            flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/n.jpg' }],
+          },
+        },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const data = await obtenerDisponibilidad({ tipo: 'pelicula', tmdbId: 1, region: 'BR' });
+
+    expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/movie/1/watch/providers');
+    expect(data).toEqual({
+      region: 'BR',
+      ofertas: [
+        {
+          tipoOferta: 'suscripcion',
+          plataformas: [
+            {
+              tmdbProviderId: 8,
+              nombre: 'Netflix',
+              logoUrl: 'https://image.tmdb.org/t/p/w92/n.jpg',
+            },
+          ],
+        },
+      ],
+      enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch?locale=BR',
+    });
+  });
+
+  it('devuelve una lista vacía si el título no tiene disponibilidad en el país', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: { AR: {} } }) }),
+    );
+
+    await expect(
+      obtenerDisponibilidad({ tipo: 'serie', tmdbId: 2, region: 'UY' }),
+    ).resolves.toEqual({ region: 'UY', ofertas: [], enlaceTmdb: null });
+  });
 });
 
 describe('tmdb.integration', () => {

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Router } from 'express';
 import { TIPOS_TITULO } from '@buscador/shared/constants';
+import { regionSchema } from '@buscador/shared/schemas';
 import * as tituloController from '../controllers/titulo.controller.js';
 import { validate } from '../middlewares/validate.middleware.js';
 
@@ -10,6 +11,12 @@ const tituloParamsSchema = z.object({
 });
 
 export const tituloRoutes = Router();
+
+tituloRoutes.get(
+  '/:tipo/:tmdbId/disponibilidad',
+  validate({ params: tituloParamsSchema, query: z.object({ region: regionSchema }) }),
+  tituloController.obtenerDisponibilidad,
+);
 
 tituloRoutes.get(
   '/:tipo/:tmdbId',

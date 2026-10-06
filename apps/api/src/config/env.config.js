@@ -8,6 +8,7 @@ const envSchema = z.object({
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   SUPABASE_SECRET_KEY: z.string().min(1),
   FRONTEND_URL: z.url().default('http://localhost:5173'),
+  TRUST_PROXY: z.string().trim().min(1).optional(),
   DEFAULT_REGION: z.string().regex(REGION_PATTERN).default('AR'),
   TMDB_API_KEY: z.string().optional(),
   STREAMING_AVAILABILITY_API_KEY: z.string().optional(),

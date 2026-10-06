@@ -1,5 +1,8 @@
 import { Link, useLocation, useParams } from 'react-router';
 import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
+import { useRegion } from '../../contexts/region/RegionContext.js';
+import { Attribution } from '../../components/ui/Attribution.jsx';
+import { useDisponibilidad } from './useDisponibilidad.js';
 
 const LINK_VOLVER_CLASS_NAME =
   'font-semibold text-link underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
@@ -7,6 +10,14 @@ const LINK_VOLVER_CLASS_NAME =
 const ETIQUETAS_TIPO = {
   pelicula: 'Película',
   serie: 'Serie',
+};
+
+const ETIQUETAS_OFERTA = {
+  suscripcion: 'Suscripción',
+  gratis: 'Gratis',
+  con_anuncios: 'Con anuncios',
+  alquiler: 'Alquiler',
+  compra: 'Compra',
 };
 
 function formatearPuntuacion(puntuacion) {
@@ -19,6 +30,12 @@ export function PaginaDetalleTitulo() {
   const location = useLocation();
   const { tipo, tmdbId } = useParams();
   const { titulo, isLoading, error } = useDetalleTitulo({ tipo, tmdbId });
+  const { region, source, loading: regionLoading } = useRegion();
+  const {
+    disponibilidad,
+    isLoading: disponibilidadLoading,
+    error: disponibilidadError,
+  } = useDisponibilidad({ tipo, tmdbId, region, regionLoading });
   const estadoBusqueda = location.state?.busqueda;
 
   if (isLoading) {
@@ -111,6 +128,58 @@ export function PaginaDetalleTitulo() {
           </div>
         </div>
       </article>
+
+      <section className="space-y-4 rounded-3xl border border-border bg-surface p-5 sm:p-8 dark:bg-surface">
+        <h2 className="text-xl font-semibold">Disponibilidad en {region}</h2>
+        {!regionLoading && source === 'default' && (
+          <p className="text-sm text-muted">
+            No pudimos detectar tu región. Mostramos la región predeterminada {region}.
+          </p>
+        )}
+        {regionLoading ? (
+          <p role="status">Detectando región...</p>
+        ) : disponibilidadLoading ? (
+          <p role="status">Consultando disponibilidad...</p>
+        ) : disponibilidadError ? (
+          <p role="alert" className="text-danger">
+            {disponibilidadError}
+          </p>
+        ) : disponibilidad?.ofertas.length ? (
+          <div className="space-y-5">
+            {disponibilidad.ofertas.map(({ tipoOferta, plataformas }) => (
+              <div key={tipoOferta} className="space-y-2">
+                <h3 className="font-semibold">{ETIQUETAS_OFERTA[tipoOferta]}</h3>
+                <ul className="flex flex-wrap gap-2">
+                  {plataformas.map((plataforma) => (
+                    <li
+                      key={plataforma.tmdbProviderId}
+                      className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm dark:bg-background"
+                    >
+                      {plataforma.logoUrl && (
+                        <img src={plataforma.logoUrl} alt="" className="size-6 rounded" />
+                      )}
+                      {plataforma.nombre}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            {disponibilidad.enlaceTmdb && (
+              <a
+                href={disponibilidad.enlaceTmdb}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={LINK_VOLVER_CLASS_NAME}
+              >
+                Ver opciones en TMDB
+              </a>
+            )}
+          </div>
+        ) : (
+          <p>No encontramos disponibilidad para este título en {region}.</p>
+        )}
+        <Attribution />
+      </section>
     </section>
   );
 }

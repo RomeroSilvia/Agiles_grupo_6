@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
+import { RegionContext } from '../../contexts/region/RegionContext.js';
 import { PaginaDetalleTitulo } from './PaginaDetalleTitulo.jsx';
 
 const detallePelicula = {
@@ -13,21 +14,39 @@ const detallePelicula = {
   puntuacion: 8.1,
 };
 
-function renderDetalle(path = '/titulos/pelicula/1', state) {
+const disponibilidad = {
+  region: 'BR',
+  ofertas: [
+    {
+      tipoOferta: 'suscripcion',
+      plataformas: [{ tmdbProviderId: 8, nombre: 'Netflix', logoUrl: null }],
+    },
+  ],
+  enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch?locale=BR',
+};
+
+const regionDetectada = { region: 'BR', source: 'ip', loading: false };
+
+function renderDetalle(path = '/titulos/pelicula/1', state, regionState = regionDetectada) {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
-      <Routes>
-        <Route path="/" element={<p>Resultados de la búsqueda</p>} />
-        <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetalleTitulo />} />
-      </Routes>
-    </MemoryRouter>,
+    <RegionContext.Provider value={regionState}>
+      <MemoryRouter initialEntries={[{ pathname: path, state }]}>
+        <Routes>
+          <Route path="/" element={<p>Resultados de la búsqueda</p>} />
+          <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetalleTitulo />} />
+        </Routes>
+      </MemoryRouter>
+    </RegionContext.Provider>,
   );
 }
 
 function configurarFetch(data = detallePelicula) {
-  const fetchMock = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ data }),
+  const fetchMock = vi.fn().mockImplementation(async (input) => {
+    const pathname = new URL(input.toString()).pathname;
+    return {
+      ok: true,
+      json: async () => ({ data: pathname.endsWith('/disponibilidad') ? disponibilidad : data }),
+    };
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
@@ -52,16 +71,43 @@ describe('PaginaDetalleTitulo', () => {
       detallePelicula.posterUrl,
     );
     expect(fetchMock.mock.calls[0][0].toString()).toContain('/api/titulos/pelicula/1');
+    expect(await screen.findByText('Netflix')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Disponibilidad en BR' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver opciones en TMDB' })).toHaveAttribute(
+      'href',
+      disponibilidad.enlaceTmdb,
+    );
+    const consulta = fetchMock.mock.calls.find(([input]) =>
+      input.toString().includes('/disponibilidad'),
+    );
+    expect(new URL(consulta[0]).searchParams.get('region')).toBe('BR');
+  });
+
+  it('identifica cuando muestra la región predeterminada', async () => {
+    configurarFetch();
+    renderDetalle('/titulos/pelicula/1', undefined, {
+      region: 'AR',
+      source: 'default',
+      loading: false,
+    });
+
+    expect(
+      await screen.findByText(
+        'No pudimos detectar tu región. Mostramos la región predeterminada AR.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('muestra el estado de carga', async () => {
     let resolver;
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockReturnValue(
-        new Promise((resolve) => {
-          resolver = resolve;
-        }),
+      vi.fn().mockImplementation((input) =>
+        input.toString().includes('/disponibilidad')
+          ? Promise.resolve({ ok: true, json: async () => ({ data: disponibilidad }) })
+          : new Promise((resolve) => {
+              resolver = resolve;
+            }),
       ),
     );
 
@@ -118,7 +164,10 @@ describe('PaginaDetalleTitulo', () => {
     let llamada = 0;
     let resolverSegundoTitulo;
     const señales = [];
-    const fetchMock = vi.fn((_url, options) => {
+    const fetchMock = vi.fn((url, options) => {
+      if (url.toString().includes('/disponibilidad')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: disponibilidad }) });
+      }
       llamada += 1;
       señales.push(options.signal);
 
@@ -148,24 +197,26 @@ describe('PaginaDetalleTitulo', () => {
     }
 
     render(
-      <MemoryRouter initialEntries={['/titulos/pelicula/1']}>
-        <Routes>
-          <Route
-            path="/titulos/:tipo/:tmdbId"
-            element={
-              <>
-                <PaginaDetalleTitulo />
-                <CambiarTitulo />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>,
+      <RegionContext.Provider value={regionDetectada}>
+        <MemoryRouter initialEntries={['/titulos/pelicula/1']}>
+          <Routes>
+            <Route
+              path="/titulos/:tipo/:tmdbId"
+              element={
+                <>
+                  <PaginaDetalleTitulo />
+                  <CambiarTitulo />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </RegionContext.Provider>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver otro título' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(llamada).toBe(2));
     expect(señales[0].aborted).toBe(true);
 
     resolverSegundoTitulo({

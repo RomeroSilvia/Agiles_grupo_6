@@ -114,14 +114,7 @@ export function useBusqueda(estadoGuardado) {
     return () => abortControllerRef.current?.abort();
   }, []);
 
-  const {
-    filtros,
-    resultados,
-    totalResultados,
-    hasSearched,
-    ultimaBusqueda,
-    verificacionIncompleta,
-  } = estado;
+  const { filtros, resultados, totalResultados, hasSearched, ultimaBusqueda } = estado;
 
   const estadoGuardable = useMemo(
     () => ({
@@ -132,18 +125,8 @@ export function useBusqueda(estadoGuardado) {
       totalPaginas,
       hasSearched,
       ultimaBusqueda,
-      verificacionIncompleta,
     }),
-    [
-      filtros,
-      resultados,
-      pagina,
-      totalResultados,
-      totalPaginas,
-      hasSearched,
-      ultimaBusqueda,
-      verificacionIncompleta,
-    ],
+    [filtros, resultados, pagina, totalResultados, totalPaginas, hasSearched, ultimaBusqueda],
   );
 
   return {

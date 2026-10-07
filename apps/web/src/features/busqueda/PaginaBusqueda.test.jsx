@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render as renderComponent, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render as renderComponent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { SessionContext } from '../../contexts/session/SessionContext.js';
 import { PlataformasPropiasContext } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
@@ -263,15 +269,13 @@ describe('PaginaBusqueda', () => {
 
 const NETFLIX = { id: 1, tmdbProviderId: 8, nombre: 'Netflix', logoPath: null };
 
-function respuestaFiltrada({ resultados, pagina = 1, totalPaginas = 1, ...resto }) {
+function respuestaFiltrada({ resultados, pagina = 1, totalPaginas = 1 }) {
   return {
     data: {
       resultados,
       pagina,
       totalPaginas,
       totalResultados: 20000,
-      verificacionIncompleta: false,
-      ...resto,
     },
   };
 }
@@ -376,17 +380,6 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
     expect(new URL(fetchMock.mock.calls[1][0]).searchParams.get('pagina')).toBe('2');
   });
 
-  it('avisa si no se pudieron verificar algunos títulos', async () => {
-    configurarFetch(respuestaFiltrada({ resultados: [duneEn()], verificacionIncompleta: true }));
-    renderConPlataformas();
-
-    await activarFiltroYBuscar();
-
-    expect(
-      await screen.findByText('No pudimos verificar algunos títulos, puede que falten resultados.'),
-    ).toBeInTheDocument();
-  });
-
   it('sin resultados en las plataformas propias lo informa y permite ver todos', async () => {
     configurarFetch(respuestaFiltrada({ resultados: [] }));
     renderConPlataformas();
@@ -422,6 +415,24 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     expect(rutaPedida(1)).toBe('/api/busqueda/propias');
     expect(new URL(fetch.mock.calls[1][0]).searchParams.get('pagina')).toBe('3');
+  });
+
+  it('mientras sigue buscando mantiene el aviso y muestra que está buscando', async () => {
+    configurarFetch(respuestaFiltrada({ resultados: [], pagina: 2, totalPaginas: 5 }));
+    renderConPlataformas();
+
+    await activarFiltroYBuscar();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {})),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Seguir buscando' }));
+
+    const aviso = screen.getByText(
+      'Ninguno de los títulos encontrados está disponible en tus plataformas.',
+    ).parentElement;
+    expect(await within(aviso).findByRole('button', { name: 'Buscando...' })).toBeDisabled();
   });
 
   it('si falla el filtrado informa el error y permite reintentar', async () => {

@@ -10,7 +10,6 @@ const RESULTADOS_VACIOS = Object.freeze({
   pagina: 1,
   totalResultados: 0,
   totalPaginas: 0,
-  verificacionIncompleta: false,
 });
 
 export const ACCIONES_BUSQUEDA = Object.freeze({
@@ -62,7 +61,6 @@ export function obtenerEstadoInicial(estadoGuardado) {
     pagina: enteroGuardado(estadoGuardado.pagina, 1),
     totalResultados: totalGuardado(estadoGuardado.totalResultados),
     totalPaginas: totalGuardado(estadoGuardado.totalPaginas),
-    verificacionIncompleta: Boolean(estadoGuardado.verificacionIncompleta),
     hasSearched: Boolean(estadoGuardado.hasSearched),
     ultimaBusqueda:
       estadoGuardado.ultimaBusqueda && typeof estadoGuardado.ultimaBusqueda === 'object'
@@ -128,9 +126,6 @@ export function busquedaReducer(estado, accion) {
           pagina: accion.data.pagina,
           totalResultados: accion.data.totalResultados,
           totalPaginas: accion.data.totalPaginas,
-          verificacionIncompleta:
-            (accion.acumular && estado.verificacionIncompleta) ||
-            Boolean(accion.data.verificacionIncompleta),
         },
         accion.acumular,
       );

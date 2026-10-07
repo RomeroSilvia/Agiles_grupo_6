@@ -10,7 +10,6 @@ function respuestaVacia(pagina) {
     pagina,
     totalPaginas: 0,
     totalResultados: 0,
-    verificacionIncompleta: false,
   };
 }
 
@@ -32,7 +31,6 @@ async function filtrarPagina({ filtros, pagina, region, plataformas }) {
   return {
     totalPaginas,
     totalResultados,
-    verificacionIncompleta: disponibilidades.some(({ verificado }) => !verificado),
     resultados: resultados
       .map((titulo, indice) => ({ ...titulo, plataformas: disponibilidades[indice].plataformas }))
       .filter((titulo) => titulo.plataformas.length > 0),
@@ -59,7 +57,6 @@ export async function buscarTitulosEnPlataformasPropias({ filtros, usuarioId, re
     respuesta.pagina = pagina;
     respuesta.totalPaginas = filtrada.totalPaginas;
     respuesta.totalResultados = filtrada.totalResultados;
-    respuesta.verificacionIncompleta ||= filtrada.verificacionIncompleta;
     respuesta.resultados.push(...filtrada.resultados);
 
     const ultimaPagina = Math.min(filtrada.totalPaginas, PAGINA_MAXIMA_TMDB);

@@ -17,6 +17,9 @@ export const ESTADOS_NOTIFICACION = ['pendiente', 'enviada', 'fallida'];
 // Valores técnicos
 export const DEFAULT_REGION = 'AR';
 
+export const FUENTE_REGION = Object.freeze({ PERFIL: 'profile', IP: 'ip', DEFAULT: 'default' });
+export const FUENTES_REGION = Object.values(FUENTE_REGION);
+
 // Código de país ISO 3166-1 alfa-2, igual que el CHECK de perfil.region
 export const REGION_PATTERN = /^[A-Z]{2}$/;
 

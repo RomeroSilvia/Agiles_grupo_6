@@ -1,3 +1,4 @@
+import { FUENTE_REGION } from '@buscador/shared/constants';
 import { Link, useLocation, useParams } from 'react-router';
 import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
@@ -131,7 +132,7 @@ export function PaginaDetalleTitulo() {
 
       <section className="space-y-4 rounded-3xl border border-border bg-surface p-5 sm:p-8 dark:bg-surface">
         <h2 className="text-xl font-semibold">Disponibilidad en {region}</h2>
-        {!regionLoading && source === 'default' && (
+        {!regionLoading && source === FUENTE_REGION.DEFAULT && (
           <p className="text-sm text-muted">
             No pudimos detectar tu región. Mostramos la región predeterminada {region}.
           </p>

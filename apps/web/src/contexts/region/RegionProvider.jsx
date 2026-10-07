@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DEFAULT_REGION } from '@buscador/shared/constants';
+import { DEFAULT_REGION, FUENTE_REGION, FUENTES_REGION } from '@buscador/shared/constants';
 import { regionSchema } from '@buscador/shared/schemas';
 import { request } from '../../services/api.service.js';
 import { useSession } from '../session/SessionContext.js';
@@ -9,7 +9,11 @@ import { RegionContext } from './RegionContext.js';
 export function RegionProvider({ children }) {
   const { user, loading: sessionLoading } = useSession();
   const identity = user?.id ?? 'guest';
-  const [state, setState] = useState({ identity: null, region: DEFAULT_REGION, source: 'default' });
+  const [state, setState] = useState({
+    identity: null,
+    region: DEFAULT_REGION,
+    source: FUENTE_REGION.DEFAULT,
+  });
   const loading = sessionLoading || state.identity !== identity;
 
   useEffect(() => {
@@ -21,16 +25,17 @@ export function RegionProvider({ children }) {
       .then((data) => {
         if (!cancelled) {
           const region = regionSchema.safeParse(data?.region);
-          setState({
-            identity,
-            region: region.success ? region.data : DEFAULT_REGION,
-            source: region.success ? data.source : 'default',
-          });
+          const source = FUENTES_REGION.includes(data?.source) ? data.source : null;
+          setState(
+            region.success && source
+              ? { identity, region: region.data, source }
+              : { identity, region: DEFAULT_REGION, source: FUENTE_REGION.DEFAULT },
+          );
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setState({ identity, region: DEFAULT_REGION, source: 'default' });
+          setState({ identity, region: DEFAULT_REGION, source: FUENTE_REGION.DEFAULT });
         }
       });
     return () => {

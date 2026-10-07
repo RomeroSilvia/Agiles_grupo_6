@@ -53,4 +53,12 @@ describe('RegionProvider', () => {
 
     expect(await screen.findByText('AR: default')).toBeInTheDocument();
   });
+
+  it('descarta una fuente desconocida del contrato de la API', async () => {
+    request.mockResolvedValueOnce({ region: 'BR', source: 'desconocida' });
+
+    renderConSesion();
+
+    expect(await screen.findByText('AR: default')).toBeInTheDocument();
+  });
 });

@@ -9,10 +9,10 @@ export async function obtenerRegion(usuarioId) {
     .eq('id', usuarioId)
     .maybeSingle();
 
-  if (error || !data) {
-    throw new DatabaseError(error ?? new Error('No se encontró el perfil del usuario'));
+  if (error) {
+    throw new DatabaseError(error);
   }
-  return fromRow(data).region;
+  return data ? fromRow(data).region : null;
 }
 
 export async function guardarRegionSiVacia(usuarioId, region) {

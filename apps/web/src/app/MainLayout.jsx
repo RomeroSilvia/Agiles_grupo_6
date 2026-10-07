@@ -1,3 +1,4 @@
+import { FUENTE_REGION } from '@buscador/shared/constants';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
 import { useSession } from '../contexts/session/SessionContext.js';
@@ -104,7 +105,7 @@ export function MainLayout() {
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             {!regionLoading && (
               <span
-                aria-label={`${source === 'default' ? 'Región predeterminada' : 'Región'}: ${region}`}
+                aria-label={`${source === FUENTE_REGION.DEFAULT ? 'Región predeterminada' : 'Región'}: ${region}`}
                 className="hidden rounded-full bg-chip px-3 py-1 font-mono text-xs font-medium text-chip-foreground sm:inline-flex"
               >
                 {region}

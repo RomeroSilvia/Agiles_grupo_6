@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { env } from '../config/env.config.js';
@@ -19,6 +19,8 @@ beforeEach(() => {
   perfilRepository.obtenerRegion.mockResolvedValue(null);
   perfilRepository.guardarRegionSiVacia.mockResolvedValue('UY');
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('GET /api/region', () => {
   it('detecta el país por IP sin consultar Supabase para visitantes', async () => {
@@ -53,6 +55,19 @@ describe('GET /api/region', () => {
     expect(perfilRepository.guardarRegionSiVacia).toHaveBeenCalledWith(USUARIO.id, 'UY');
   });
 
+  it('usa la región de la IP si el usuario todavía no tiene un perfil', async () => {
+    perfilRepository.guardarRegionSiVacia.mockResolvedValue(null);
+
+    const res = await request(createApp())
+      .get('/api/region')
+      .set('Cookie', 'access_token=access-de-prueba');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ data: { region: 'UY', source: 'ip' } });
+    expect(perfilRepository.obtenerRegion).toHaveBeenCalledTimes(2);
+    expect(perfilRepository.guardarRegionSiVacia).toHaveBeenCalledWith(USUARIO.id, 'UY');
+  });
+
   it('usa la región que guardó otra solicitud si hubo una carrera', async () => {
     perfilRepository.guardarRegionSiVacia.mockResolvedValue(null);
     perfilRepository.obtenerRegion.mockResolvedValueOnce(null).mockResolvedValueOnce('BR');
@@ -65,15 +80,16 @@ describe('GET /api/region', () => {
   });
 
   it('identifica el fallback configurado cuando falla la detección', async () => {
-    geoipIntegration.getRegionByIp.mockRejectedValue(
-      new ExternalServiceError('la ubicación por IP', new Error('sin conexión')),
-    );
+    const error = new ExternalServiceError('la ubicación por IP', new Error('sin conexión'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    geoipIntegration.getRegionByIp.mockRejectedValue(error);
 
     const res = await request(createApp()).get('/api/region');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: { region: env.DEFAULT_REGION, source: 'default' } });
     expect(perfilRepository.guardarRegionSiVacia).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('No se pudo detectar la región por IP', error);
   });
 
   it('no hace detección en una ruta que no requiere región', async () => {

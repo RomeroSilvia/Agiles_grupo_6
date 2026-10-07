@@ -19,6 +19,12 @@ describe('perfil.repository', () => {
     expect(builder.eq).toHaveBeenCalledWith('id', USUARIO.id);
   });
 
+  it('devuelve null cuando no existe un perfil para el usuario', async () => {
+    mockearConsulta(supabaseAdmin.from, { data: null, error: null });
+
+    await expect(perfilRepository.obtenerRegion(USUARIO.id)).resolves.toBeNull();
+  });
+
   it('solo guarda la región si todavía no hay una en el perfil', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, { data: { region: 'UY' }, error: null });
 

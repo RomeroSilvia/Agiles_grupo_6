@@ -1,5 +1,5 @@
 import { env } from '../config/env.config.js';
-import { FILTRO_PLATAFORMAS } from '../config/busqueda.config.js';
+import { TMDB_CONFIG } from '../config/tmdb.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 import { createTtlCache } from '../utils/ttlCache.js';
@@ -22,11 +22,11 @@ const TIPO_OFERTA_POR_CLAVE_TMDB = Object.freeze({
   buy: TIPO_OFERTA.COMPRA,
 });
 
-const limitarConcurrencia = createConcurrencyLimiter(FILTRO_PLATAFORMAS.CONCURRENCIA_TMDB);
+const limitarConcurrencia = createConcurrencyLimiter(TMDB_CONFIG.MAX_CONCURRENT_REQUESTS);
 
 const ofertasCache = createTtlCache({
-  ttlMs: FILTRO_PLATAFORMAS.TTL_CACHE_MS,
-  maxEntries: FILTRO_PLATAFORMAS.MAX_ENTRADAS_CACHE,
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
 });
 
 function tmdbRequest(path, params) {

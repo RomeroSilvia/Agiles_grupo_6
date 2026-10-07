@@ -1,4 +1,5 @@
-import { FILTRO_PLATAFORMAS, PAGINA_MAXIMA_TMDB } from '../config/busqueda.config.js';
+import { PAGINA_MAXIMA } from '@buscador/shared/constants';
+import { FILTRO_PLATAFORMAS } from '../config/busqueda.config.js';
 import { ExternalServiceError } from '../errors/index.js';
 import * as usuarioPlataformaRepository from '../repositories/usuarioPlataforma.repository.js';
 import * as busquedaService from './busqueda.service.js';
@@ -59,7 +60,7 @@ export async function buscarTitulosEnPlataformasPropias({ filtros, usuarioId, re
     respuesta.totalResultados = filtrada.totalResultados;
     respuesta.resultados.push(...filtrada.resultados);
 
-    const ultimaPagina = Math.min(filtrada.totalPaginas, PAGINA_MAXIMA_TMDB);
+    const ultimaPagina = Math.min(filtrada.totalPaginas, PAGINA_MAXIMA);
     if (
       respuesta.resultados.length >= FILTRO_PLATAFORMAS.RESULTADOS_OBJETIVO ||
       pagina >= ultimaPagina

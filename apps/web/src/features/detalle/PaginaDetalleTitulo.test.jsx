@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { PaginaDetalleTitulo } from './PaginaDetalleTitulo.jsx';
+import { RegionProvider } from '../../contexts/region/RegionProvider.jsx';
 
 const detallePelicula = {
   tmdbId: 1,
@@ -15,19 +16,39 @@ const detallePelicula = {
 
 function renderDetalle(path = '/titulos/pelicula/1', state) {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
-      <Routes>
-        <Route path="/" element={<p>Resultados de la búsqueda</p>} />
-        <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetalleTitulo />} />
-      </Routes>
-    </MemoryRouter>,
+    <RegionProvider>
+      <MemoryRouter initialEntries={[{ pathname: path, state }]}>
+        <Routes>
+          <Route path="/" element={<p>Resultados de la búsqueda</p>} />
+          <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetalleTitulo />} />
+        </Routes>
+      </MemoryRouter>
+    </RegionProvider>,
   );
 }
 
-function configurarFetch(data = detallePelicula) {
-  const fetchMock = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ data }),
+function configurarFetch(
+  data = detallePelicula,
+  disponibilidad = { region: 'AR', plataformas: [] },
+) {
+  const fetchMock = vi.fn().mockImplementation((url) => {
+    const urlStr = url.toString();
+    if (urlStr.includes('/disponibilidad')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: disponibilidad }),
+      });
+    }
+    if (urlStr.includes('/region')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: { region: 'AR' } }),
+      });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ data }),
+    });
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
@@ -118,13 +139,24 @@ describe('PaginaDetalleTitulo', () => {
     let llamada = 0;
     let resolverSegundoTitulo;
     const señales = [];
-    const fetchMock = vi.fn((_url, options) => {
+    const fetchMock = vi.fn((url, options) => {
+      const urlStr = url?.toString() ?? '';
+      if (urlStr.includes('/region')) {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { region: 'AR' } }) });
+      }
+      if (urlStr.includes('/disponibilidad')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: { region: 'AR', plataformas: [] } }),
+        });
+      }
+
       llamada += 1;
-      señales.push(options.signal);
+      señales.push(options?.signal);
 
       if (llamada === 1) {
         return new Promise((_resolve, reject) => {
-          options.signal.addEventListener('abort', () => {
+          options?.signal?.addEventListener('abort', () => {
             const error = new Error('Request abortado');
             error.name = 'AbortError';
             reject(error);
@@ -148,24 +180,26 @@ describe('PaginaDetalleTitulo', () => {
     }
 
     render(
-      <MemoryRouter initialEntries={['/titulos/pelicula/1']}>
-        <Routes>
-          <Route
-            path="/titulos/:tipo/:tmdbId"
-            element={
-              <>
-                <PaginaDetalleTitulo />
-                <CambiarTitulo />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>,
+      <RegionProvider>
+        <MemoryRouter initialEntries={['/titulos/pelicula/1']}>
+          <Routes>
+            <Route
+              path="/titulos/:tipo/:tmdbId"
+              element={
+                <>
+                  <PaginaDetalleTitulo />
+                  <CambiarTitulo />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </RegionProvider>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver otro título' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(llamada).toBe(2));
     expect(señales[0].aborted).toBe(true);
 
     resolverSegundoTitulo({
@@ -178,5 +212,132 @@ describe('PaginaDetalleTitulo', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'The Office' }),
     ).toBeInTheDocument();
+  });
+
+  describe('Disponibilidad de plataformas (E1HU2)', () => {
+    it('muestra una única plataforma cuando el título está disponible en ella (Escenario 1)', async () => {
+      configurarFetch(detallePelicula, {
+        region: 'AR',
+        plataformas: [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+          },
+        ],
+      });
+
+      renderDetalle();
+
+      expect(
+        await screen.findByRole('heading', { level: 2, name: /Plataformas disponibles/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Netflix')).toBeInTheDocument();
+      const link = screen.getByRole('link', { name: /Netflix/i });
+      expect(link).toHaveAttribute('href', 'https://www.netflix.com');
+      expect(screen.getByRole('img', { name: /Logo de Netflix/i })).toBeInTheDocument();
+    });
+
+    it('muestra todas las plataformas cuando el título está en varias plataformas (Escenario 2)', async () => {
+      configurarFetch(detallePelicula, {
+        region: 'AR',
+        plataformas: [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+          },
+          {
+            id: 2,
+            tmdbProviderId: 119,
+            nombre: 'Amazon Prime Video',
+            logoPath: '/prime.jpg',
+            urlHome: 'https://www.primevideo.com',
+          },
+        ],
+      });
+
+      renderDetalle();
+
+      expect(await screen.findByText('Netflix')).toBeInTheDocument();
+      expect(screen.getByText('Amazon Prime Video')).toBeInTheDocument();
+    });
+
+    it('muestra un mensaje indicando que no está disponible cuando no hay plataformas en la región (Escenario 3)', async () => {
+      configurarFetch(detallePelicula, {
+        region: 'AR',
+        plataformas: [],
+      });
+
+      renderDetalle();
+
+      expect(
+        await screen.findByText(
+          'No encontramos disponibilidad en plataformas de streaming para tu región.',
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('muestra un mensaje de error y permite reintentar cuando falla la consulta de disponibilidad (Escenario 4)', async () => {
+      let intento = 0;
+      const fetchMock = vi.fn().mockImplementation((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/disponibilidad')) {
+          intento += 1;
+          if (intento === 1) {
+            return Promise.resolve({
+              ok: false,
+              json: async () => ({
+                error: {
+                  code: 'EXTERNAL_SERVICE',
+                  message: 'No se pudo consultar la disponibilidad',
+                },
+              }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              data: {
+                region: 'AR',
+                plataformas: [
+                  {
+                    id: 1,
+                    tmdbProviderId: 8,
+                    nombre: 'Netflix',
+                    logoPath: '/netflix.jpg',
+                    urlHome: 'https://www.netflix.com',
+                  },
+                ],
+              },
+            }),
+          });
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ data: { region: 'AR' } }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: detallePelicula }),
+        });
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle();
+
+      expect(await screen.findByText('No se pudo consultar la disponibilidad')).toBeInTheDocument();
+      const botonReintentar = screen.getByRole('button', { name: /Reintentar/i });
+
+      fireEvent.click(botonReintentar);
+
+      expect(await screen.findByText('Netflix')).toBeInTheDocument();
+    });
   });
 });

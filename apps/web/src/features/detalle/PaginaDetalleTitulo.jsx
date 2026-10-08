@@ -1,5 +1,8 @@
 import { Link, useLocation, useParams } from 'react-router';
+import { useRegion } from '../../contexts/region/RegionContext.js';
 import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
+import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
+import { useDisponibilidad } from './useDisponibilidad.js';
 
 const LINK_VOLVER_CLASS_NAME =
   'font-semibold text-link underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
@@ -18,7 +21,14 @@ function formatearPuntuacion(puntuacion) {
 export function PaginaDetalleTitulo() {
   const location = useLocation();
   const { tipo, tmdbId } = useParams();
+  const { region } = useRegion();
   const { titulo, isLoading, error } = useDetalleTitulo({ tipo, tmdbId });
+  const {
+    plataformas,
+    isLoading: cargandoDisponibilidad,
+    error: errorDisponibilidad,
+    reintentar: reintentarDisponibilidad,
+  } = useDisponibilidad({ tipo, tmdbId, region });
   const estadoBusqueda = location.state?.busqueda;
 
   if (isLoading) {
@@ -108,6 +118,79 @@ export function PaginaDetalleTitulo() {
             <p className="max-w-3xl leading-7 text-muted">
               {titulo.sinopsis ?? 'Sinopsis no disponible'}
             </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="seccion-disponibilidad" className="text-xl font-semibold">
+                Plataformas disponibles
+              </h2>
+              {region && (
+                <span
+                  aria-label={`Región de disponibilidad: ${region}`}
+                  className="rounded-full bg-chip px-2.5 py-0.5 font-mono text-xs font-medium text-chip-foreground"
+                >
+                  {region}
+                </span>
+              )}
+            </div>
+
+            {cargandoDisponibilidad && (
+              <p role="status" aria-live="polite" className="text-sm text-muted">
+                Consultando disponibilidad...
+              </p>
+            )}
+
+            {!cargandoDisponibilidad && errorDisponibilidad && (
+              <div
+                role="alert"
+                className="flex flex-col gap-2 rounded-2xl border border-danger/30 bg-danger-surface p-4 text-sm text-danger sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span>{errorDisponibilidad}</span>
+                <button
+                  type="button"
+                  onClick={reintentarDisponibilidad}
+                  className="cursor-pointer font-semibold underline underline-offset-4 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {!cargandoDisponibilidad && !errorDisponibilidad && plataformas.length === 0 && (
+              <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
+                No encontramos disponibilidad en plataformas de streaming para tu región.
+              </p>
+            )}
+
+            {!cargandoDisponibilidad && !errorDisponibilidad && plataformas.length > 0 && (
+              <ul
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                aria-label="Plataformas disponibles"
+              >
+                {plataformas.map((plataforma) => (
+                  <li key={plataforma.id}>
+                    {plataforma.urlHome ? (
+                      <a
+                        href={plataforma.urlHome}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3 transition-colors duration-150 hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        title={`Ir a ${plataforma.nombre}`}
+                      >
+                        <LogoPlataforma plataforma={plataforma} />
+                        <span className="font-semibold text-foreground">{plataforma.nombre}</span>
+                      </a>
+                    ) : (
+                      <div className="flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3">
+                        <LogoPlataforma plataforma={plataforma} />
+                        <span className="font-semibold text-foreground">{plataforma.nombre}</span>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </article>

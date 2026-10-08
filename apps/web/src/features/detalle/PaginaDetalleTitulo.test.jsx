@@ -1,8 +1,17 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { PaginaDetalleTitulo } from './PaginaDetalleTitulo.jsx';
+import { PlataformasPropiasContext } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { RegionProvider } from '../../contexts/region/RegionProvider.jsx';
+import { SessionContext } from '../../contexts/session/SessionContext.js';
+
+const SIN_SESION = { user: null, loading: false };
+const CON_SESION = { user: { id: 'u1', email: 'ana@mail.com' }, loading: false };
+
+function plataformasPropias(ids = [], overrides = {}) {
+  return { seleccionadas: new Set(ids), loading: false, error: '', ...overrides };
+}
 
 const detallePelicula = {
   tmdbId: 1,
@@ -14,16 +23,24 @@ const detallePelicula = {
   puntuacion: 8.1,
 };
 
-function renderDetalle(path = '/titulos/pelicula/1', state) {
+function renderDetalle(
+  path = '/titulos/pelicula/1',
+  state,
+  { sesion = SIN_SESION, propias = plataformasPropias() } = {},
+) {
   return render(
-    <RegionProvider>
-      <MemoryRouter initialEntries={[{ pathname: path, state }]}>
-        <Routes>
-          <Route path="/" element={<p>Resultados de la búsqueda</p>} />
-          <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetalleTitulo />} />
-        </Routes>
-      </MemoryRouter>
-    </RegionProvider>,
+    <SessionContext.Provider value={sesion}>
+      <PlataformasPropiasContext.Provider value={propias}>
+        <RegionProvider>
+          <MemoryRouter initialEntries={[{ pathname: path, state }]}>
+            <Routes>
+              <Route path="/" element={<p>Resultados de la búsqueda</p>} />
+              <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetalleTitulo />} />
+            </Routes>
+          </MemoryRouter>
+        </RegionProvider>
+      </PlataformasPropiasContext.Provider>
+    </SessionContext.Provider>,
   );
 }
 
@@ -180,21 +197,25 @@ describe('PaginaDetalleTitulo', () => {
     }
 
     render(
-      <RegionProvider>
-        <MemoryRouter initialEntries={['/titulos/pelicula/1']}>
-          <Routes>
-            <Route
-              path="/titulos/:tipo/:tmdbId"
-              element={
-                <>
-                  <PaginaDetalleTitulo />
-                  <CambiarTitulo />
-                </>
-              }
-            />
-          </Routes>
-        </MemoryRouter>
-      </RegionProvider>,
+      <SessionContext.Provider value={SIN_SESION}>
+        <PlataformasPropiasContext.Provider value={plataformasPropias()}>
+          <RegionProvider>
+            <MemoryRouter initialEntries={['/titulos/pelicula/1']}>
+              <Routes>
+                <Route
+                  path="/titulos/:tipo/:tmdbId"
+                  element={
+                    <>
+                      <PaginaDetalleTitulo />
+                      <CambiarTitulo />
+                    </>
+                  }
+                />
+              </Routes>
+            </MemoryRouter>
+          </RegionProvider>
+        </PlataformasPropiasContext.Provider>
+      </SessionContext.Provider>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver otro título' }));
@@ -338,6 +359,87 @@ describe('PaginaDetalleTitulo', () => {
       fireEvent.click(botonReintentar);
 
       expect(await screen.findByText('Netflix')).toBeInTheDocument();
+    });
+  });
+
+  describe('Plataformas propias en la disponibilidad', () => {
+    const NETFLIX = {
+      id: 1,
+      tmdbProviderId: 8,
+      nombre: 'Netflix',
+      logoPath: '/netflix.jpg',
+      urlHome: 'https://www.netflix.com',
+    };
+    const PRIME = {
+      id: 2,
+      tmdbProviderId: 119,
+      nombre: 'Amazon Prime Video',
+      logoPath: '/prime.jpg',
+      urlHome: 'https://www.primevideo.com',
+    };
+
+    function configurarDisponibilidad() {
+      configurarFetch(detallePelicula, { region: 'AR', plataformas: [NETFLIX, PRIME] });
+    }
+
+    it('sin sesión permite ir a todas las plataformas', async () => {
+      configurarDisponibilidad();
+
+      renderDetalle();
+
+      expect(await screen.findByRole('link', { name: /Netflix/ })).toHaveAttribute(
+        'href',
+        NETFLIX.urlHome,
+      );
+      expect(screen.getByRole('link', { name: /Amazon Prime Video/ })).toHaveAttribute(
+        'href',
+        PRIME.urlHome,
+      );
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
+
+    it('con sesión solo permite ir a las plataformas propias y avisa en las demás', async () => {
+      configurarDisponibilidad();
+
+      renderDetalle('/titulos/pelicula/1', undefined, {
+        sesion: CON_SESION,
+        propias: plataformasPropias([PRIME.id]),
+      });
+
+      expect(await screen.findByRole('link', { name: /Amazon Prime Video/ })).toHaveAttribute(
+        'href',
+        PRIME.urlHome,
+      );
+      expect(screen.queryByRole('link', { name: /Netflix/ })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('group', { name: 'Netflix (no está en tus plataformas)' }),
+      ).toHaveAccessibleDescription('No tenés Netflix en tus plataformas');
+    });
+
+    it('con sesión muestra primero las plataformas propias', async () => {
+      configurarDisponibilidad();
+
+      renderDetalle('/titulos/pelicula/1', undefined, {
+        sesion: CON_SESION,
+        propias: plataformasPropias([PRIME.id]),
+      });
+
+      const lista = await screen.findByRole('list', { name: 'Plataformas disponibles' });
+      const items = within(lista).getAllByRole('listitem');
+      expect(items[0]).toHaveTextContent('Amazon Prime Video');
+      expect(items[1]).toHaveTextContent('Netflix');
+    });
+
+    it('mientras cargan las plataformas propias no oculta ninguna', async () => {
+      configurarDisponibilidad();
+
+      renderDetalle('/titulos/pelicula/1', undefined, {
+        sesion: CON_SESION,
+        propias: plataformasPropias([], { loading: true }),
+      });
+
+      expect(await screen.findByRole('link', { name: /Netflix/ })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Amazon Prime Video/ })).toBeInTheDocument();
     });
   });
 });

@@ -1,6 +1,6 @@
 import { env } from '../config/env.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
-import { TIPO_TITULO, TMDB_LOGO_BASE_URL } from '@buscador/shared/constants';
+import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
@@ -133,11 +133,11 @@ export const obtenerDetallePelicula = obtenerPelicula;
 export const obtenerDetalleSerie = obtenerSerie;
 
 const TIPOS_OFERTA_TMDB = {
-  flatrate: 'suscripcion',
-  free: 'gratis',
-  ads: 'con_anuncios',
-  rent: 'alquiler',
-  buy: 'compra',
+  flatrate: TIPO_OFERTA.SUSCRIPCION,
+  free: TIPO_OFERTA.GRATIS,
+  ads: TIPO_OFERTA.CON_ANUNCIOS,
+  rent: TIPO_OFERTA.ALQUILER,
+  buy: TIPO_OFERTA.COMPRA,
 };
 
 function obtenerEnlaceTmdb(link) {
@@ -178,9 +178,7 @@ export async function obtenerDisponibilidad({ tipo, tmdbId, region }) {
             ? plataformas.map((plataforma) => ({
                 tmdbProviderId: plataforma?.provider_id,
                 nombre: plataforma?.provider_name,
-                logoUrl: plataforma?.logo_path
-                  ? `${TMDB_LOGO_BASE_URL}${plataforma.logo_path}`
-                  : null,
+                logoPath: plataforma?.logo_path ?? null,
               }))
             : plataformas,
         },

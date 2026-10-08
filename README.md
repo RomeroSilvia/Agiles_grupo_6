@@ -58,7 +58,10 @@ vacío, guarda el país detectado. El servicio de país usado es `https://api.co
 requiere una clave nueva. Si no se puede detectar, devuelve `DEFAULT_REGION` con
 `source: "default"` y la pantalla lo indica. En desarrollo local, la IP suele ser local y se
 aplica ese respaldo. Si la API corre detrás de un proxy, configurar `TRUST_PROXY` en
-`apps/api/.env` con la IP o subred del proxy de confianza.
+`apps/api/.env` con las IPs o subredes CIDR de los proxies de confianza, separadas por comas.
+Debe configurarse antes de registrar usuarios: la primera región detectada se guarda en el perfil.
+Las IPs privadas o reservadas no se envían al servicio de país. `true` y `1` no son valores
+válidos para `TRUST_PROXY`.
 
 `GET /api/titulos/:tipo/:tmdbId/disponibilidad?region=BR` consulta la disponibilidad del país
 indicado por el contexto de región. La página de detalle ofrece el enlace de TMDB cuando

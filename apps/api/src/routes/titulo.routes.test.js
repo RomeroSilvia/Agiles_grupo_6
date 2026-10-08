@@ -41,9 +41,7 @@ beforeEach(() => {
     ofertas: [
       {
         tipoOferta: 'suscripcion',
-        plataformas: [
-          { tmdbProviderId: 8, nombre: 'Netflix', logoUrl: 'https://image.tmdb.org/t/p/w92/n.jpg' },
-        ],
+        plataformas: [{ tmdbProviderId: 8, nombre: 'Netflix', logoPath: '/n.jpg' }],
       },
     ],
     enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch?locale=BR',

@@ -11,7 +11,7 @@ export const disponibilidadSchema = z.object({
         z.object({
           tmdbProviderId: z.number().int().positive(),
           nombre: z.string().min(1),
-          logoUrl: z.url().nullable(),
+          logoPath: z.string().min(1).nullable(),
         }),
       ),
     }),

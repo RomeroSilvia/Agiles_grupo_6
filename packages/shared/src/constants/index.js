@@ -10,15 +10,22 @@ export const TIPOS_TITULO = Object.values(TIPO_TITULO);
 export const ANIO_MINIMO = 1888;
 export const ANIO_MAXIMO = 2100;
 
-export const TIPOS_OFERTA = ['suscripcion', 'gratis', 'con_anuncios', 'alquiler', 'compra'];
+export const TIPO_OFERTA = Object.freeze({
+  SUSCRIPCION: 'suscripcion',
+  GRATIS: 'gratis',
+  CON_ANUNCIOS: 'con_anuncios',
+  ALQUILER: 'alquiler',
+  COMPRA: 'compra',
+});
+export const TIPOS_OFERTA = Object.values(TIPO_OFERTA);
 
 export const ESTADOS_NOTIFICACION = ['pendiente', 'enviada', 'fallida'];
 
 // Valores técnicos
 export const DEFAULT_REGION = 'AR';
 
-export const FUENTE_REGION = Object.freeze({ PERFIL: 'profile', IP: 'ip', DEFAULT: 'default' });
-export const FUENTES_REGION = Object.values(FUENTE_REGION);
+export const REGION_SOURCE = Object.freeze({ PROFILE: 'profile', IP: 'ip', DEFAULT: 'default' });
+export const REGION_SOURCES = Object.values(REGION_SOURCE);
 
 // Código de país ISO 3166-1 alfa-2, igual que el CHECK de perfil.region
 export const REGION_PATTERN = /^[A-Z]{2}$/;

@@ -25,6 +25,31 @@ describe('geoip.integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('no envía IPs privadas o reservadas al servicio externo', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    for (const ip of [
+      '10.1.2.3',
+      '172.16.0.1',
+      '192.168.1.1',
+      '169.254.1.1',
+      '100.64.0.1',
+      '192.0.2.1',
+      '::ffff:10.1.2.3',
+      '::ffff:a01:203',
+      'fc00::1',
+      'fe80::1',
+      '2001:db8::1',
+      '::',
+      'IP inválida',
+    ]) {
+      await expect(getRegionByIp(ip)).resolves.toBeNull();
+    }
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('trata un código inválido como región no detectable', async () => {
     vi.stubGlobal(
       'fetch',

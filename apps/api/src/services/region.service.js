@@ -1,4 +1,4 @@
-import { FUENTE_REGION } from '@buscador/shared/constants';
+import { REGION_SOURCE } from '@buscador/shared/constants';
 import { env } from '../config/env.config.js';
 import { ExternalServiceError } from '../errors/index.js';
 import * as geoipIntegration from '../integrations/geoip.integration.js';
@@ -8,7 +8,7 @@ export async function obtenerRegion({ usuarioId, ip }) {
   if (usuarioId) {
     const regionGuardada = await perfilRepository.obtenerRegion(usuarioId);
     if (regionGuardada) {
-      return { region: regionGuardada, source: FUENTE_REGION.PERFIL };
+      return { region: regionGuardada, source: REGION_SOURCE.PROFILE };
     }
   }
 
@@ -23,7 +23,7 @@ export async function obtenerRegion({ usuarioId, ip }) {
   }
 
   if (!regionDetectada) {
-    return { region: env.DEFAULT_REGION, source: FUENTE_REGION.DEFAULT };
+    return { region: env.DEFAULT_REGION, source: REGION_SOURCE.DEFAULT };
   }
 
   if (usuarioId) {
@@ -31,10 +31,10 @@ export async function obtenerRegion({ usuarioId, ip }) {
     if (!regionGuardada) {
       const regionActual = await perfilRepository.obtenerRegion(usuarioId);
       if (regionActual) {
-        return { region: regionActual, source: FUENTE_REGION.PERFIL };
+        return { region: regionActual, source: REGION_SOURCE.PROFILE };
       }
     }
   }
 
-  return { region: regionDetectada, source: FUENTE_REGION.IP };
+  return { region: regionDetectada, source: REGION_SOURCE.IP };
 }

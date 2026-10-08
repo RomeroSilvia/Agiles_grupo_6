@@ -33,6 +33,16 @@ describe('GET /api/region', () => {
     expect(perfilRepository.obtenerRegion).not.toHaveBeenCalled();
   });
 
+  it('usa X-Forwarded-For cuando la IP del proxy está declarada como confiable', async () => {
+    const app = createApp();
+    app.set('trust proxy', '127.0.0.1/8, ::1/128');
+
+    const res = await request(app).get('/api/region').set('X-Forwarded-For', '8.8.8.8');
+
+    expect(res.status).toBe(200);
+    expect(geoipIntegration.getRegionByIp).toHaveBeenCalledWith('8.8.8.8');
+  });
+
   it('reutiliza la región guardada sin repetir la detección', async () => {
     perfilRepository.obtenerRegion.mockResolvedValue('BR');
 

@@ -19,7 +19,7 @@ const disponibilidad = {
   ofertas: [
     {
       tipoOferta: 'suscripcion',
-      plataformas: [{ tmdbProviderId: 8, nombre: 'Netflix', logoUrl: null }],
+      plataformas: [{ tmdbProviderId: 8, nombre: 'Netflix', logoPath: '/n.jpg' }],
     },
   ],
   enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch?locale=BR',
@@ -72,6 +72,10 @@ describe('PaginaDetalleTitulo', () => {
     );
     expect(fetchMock.mock.calls[0][0].toString()).toContain('/api/titulos/pelicula/1');
     expect(await screen.findByText('Netflix')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Logo de Netflix' })).toHaveAttribute(
+      'src',
+      'https://image.tmdb.org/t/p/w92/n.jpg',
+    );
     expect(screen.getByRole('heading', { name: 'Disponibilidad en BR' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver opciones en TMDB' })).toHaveAttribute(
       'href',
@@ -96,6 +100,22 @@ describe('PaginaDetalleTitulo', () => {
         'No pudimos detectar tu región. Mostramos la región predeterminada AR.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('espera a conocer la región antes de mostrarla en el título o consultar disponibilidad', async () => {
+    const fetchMock = configurarFetch();
+    renderDetalle('/titulos/pelicula/1', undefined, {
+      region: 'AR',
+      source: 'default',
+      loading: true,
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Disponibilidad' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Disponibilidad en AR' })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Detectando región...');
+    expect(
+      fetchMock.mock.calls.every(([input]) => !input.toString().includes('/disponibilidad')),
+    ).toBe(true);
   });
 
   it('muestra el estado de carga', async () => {

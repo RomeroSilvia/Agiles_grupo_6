@@ -1,8 +1,9 @@
-import { FUENTE_REGION } from '@buscador/shared/constants';
+import { REGION_SOURCE, TIPO_OFERTA } from '@buscador/shared/constants';
 import { Link, useLocation, useParams } from 'react-router';
 import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
 import { Attribution } from '../../components/ui/Attribution.jsx';
+import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 
 const LINK_VOLVER_CLASS_NAME =
@@ -14,11 +15,11 @@ const ETIQUETAS_TIPO = {
 };
 
 const ETIQUETAS_OFERTA = {
-  suscripcion: 'Suscripción',
-  gratis: 'Gratis',
-  con_anuncios: 'Con anuncios',
-  alquiler: 'Alquiler',
-  compra: 'Compra',
+  [TIPO_OFERTA.SUSCRIPCION]: 'Suscripción',
+  [TIPO_OFERTA.GRATIS]: 'Gratis',
+  [TIPO_OFERTA.CON_ANUNCIOS]: 'Con anuncios',
+  [TIPO_OFERTA.ALQUILER]: 'Alquiler',
+  [TIPO_OFERTA.COMPRA]: 'Compra',
 };
 
 function formatearPuntuacion(puntuacion) {
@@ -131,8 +132,10 @@ export function PaginaDetalleTitulo() {
       </article>
 
       <section className="space-y-4 rounded-3xl border border-border bg-surface p-5 sm:p-8 dark:bg-surface">
-        <h2 className="text-xl font-semibold">Disponibilidad en {region}</h2>
-        {!regionLoading && source === FUENTE_REGION.DEFAULT && (
+        <h2 className="text-xl font-semibold">
+          Disponibilidad{regionLoading ? '' : ` en ${region}`}
+        </h2>
+        {!regionLoading && source === REGION_SOURCE.DEFAULT && (
           <p className="text-sm text-muted">
             No pudimos detectar tu región. Mostramos la región predeterminada {region}.
           </p>
@@ -156,9 +159,7 @@ export function PaginaDetalleTitulo() {
                       key={plataforma.tmdbProviderId}
                       className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm dark:bg-background"
                     >
-                      {plataforma.logoUrl && (
-                        <img src={plataforma.logoUrl} alt="" className="size-6 rounded" />
-                      )}
+                      <LogoPlataforma plataforma={plataforma} size="small" />
                       {plataforma.nombre}
                     </li>
                   ))}

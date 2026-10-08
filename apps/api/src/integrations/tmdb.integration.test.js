@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { TIPOS_OFERTA } from '@buscador/shared/constants';
 
 const envMock = vi.hoisted(() => ({ env: { TMDB_API_KEY: 'clave-prueba' } }));
 
@@ -46,7 +47,7 @@ describe('disponibilidad de TMDB', () => {
             {
               tmdbProviderId: 8,
               nombre: 'Netflix',
-              logoUrl: 'https://image.tmdb.org/t/p/w92/n.jpg',
+              logoPath: '/n.jpg',
             },
           ],
         },
@@ -64,6 +65,29 @@ describe('disponibilidad de TMDB', () => {
     await expect(
       obtenerDisponibilidad({ tipo: 'serie', tmdbId: 2, region: 'UY' }),
     ).resolves.toEqual({ region: 'UY', ofertas: [], enlaceTmdb: null });
+  });
+
+  it('asigna a cada modalidad de TMDB el tipo de oferta compartido', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: {
+            AR: Object.fromEntries(
+              ['flatrate', 'free', 'ads', 'rent', 'buy'].map((tipo, index) => [
+                tipo,
+                [{ provider_id: index + 1, provider_name: `Plataforma ${index + 1}` }],
+              ]),
+            ),
+          },
+        }),
+      }),
+    );
+
+    const data = await obtenerDisponibilidad({ tipo: 'serie', tmdbId: 2, region: 'AR' });
+
+    expect(data.ofertas.map(({ tipoOferta }) => tipoOferta)).toEqual(TIPOS_OFERTA);
   });
 });
 

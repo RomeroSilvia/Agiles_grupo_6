@@ -10,7 +10,6 @@ import {
   obtenerOfertas,
   obtenerPelicula,
   obtenerSerie,
-  obtenerProveedores,
 } from './tmdb.integration.js';
 import { env } from '../config/env.config.js';
 
@@ -220,48 +219,6 @@ describe('tmdb.integration', () => {
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
-
-  it('consulta los proveedores de streaming para una película', async () => {
-    const providersData = {
-      results: {
-        AR: {
-          flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.jpg' }],
-        },
-      },
-    };
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => providersData,
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const proveedores = await obtenerProveedores('pelicula', 1);
-
-    const [url] = fetchMock.mock.calls[0];
-    expect(url.pathname).toBe('/3/movie/1/watch/providers');
-    expect(proveedores).toEqual(providersData.results);
-  });
-
-  it('consulta los proveedores de streaming para una serie', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: {} }),
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const proveedores = await obtenerProveedores('serie', 2);
-
-    const [url] = fetchMock.mock.calls[0];
-    expect(url.pathname).toBe('/3/tv/2/watch/providers');
-    expect(proveedores).toEqual({});
-  });
-
-  it('lanza un error de servicio externo si el tipo de título es inválido en proveedores', async () => {
-    await expect(obtenerProveedores('anime', 1)).rejects.toMatchObject({
-      code: 'EXTERNAL_SERVICE',
-      status: 502,
-    });
-  });
 });
 
 describe('obtenerOfertas', () => {
@@ -272,7 +229,7 @@ describe('obtenerOfertas', () => {
         id: 101,
         results: {
           AR: {
-            flatrate: [{ provider_id: 8 }],
+            flatrate: [{ provider_id: 8, logo_path: '/netflix.jpg' }],
             rent: [{ provider_id: 119 }],
           },
           MX: { ads: [{ provider_id: 337 }], free: [{ provider_id: 11 }] },
@@ -286,12 +243,12 @@ describe('obtenerOfertas', () => {
     expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/movie/101/watch/providers');
     expect(ofertas).toEqual({
       AR: [
-        { tmdbProviderId: 8, tipoOferta: 'suscripcion' },
-        { tmdbProviderId: 119, tipoOferta: 'alquiler' },
+        { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
+        { tmdbProviderId: 119, tipoOferta: 'alquiler', logoPath: null },
       ],
       MX: [
-        { tmdbProviderId: 11, tipoOferta: 'gratis' },
-        { tmdbProviderId: 337, tipoOferta: 'con_anuncios' },
+        { tmdbProviderId: 11, tipoOferta: 'gratis', logoPath: null },
+        { tmdbProviderId: 337, tipoOferta: 'con_anuncios', logoPath: null },
       ],
     });
   });

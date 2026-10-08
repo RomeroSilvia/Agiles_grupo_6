@@ -166,7 +166,11 @@ function normalizarOfertasDeRegion(datosRegion) {
     const proveedores = Array.isArray(datosRegion?.[clave]) ? datosRegion[clave] : [];
     return proveedores
       .filter((proveedor) => Number.isInteger(proveedor?.provider_id))
-      .map((proveedor) => ({ tmdbProviderId: proveedor.provider_id, tipoOferta }));
+      .map((proveedor) => ({
+        tmdbProviderId: proveedor.provider_id,
+        tipoOferta,
+        logoPath: proveedor.logo_path ?? null,
+      }));
   });
 }
 
@@ -198,22 +202,4 @@ async function consultarOfertas(tipo, tmdbId) {
 
 export function obtenerOfertas({ tipo, tmdbId }) {
   return ofertasCache.getOrSet(`${tipo}:${tmdbId}`, () => consultarOfertas(tipo, tmdbId));
-}
-
-export const obtenerDetallePelicula = obtenerPelicula;
-export const obtenerDetalleSerie = obtenerSerie;
-
-const RUTA_TMDB_POR_TIPO = Object.freeze({
-  [TIPO_TITULO.PELICULA]: 'movie',
-  [TIPO_TITULO.SERIE]: 'tv',
-});
-
-export async function obtenerProveedores(tipo, tmdbId) {
-  const ruta = RUTA_TMDB_POR_TIPO[tipo];
-  if (!ruta) {
-    throw new ExternalServiceError('TMDB', new Error('Tipo de título inválido'));
-  }
-
-  const response = await tmdbRequest(`/${ruta}/${tmdbId}/watch/providers`);
-  return response?.results ?? {};
 }

@@ -86,6 +86,22 @@ describe('obtenerPlataformasDelUsuarioPorTitulo', () => {
     expect(disponibilidad.plataformas).toEqual([]);
   });
 
+  it('usa el logo de TMDB si la plataforma no tiene uno propio', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValue({
+      AR: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' }],
+    });
+
+    const [disponibilidad] = await obtenerPlataformasDelUsuarioPorTitulo({
+      titulos: [DUNE],
+      region: 'AR',
+      plataformas: [NETFLIX, { ...DISNEY, logoPath: '/disney-propio.jpg' }],
+    });
+
+    expect(disponibilidad.plataformas).toEqual([
+      { ...plataformaDeResultado(NETFLIX), logoPath: '/netflix.jpg' },
+    ]);
+  });
+
   it('marca como no verificado el título cuya consulta falla, sin afectar a los demás', async () => {
     tmdbIntegration.obtenerOfertas
       .mockRejectedValueOnce(new ExternalServiceError('TMDB', new Error('caída')))

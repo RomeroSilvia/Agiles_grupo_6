@@ -17,3 +17,20 @@ export function Attribution() {
     </p>
   );
 }
+
+/**
+ * Versión corta de la atribución para usar junto a la sección de disponibilidad,
+ * donde la atribución completa ya aparece en el pie de página del layout.
+ * Menciona solo JustWatch como fuente de los datos de disponibilidad.
+ */
+export function AttributionDisponibilidad() {
+  return (
+    <p className="text-xs leading-5 text-muted">
+      Datos de disponibilidad provistos por{' '}
+      <a href="https://www.justwatch.com" className="underline" target="_blank" rel="noreferrer">
+        JustWatch
+      </a>
+      .
+    </p>
+  );
+}

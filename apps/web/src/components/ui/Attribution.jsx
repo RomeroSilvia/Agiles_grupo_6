@@ -2,9 +2,9 @@
  * Atribución obligatoria por los términos de uso de TMDB y JustWatch (E6HU3).
  * No quitar: su ausencia puede derivar en la revocación del acceso a la API.
  */
-export function Attribution({ className = 'text-xs leading-5 text-muted' } = {}) {
+export function Attribution() {
   return (
-    <p className={className}>
+    <p className="text-xs leading-5 text-muted">
       Datos de títulos provistos por{' '}
       <a href="https://www.themoviedb.org" className="underline" target="_blank" rel="noreferrer">
         TMDB
@@ -14,6 +14,23 @@ export function Attribution({ className = 'text-xs leading-5 text-muted' } = {})
         JustWatch
       </a>
       . Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.
+    </p>
+  );
+}
+
+/**
+ * Versión corta de la atribución para usar junto a la sección de disponibilidad,
+ * donde la atribución completa ya aparece en el pie de página del layout.
+ * Menciona solo JustWatch como fuente de los datos de disponibilidad.
+ */
+export function AttributionDisponibilidad() {
+  return (
+    <p className="text-xs leading-5 text-muted">
+      Datos de disponibilidad provistos por{' '}
+      <a href="https://www.justwatch.com" className="underline" target="_blank" rel="noreferrer">
+        JustWatch
+      </a>
+      .
     </p>
   );
 }

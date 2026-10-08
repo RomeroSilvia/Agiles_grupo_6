@@ -1,7 +1,7 @@
 import { Link, useLocation, useParams } from 'react-router';
 import { useRegion } from '../../contexts/region/RegionContext.js';
 import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
-import { Attribution } from '../../components/ui/Attribution.jsx';
+import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
 import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 
@@ -194,7 +194,7 @@ export function PaginaDetalleTitulo() {
             )}
 
             <div className="pt-2">
-              <Attribution />
+              <AttributionDisponibilidad />
             </div>
           </div>
         </div>

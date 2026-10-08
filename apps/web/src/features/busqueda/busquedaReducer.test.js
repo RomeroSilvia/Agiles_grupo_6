@@ -54,6 +54,13 @@ describe('obtenerEstadoInicial', () => {
     expect(estado.resultados).toEqual([DUNE]);
     expect(estado.pagina).toBe(2);
     expect(estado.ultimaBusqueda).toEqual(ULTIMA_BUSQUEDA);
+    expect(estado.verificacionIncompleta).toBe(false);
+  });
+
+  it('recupera si la verificación de la búsqueda guardada fue incompleta', () => {
+    const estado = obtenerEstadoInicial({ resultados: [DUNE], verificacionIncompleta: true });
+
+    expect(estado.verificacionIncompleta).toBe(true);
   });
 
   it('descarta valores guardados con un formato inválido', () => {
@@ -123,6 +130,38 @@ describe('busquedaReducer', () => {
     expect(exitosa.resultados).toEqual([DUNE, MATRIX]);
     expect(exitosa.pagina).toBe(2);
     expect(exitosa.isLoadingMore).toBe(false);
+  });
+
+  it('cargar más conserva el aviso de verificación incompleta de las páginas anteriores', () => {
+    const estado = busquedaReducer(
+      { ...estadoConResultados(), verificacionIncompleta: true, isLoadingMore: true },
+      {
+        type: ACCIONES_BUSQUEDA.BUSQUEDA_EXITOSA,
+        data: {
+          resultados: [MATRIX],
+          pagina: 2,
+          totalResultados: 2,
+          totalPaginas: 2,
+          verificacionIncompleta: false,
+        },
+        acumular: true,
+      },
+    );
+
+    expect(estado.verificacionIncompleta).toBe(true);
+  });
+
+  it('una búsqueda nueva reemplaza el aviso de verificación incompleta', () => {
+    const estado = busquedaReducer(
+      { ...estadoConResultados(), verificacionIncompleta: true, isLoading: true },
+      {
+        type: ACCIONES_BUSQUEDA.BUSQUEDA_EXITOSA,
+        data: { resultados: [MATRIX], pagina: 1, totalResultados: 1, totalPaginas: 1 },
+        acumular: false,
+      },
+    );
+
+    expect(estado.verificacionIncompleta).toBe(false);
   });
 
   it('si falla al cargar más, conserva los resultados y guarda el error', () => {

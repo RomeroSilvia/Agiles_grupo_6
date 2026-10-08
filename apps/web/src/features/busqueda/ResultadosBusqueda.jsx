@@ -13,7 +13,6 @@ const VISTAS_RESULTADOS = Object.freeze({
   RESULTADOS: 'RESULTADOS',
 });
 
-// "Cargar más" y "Seguir buscando" no reemplazan la vista actual mientras cargan.
 function obtenerVista({
   isLoading,
   isLoadingMore,
@@ -52,6 +51,7 @@ export function ResultadosBusqueda({
   pagina,
   totalPaginas,
   totalResultados,
+  verificacionIncompleta,
   isLoading,
   isLoadingMore,
   error,
@@ -72,6 +72,7 @@ export function ResultadosBusqueda({
     busquedaFiltrada,
   });
   const hayMasPaginas = pagina < totalPaginas;
+  const mostrarVerificacionIncompleta = busquedaFiltrada && verificacionIncompleta;
 
   return (
     <section>
@@ -106,9 +107,11 @@ export function ResultadosBusqueda({
 
       {vista === VISTAS_RESULTADOS.SIN_RESULTADOS_PROPIOS && (
         <EstadoSinResultadosPropios
+          verificacionIncompleta={mostrarVerificacionIncompleta}
           puedeSeguirBuscando={hayMasPaginas}
           buscando={isLoadingMore}
           onSeguirBuscando={onCargarMas}
+          onReintentar={onReintentar}
           onVerTodos={onVerTodos}
         />
       )}
@@ -133,6 +136,25 @@ export function ResultadosBusqueda({
                 : `Mostrando ${resultados.length} de ${totalResultados} ${totalResultados === 1 ? 'título' : 'títulos'}`}
             </p>
           </div>
+          {mostrarVerificacionIncompleta && (
+            <div
+              role="status"
+              className="mb-5 flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p>
+                No pudimos verificar todos los títulos. Puede haber más disponibles en tus
+                plataformas.
+              </p>
+              <button
+                type="button"
+                onClick={onReintentar}
+                disabled={isLoading}
+                className="shrink-0 rounded-xl border border-primary px-4 py-2 font-semibold text-primary transition hover:bg-primary/10 focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
           <GrillaResultados>
             {resultados.map((resultado) => (
               <ResultadoCard

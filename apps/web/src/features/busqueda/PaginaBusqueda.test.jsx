@@ -269,13 +269,19 @@ describe('PaginaBusqueda', () => {
 
 const NETFLIX = { id: 1, tmdbProviderId: 8, nombre: 'Netflix', logoPath: null };
 
-function respuestaFiltrada({ resultados, pagina = 1, totalPaginas = 1 }) {
+function respuestaFiltrada({
+  resultados,
+  pagina = 1,
+  totalPaginas = 1,
+  verificacionIncompleta = false,
+}) {
   return {
     data: {
       resultados,
       pagina,
       totalPaginas,
       totalResultados: 20000,
+      verificacionIncompleta,
     },
   };
 }
@@ -486,6 +492,94 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
     await activarFiltroYBuscar();
 
     expect(screen.getByRole('status')).toHaveTextContent('Buscando en tus plataformas...');
+  });
+
+  it('avisa si no se pudo verificar algún título y permite reintentar', async () => {
+    configurarFetch(respuestaFiltrada({ resultados: [duneEn()], verificacionIncompleta: true }));
+    renderConPlataformas();
+
+    await activarFiltroYBuscar();
+
+    expect(
+      await screen.findByText(
+        'No pudimos verificar todos los títulos. Puede haber más disponibles en tus plataformas.',
+      ),
+    ).toBeInTheDocument();
+
+    configurarFetch(respuestaFiltrada({ resultados: [duneEn()] }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    expect(rutaPedida(0)).toBe('/api/busqueda/propias');
+    await waitFor(() =>
+      expect(screen.queryByText(/No pudimos verificar todos los títulos/)).not.toBeInTheDocument(),
+    );
+  });
+
+  it('sin resultados y con verificación incompleta no afirma que no hay disponibles', async () => {
+    configurarFetch(respuestaFiltrada({ resultados: [], verificacionIncompleta: true }));
+    renderConPlataformas();
+
+    await activarFiltroYBuscar();
+
+    expect(
+      await screen.findByText(
+        'No encontramos títulos en tus plataformas, pero no pudimos confirmar la disponibilidad de algunos.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Ninguno de los títulos encontrados está disponible en tus plataformas.'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
+  });
+
+  describe('al volver con el navegador', () => {
+    const FILTROS_GUARDADOS = { q: 'Dune', tipo: '', anio: '', soloPropias: true };
+
+    function renderConEstadoGuardado({ firmaGuardada, idsActuales }) {
+      const busqueda = {
+        filtros: FILTROS_GUARDADOS,
+        resultados: [duneEn()],
+        pagina: 1,
+        totalResultados: 1,
+        totalPaginas: 1,
+        hasSearched: true,
+        ultimaBusqueda: { ...FILTROS_GUARDADOS, firmaPlataformas: firmaGuardada },
+      };
+
+      return renderComponent(
+        <SessionContext.Provider value={CON_SESION}>
+          <PlataformasPropiasContext.Provider value={plataformasPropias(idsActuales)}>
+            <MemoryRouter initialEntries={[{ pathname: '/', state: { busqueda } }]}>
+              <PaginaBusqueda />
+            </MemoryRouter>
+          </PlataformasPropiasContext.Provider>
+        </SessionContext.Provider>,
+      );
+    }
+
+    it('repite la búsqueda filtrada si cambiaron las plataformas propias', async () => {
+      configurarFetch(respuestaFiltrada({ resultados: [] }));
+      renderConEstadoGuardado({ firmaGuardada: '1,3', idsActuales: [3] });
+
+      await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      expect(rutaPedida(0)).toBe('/api/busqueda/propias');
+      expect(new URL(fetch.mock.calls[0][0]).searchParams.get('q')).toBe('Dune');
+      expect(
+        await screen.findByText(
+          'Ninguno de los títulos encontrados está disponible en tus plataformas.',
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('restaura los resultados sin consultar si las plataformas no cambiaron', async () => {
+      renderConEstadoGuardado({ firmaGuardada: '1,3', idsActuales: [3, 1] });
+
+      expect(
+        await screen.findByRole('link', { name: 'Ver detalle de Dune, disponible en Netflix' }),
+      ).toBeInTheDocument();
+      expect(fetch).not.toHaveBeenCalled();
+    });
   });
 
   it('al cerrar sesión apaga el filtro y vuelve a buscar sin filtrar', async () => {

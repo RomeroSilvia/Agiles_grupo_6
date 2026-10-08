@@ -50,7 +50,11 @@ export function useBusqueda(estadoGuardado) {
 
       const filtrosValidos = validacion.data;
       const soloPropias = Boolean(filtrosConsulta.soloPropias);
-      const ultimaBusqueda = { ...convertirFiltros(filtrosValidos), soloPropias };
+      const ultimaBusqueda = {
+        ...convertirFiltros(filtrosValidos),
+        soloPropias,
+        firmaPlataformas: soloPropias ? (filtrosConsulta.firmaPlataformas ?? null) : null,
+      };
       ultimaBusquedaRef.current = ultimaBusqueda;
       dispatch({ type: ACCIONES_BUSQUEDA.BUSQUEDA_INICIADA, ultimaBusqueda, acumular });
 
@@ -114,7 +118,14 @@ export function useBusqueda(estadoGuardado) {
     return () => abortControllerRef.current?.abort();
   }, []);
 
-  const { filtros, resultados, totalResultados, hasSearched, ultimaBusqueda } = estado;
+  const {
+    filtros,
+    resultados,
+    totalResultados,
+    verificacionIncompleta,
+    hasSearched,
+    ultimaBusqueda,
+  } = estado;
 
   const estadoGuardable = useMemo(
     () => ({
@@ -123,10 +134,20 @@ export function useBusqueda(estadoGuardado) {
       pagina,
       totalResultados,
       totalPaginas,
+      verificacionIncompleta,
       hasSearched,
       ultimaBusqueda,
     }),
-    [filtros, resultados, pagina, totalResultados, totalPaginas, hasSearched, ultimaBusqueda],
+    [
+      filtros,
+      resultados,
+      pagina,
+      totalResultados,
+      totalPaginas,
+      verificacionIncompleta,
+      hasSearched,
+      ultimaBusqueda,
+    ],
   );
 
   return {

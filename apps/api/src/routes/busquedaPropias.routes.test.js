@@ -100,6 +100,7 @@ describe('GET /api/busqueda/propias', () => {
       pagina: 1,
       totalPaginas: 1,
       totalResultados: 2,
+      verificacionIncompleta: false,
     });
     expect(usuarioPlataformaRepository.listarPlataformasActivasPorUsuario).toHaveBeenCalledWith(
       USUARIO.id,
@@ -153,7 +154,17 @@ describe('GET /api/busqueda/propias', () => {
     expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledTimes(1);
   });
 
-  it('descarta el título que no se pudo verificar', async () => {
+  it('usa las ofertas de la región del usuario', async () => {
+    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1)]));
+    ofertasPorId({ 1: { MX: EN_NETFLIX.AR } });
+
+    const res = await buscarConSesion({ q: 'Dune' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.resultados).toEqual([]);
+  });
+
+  it('descarta el título que no se pudo verificar y lo informa', async () => {
     tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1), pelicula(2)]));
     ofertasPorId({ 1: new ExternalServiceError('TMDB', new Error('caída')), 2: EN_NETFLIX });
 
@@ -161,6 +172,18 @@ describe('GET /api/busqueda/propias', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.resultados.map(({ tmdbId }) => tmdbId)).toEqual([2]);
+    expect(res.body.data.verificacionIncompleta).toBe(true);
+  });
+
+  it('informa la verificación incompleta aunque ningún título verificado coincida', async () => {
+    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1), pelicula(2)]));
+    ofertasPorId({ 1: new ExternalServiceError('TMDB', new Error('caída')) });
+
+    const res = await buscarConSesion({ q: 'Dune' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.resultados).toEqual([]);
+    expect(res.body.data.verificacionIncompleta).toBe(true);
   });
 
   it('responde 502 si no se pudo verificar ningún título', async () => {

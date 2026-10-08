@@ -28,6 +28,7 @@ export function PaginaBusqueda() {
     pagina,
     totalResultados,
     totalPaginas,
+    verificacionIncompleta,
     isLoading,
     isLoadingMore,
     error,
@@ -43,6 +44,7 @@ export function PaginaBusqueda() {
     return {
       ...filtrosConsulta,
       soloPropias: filtrosConsulta.soloPropias && filtroPropias.disponible,
+      firmaPlataformas: filtroPropias.firma,
     };
   }
 
@@ -82,6 +84,18 @@ export function PaginaBusqueda() {
     }
   }, [filtroPerdido, filtros, setFiltros, ultimaBusqueda, buscarConFiltros]);
 
+  const seleccionDesactualizada =
+    Boolean(ultimaBusqueda?.soloPropias) &&
+    filtroPropias.disponible &&
+    !isLoading &&
+    ultimaBusqueda.firmaPlataformas !== filtroPropias.firma;
+
+  useEffect(() => {
+    if (seleccionDesactualizada) {
+      buscar({ ...ultimaBusqueda, firmaPlataformas: filtroPropias.firma });
+    }
+  }, [seleccionDesactualizada, ultimaBusqueda, filtroPropias.firma, buscar]);
+
   return (
     <>
       <header className="mb-12 max-w-2xl space-y-3">
@@ -108,6 +122,7 @@ export function PaginaBusqueda() {
         pagina={pagina}
         totalPaginas={totalPaginas}
         totalResultados={totalResultados}
+        verificacionIncompleta={verificacionIncompleta}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         error={error}

@@ -2,11 +2,12 @@ import { DEFAULT_REGION, TIPO_TITULO } from '@buscador/shared/constants';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
 import { ExternalServiceError } from '../errors/index.js';
+import { disponibilidadSchema } from '../models/disponibilidad.model.js';
 import { tituloSchema } from '../models/titulo.model.js';
 import * as plataformaService from './plataforma.service.js';
 
-function validarRespuesta(respuesta) {
-  const resultado = tituloSchema.safeParse(respuesta);
+function validarRespuesta(schema, respuesta) {
+  const resultado = schema.safeParse(respuesta);
 
   if (!resultado.success) {
     throw new ExternalServiceError('TMDB', resultado.error);
@@ -31,7 +32,7 @@ export async function obtenerDetalleTitulo({ tipo, tmdbId }) {
   const obtenerDetalle = obtenerFuncionDetalle(tipo);
   const respuesta = await obtenerDetalle(tmdbId);
 
-  return validarRespuesta(respuesta);
+  return validarRespuesta(tituloSchema, respuesta);
 }
 
 export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REGION }) {
@@ -41,18 +42,14 @@ export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REG
     plataformaRepository.listarActivas(),
   ]);
 
-  const plataformas = plataformaService
-    .filtrarPlataformasConOfertaIncluida(ofertas[codigoRegion] ?? [], plataformasActivas)
-    .map(({ id, tmdbProviderId, nombre, logoPath, urlHome }) => ({
-      id,
-      tmdbProviderId,
-      nombre,
-      logoPath,
-      urlHome,
-    }));
+  const ofertasDeRegion = ofertas[codigoRegion] ?? { enlaceTmdb: null, ofertas: [] };
 
-  return {
+  return validarRespuesta(disponibilidadSchema, {
     region: codigoRegion,
-    plataformas,
-  };
+    ofertas: plataformaService.agruparPlataformasPorTipoOferta(
+      ofertasDeRegion.ofertas,
+      plataformasActivas,
+    ),
+    enlaceTmdb: ofertasDeRegion.enlaceTmdb,
+  });
 }

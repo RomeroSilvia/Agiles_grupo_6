@@ -19,6 +19,29 @@ export function filtrarPlataformasConOfertaIncluida(ofertasDeRegion, plataformas
     }));
 }
 
+export function agruparPlataformasPorTipoOferta(ofertasDeRegion, plataformas) {
+  return TIPOS_OFERTA_INCLUIDOS.flatMap((tipoOferta) => {
+    const ofertasPorProveedor = new Map(
+      ofertasDeRegion
+        .filter((oferta) => oferta.tipoOferta === tipoOferta)
+        .map((oferta) => [oferta.tmdbProviderId, oferta]),
+    );
+    const plataformasDisponibles = plataformas
+      .filter(({ tmdbProviderId }) => ofertasPorProveedor.has(tmdbProviderId))
+      .map((plataforma) => ({
+        ...plataforma,
+        logoPath:
+          plataforma.logoPath ??
+          ofertasPorProveedor.get(plataforma.tmdbProviderId).logoPath ??
+          null,
+      }));
+
+    return plataformasDisponibles.length > 0
+      ? [{ tipoOferta, plataformas: plataformasDisponibles }]
+      : [];
+  });
+}
+
 export function listarPlataformasDisponibles() {
   return plataformaRepository.listarActivas();
 }

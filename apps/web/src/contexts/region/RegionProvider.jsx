@@ -1,35 +1,52 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DEFAULT_REGION } from '@buscador/shared/constants';
+import { DEFAULT_REGION, REGION_SOURCE, REGION_SOURCES } from '@buscador/shared/constants';
+import { regionSchema } from '@buscador/shared/schemas';
 import { request } from '../../services/api.service.js';
+import { useSession } from '../session/SessionContext.js';
 import { RegionContext } from './RegionContext.js';
 
-/** Región detectada por la API (E2HU1). Mientras carga, usa la región por defecto. */
+/** Mantiene la región resuelta por la API durante la sesión actual. */
 export function RegionProvider({ children }) {
-  const [region, setRegion] = useState(DEFAULT_REGION);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: sessionLoading } = useSession();
+  const identity = user?.id ?? 'guest';
+  const [state, setState] = useState({
+    identity: null,
+    region: DEFAULT_REGION,
+    source: REGION_SOURCE.DEFAULT,
+  });
+  const loading = sessionLoading || state.identity !== identity;
 
   useEffect(() => {
+    if (sessionLoading) {
+      return;
+    }
     let cancelled = false;
     request('/region')
       .then((data) => {
         if (!cancelled) {
-          setRegion(data.region);
+          const region = regionSchema.safeParse(data?.region);
+          const source = REGION_SOURCES.includes(data?.source) ? data.source : null;
+          setState(
+            region.success && source
+              ? { identity, region: region.data, source }
+              : { identity, region: DEFAULT_REGION, source: REGION_SOURCE.DEFAULT },
+          );
         }
       })
       .catch(() => {
-        // si falla, queda la región por defecto
-      })
-      .finally(() => {
         if (!cancelled) {
-          setLoading(false);
+          setState({ identity, region: DEFAULT_REGION, source: REGION_SOURCE.DEFAULT });
         }
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [identity, sessionLoading]);
 
-  const value = useMemo(() => ({ region, loading }), [region, loading]);
+  const value = useMemo(
+    () => ({ region: state.region, source: state.source, loading }),
+    [state.region, state.source, loading],
+  );
 
   return <RegionContext.Provider value={value}>{children}</RegionContext.Provider>;
 }

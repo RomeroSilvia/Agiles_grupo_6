@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { REGION_SOURCE, TIPO_OFERTA } from '@buscador/shared/constants';
 import { Link, useLocation, useParams } from 'react-router';
 import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
@@ -7,13 +8,21 @@ import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
 import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 
-const LINK_VOLVER_CLASS_NAME =
+const LINK_CLASS_NAME =
   'font-semibold text-link underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const ETIQUETAS_TIPO = {
   pelicula: 'Película',
   serie: 'Serie',
 };
+
+const ETIQUETAS_OFERTA = Object.freeze({
+  [TIPO_OFERTA.SUSCRIPCION]: 'Suscripción',
+  [TIPO_OFERTA.GRATIS]: 'Gratis',
+  [TIPO_OFERTA.CON_ANUNCIOS]: 'Gratis con anuncios',
+  [TIPO_OFERTA.ALQUILER]: 'Alquiler',
+  [TIPO_OFERTA.COMPRA]: 'Compra',
+});
 
 function formatearPuntuacion(puntuacion) {
   return puntuacion === null || puntuacion === undefined
@@ -24,28 +33,33 @@ function formatearPuntuacion(puntuacion) {
 export function PaginaDetalleTitulo() {
   const location = useLocation();
   const { tipo, tmdbId } = useParams();
-  const { region } = useRegion();
+  const { region, source, loading: regionLoading } = useRegion();
   const { titulo, isLoading, error } = useDetalleTitulo({ tipo, tmdbId });
   const {
-    plataformas,
+    ofertas,
+    enlaceTmdb,
     isLoading: cargandoDisponibilidad,
     error: errorDisponibilidad,
     reintentar: reintentarDisponibilidad,
-  } = useDisponibilidad({ tipo, tmdbId, region });
+  } = useDisponibilidad({ tipo, tmdbId, region, regionLoading });
   const estadoBusqueda = location.state?.busqueda;
   const { user, loading: cargandoSesion } = useSession();
   const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
   const distinguirPropias = Boolean(user) && !cargandoSesion && !cargandoPropias;
 
-  const plataformasConPropiedad = useMemo(() => {
-    const conPropiedad = plataformas.map((plataforma) => ({
-      plataforma,
-      esPropia: !distinguirPropias || seleccionadas.has(plataforma.id),
-    }));
-    return distinguirPropias
-      ? conPropiedad.sort((a, b) => Number(b.esPropia) - Number(a.esPropia))
-      : conPropiedad;
-  }, [plataformas, distinguirPropias, seleccionadas]);
+  const ofertasConPropiedad = useMemo(
+    () =>
+      ofertas.map(({ tipoOferta, plataformas }) => ({
+        tipoOferta,
+        plataformas: plataformas
+          .map((plataforma) => ({
+            plataforma,
+            esPropia: !distinguirPropias || seleccionadas.has(plataforma.id),
+          }))
+          .sort((a, b) => Number(b.esPropia) - Number(a.esPropia)),
+      })),
+    [ofertas, distinguirPropias, seleccionadas],
+  );
 
   if (isLoading) {
     return (
@@ -65,7 +79,7 @@ export function PaginaDetalleTitulo() {
         <Link
           to="/"
           state={estadoBusqueda ? { busqueda: estadoBusqueda } : undefined}
-          className={LINK_VOLVER_CLASS_NAME}
+          className={LINK_CLASS_NAME}
         >
           Volver a la búsqueda
         </Link>
@@ -90,7 +104,7 @@ export function PaginaDetalleTitulo() {
       <Link
         to="/"
         state={estadoBusqueda ? { busqueda: estadoBusqueda } : undefined}
-        className={LINK_VOLVER_CLASS_NAME}
+        className={LINK_CLASS_NAME}
       >
         Volver a la búsqueda
       </Link>
@@ -141,7 +155,7 @@ export function PaginaDetalleTitulo() {
               <h2 id="seccion-disponibilidad" className="text-xl font-semibold">
                 Plataformas disponibles
               </h2>
-              {region && (
+              {!regionLoading && region && (
                 <span
                   aria-label={`Región de disponibilidad: ${region}`}
                   className="rounded-full bg-chip px-2.5 py-0.5 font-mono text-xs font-medium text-chip-foreground"
@@ -151,7 +165,19 @@ export function PaginaDetalleTitulo() {
               )}
             </div>
 
-            {cargandoDisponibilidad && (
+            {regionLoading && (
+              <p role="status" aria-live="polite" className="text-sm text-muted">
+                Detectando región...
+              </p>
+            )}
+
+            {!regionLoading && source === REGION_SOURCE.DEFAULT && (
+              <p className="text-sm text-muted">
+                No pudimos detectar tu región. Mostramos la región predeterminada {region}.
+              </p>
+            )}
+
+            {!regionLoading && cargandoDisponibilidad && (
               <p role="status" aria-live="polite" className="text-sm text-muted">
                 Consultando disponibilidad...
               </p>
@@ -173,23 +199,42 @@ export function PaginaDetalleTitulo() {
               </div>
             )}
 
-            {!cargandoDisponibilidad && !errorDisponibilidad && plataformas.length === 0 && (
-              <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
-                No encontramos disponibilidad en plataformas de streaming para tu región.
-              </p>
+            {!cargandoDisponibilidad && !errorDisponibilidad && enlaceTmdb && (
+              <a href={enlaceTmdb} target="_blank" rel="noreferrer" className={LINK_CLASS_NAME}>
+                Ver disponibilidad en TMDB
+              </a>
             )}
 
-            {!cargandoDisponibilidad && !errorDisponibilidad && plataformas.length > 0 && (
-              <ul
-                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                aria-label="Plataformas disponibles"
-              >
-                {plataformasConPropiedad.map(({ plataforma, esPropia }) => (
-                  <li key={plataforma.id}>
-                    <TarjetaDisponibilidad plataforma={plataforma} esPropia={esPropia} />
-                  </li>
-                ))}
-              </ul>
+            {!cargandoDisponibilidad &&
+              !errorDisponibilidad &&
+              ofertasConPropiedad.length === 0 && (
+                <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
+                  No encontramos disponibilidad en plataformas de streaming para tu región.
+                </p>
+              )}
+
+            {!cargandoDisponibilidad && !errorDisponibilidad && ofertasConPropiedad.length > 0 && (
+              <div className="space-y-4">
+                {ofertasConPropiedad.map(({ tipoOferta, plataformas }) => {
+                  const etiquetaOferta = ETIQUETAS_OFERTA[tipoOferta] ?? tipoOferta;
+
+                  return (
+                    <section key={tipoOferta} aria-label={etiquetaOferta} className="space-y-2">
+                      <h3 className="text-sm font-semibold text-muted">{etiquetaOferta}</h3>
+                      <ul
+                        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                        aria-label={`Plataformas disponibles: ${etiquetaOferta}`}
+                      >
+                        {plataformas.map(({ plataforma, esPropia }) => (
+                          <li key={plataforma.id}>
+                            <TarjetaDisponibilidad plataforma={plataforma} esPropia={esPropia} />
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

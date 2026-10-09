@@ -10,7 +10,7 @@ export const busquedaPropiasRoutes = Router();
 busquedaPropiasRoutes.get(
   '/',
   requireSession,
-  detectRegion,
   validate({ query: busquedaSchema }),
+  detectRegion,
   busquedaPropiasController.buscar,
 );

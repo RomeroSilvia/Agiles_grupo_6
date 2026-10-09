@@ -262,7 +262,7 @@ describe('Mis plataformas', () => {
     const user = userEvent.setup();
     renderRoute('/mis-plataformas');
 
-    const boton = await screen.findByRole('button', { name: 'Reintentar' });
+    const boton = await screen.findByRole('button', { name: 'Reintentar' }, { timeout: 5_000 });
     fallar = false;
     await user.click(boton);
 

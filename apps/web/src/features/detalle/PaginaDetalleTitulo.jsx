@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { REGION_SOURCE } from '@buscador/shared/constants';
 import { Link, useLocation, useParams } from 'react-router';
-import { Attribution } from '../../components/ui/Attribution.jsx';
 import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
@@ -208,7 +207,6 @@ export function PaginaDetalleTitulo() {
           </div>
         </div>
       </article>
-      <Attribution />
     </section>
   );
 }

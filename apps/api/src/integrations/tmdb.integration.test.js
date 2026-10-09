@@ -11,7 +11,6 @@ import {
   obtenerOfertas,
   obtenerPelicula,
   obtenerSerie,
-  obtenerDisponibilidad,
 } from './tmdb.integration.js';
 import { env } from '../config/env.config.js';
 
@@ -21,14 +20,13 @@ afterEach(() => {
 });
 
 describe('disponibilidad de TMDB', () => {
-  it('selecciona solamente el país solicitado y normaliza las ofertas', async () => {
+  it('normaliza las ofertas de cada región', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         results: {
           AR: { flatrate: [{ provider_id: 337, provider_name: 'Disney Plus' }] },
           BR: {
-            link: 'https://www.themoviedb.org/movie/1/watch?locale=BR',
             flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/n.jpg' }],
           },
         },
@@ -36,36 +34,22 @@ describe('disponibilidad de TMDB', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const data = await obtenerDisponibilidad({ tipo: 'pelicula', tmdbId: 1, region: 'BR' });
+    const ofertas = await obtenerOfertas({ tipo: 'pelicula', tmdbId: 1 });
 
     expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/movie/1/watch/providers');
-    expect(data).toEqual({
-      region: 'BR',
-      ofertas: [
-        {
-          tipoOferta: 'suscripcion',
-          plataformas: [
-            {
-              tmdbProviderId: 8,
-              nombre: 'Netflix',
-              logoPath: '/n.jpg',
-            },
-          ],
-        },
-      ],
-      enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch?locale=BR',
+    expect(ofertas).toEqual({
+      AR: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: null }],
+      BR: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/n.jpg' }],
     });
   });
 
-  it('devuelve una lista vacía si el título no tiene disponibilidad en el país', async () => {
+  it('devuelve una lista vacía para una región sin ofertas', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: { AR: {} } }) }),
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: { UY: {} } }) }),
     );
 
-    await expect(
-      obtenerDisponibilidad({ tipo: 'serie', tmdbId: 2, region: 'UY' }),
-    ).resolves.toEqual({ region: 'UY', ofertas: [], enlaceTmdb: null });
+    await expect(obtenerOfertas({ tipo: 'serie', tmdbId: 2 })).resolves.toEqual({ UY: [] });
   });
 
   it('asigna a cada modalidad de TMDB el tipo de oferta compartido', async () => {
@@ -86,9 +70,9 @@ describe('disponibilidad de TMDB', () => {
       }),
     );
 
-    const data = await obtenerDisponibilidad({ tipo: 'serie', tmdbId: 2, region: 'AR' });
+    const ofertas = await obtenerOfertas({ tipo: 'serie', tmdbId: 3 });
 
-    expect(data.ofertas.map(({ tipoOferta }) => tipoOferta)).toEqual(TIPOS_OFERTA);
+    expect(ofertas.AR.map(({ tipoOferta }) => tipoOferta)).toEqual(TIPOS_OFERTA);
   });
 });
 

@@ -7,9 +7,9 @@ vi.mock('../config/env.config.js', () => envMock);
 import {
   buscarPeliculas,
   buscarSeries,
+  obtenerOfertas,
   obtenerPelicula,
   obtenerSerie,
-  obtenerProveedores,
 } from './tmdb.integration.js';
 import { env } from '../config/env.config.js';
 
@@ -219,46 +219,89 @@ describe('tmdb.integration', () => {
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+});
 
-  it('consulta los proveedores de streaming para una película', async () => {
-    const providersData = {
-      results: {
-        AR: {
-          flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.jpg' }],
+describe('obtenerOfertas', () => {
+  it('normaliza las ofertas de todas las regiones', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 101,
+        results: {
+          AR: {
+            flatrate: [{ provider_id: 8, logo_path: '/netflix.jpg' }],
+            rent: [{ provider_id: 119 }],
+          },
+          MX: { ads: [{ provider_id: 337 }], free: [{ provider_id: 11 }] },
         },
-      },
-    };
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => providersData,
+      }),
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const proveedores = await obtenerProveedores('pelicula', 1);
+    const ofertas = await obtenerOfertas({ tipo: 'pelicula', tmdbId: 101 });
 
-    const [url] = fetchMock.mock.calls[0];
-    expect(url.pathname).toBe('/3/movie/1/watch/providers');
-    expect(proveedores).toEqual(providersData.results);
+    expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/movie/101/watch/providers');
+    expect(ofertas).toEqual({
+      AR: [
+        { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
+        { tmdbProviderId: 119, tipoOferta: 'alquiler', logoPath: null },
+      ],
+      MX: [
+        { tmdbProviderId: 11, tipoOferta: 'gratis', logoPath: null },
+        { tmdbProviderId: 337, tipoOferta: 'con_anuncios', logoPath: null },
+      ],
+    });
   });
 
-  it('consulta los proveedores de streaming para una serie', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: {} }),
-    });
+  it('usa la ruta de series para las series', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
     vi.stubGlobal('fetch', fetchMock);
 
-    const proveedores = await obtenerProveedores('serie', 2);
+    await obtenerOfertas({ tipo: 'serie', tmdbId: 102 });
 
-    const [url] = fetchMock.mock.calls[0];
-    expect(url.pathname).toBe('/3/tv/2/watch/providers');
-    expect(proveedores).toEqual({});
+    expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/tv/102/watch/providers');
   });
 
-  it('lanza un error de servicio externo si el tipo de título es inválido en proveedores', async () => {
-    await expect(obtenerProveedores('anime', 1)).rejects.toMatchObject({
+  it('devuelve sin ofertas si TMDB no conoce el título', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 103 })).resolves.toEqual({});
+  });
+
+  it('ignora proveedores con un formato inválido', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: { AR: { flatrate: [{ provider_id: 'x' }, null], buy: 'no' } },
+        }),
+      }),
+    );
+
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 104 })).resolves.toEqual({ AR: [] });
+  });
+
+  it('reutiliza la respuesta en memoria para el mismo título', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await obtenerOfertas({ tipo: 'pelicula', tmdbId: 105 });
+    await obtenerOfertas({ tipo: 'pelicula', tmdbId: 105 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('propaga el error externo y no lo guarda', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 503 })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 106 })).rejects.toMatchObject({
       code: 'EXTERNAL_SERVICE',
-      status: 502,
     });
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 106 })).resolves.toEqual({});
   });
 });

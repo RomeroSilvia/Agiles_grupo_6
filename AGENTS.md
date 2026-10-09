@@ -58,6 +58,7 @@ apps/api/src/
   middlewares/     <nombre>.middleware.js: validate, requireSession, detectRegion, errorHandler
   integrations/    <servicio>.integration.js: tmdb, streamingAvailability, geoip, resend
   jobs/            <nombre>.job.js: syncAvailability, sendNotifications
+  utils/           helpers técnicos genéricos, sin lógica de negocio: ttlCache, concurrencyLimiter
   errors/          clases de error
   app.js           arma la app de Express (sin levantarla)
   server.js        punto de entrada

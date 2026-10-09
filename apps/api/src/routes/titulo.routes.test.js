@@ -10,7 +10,7 @@ vi.mock('../integrations/tmdb.integration.js', () => ({
   buscarSeries: vi.fn(),
   obtenerPelicula: vi.fn(),
   obtenerSerie: vi.fn(),
-  obtenerProveedores: vi.fn(),
+  obtenerOfertas: vi.fn(),
 }));
 
 vi.mock('../repositories/plataforma.repository.js', () => ({
@@ -61,23 +61,20 @@ const plataformasActivas = [
   },
 ];
 
-const proveedoresTmdb = {
-  AR: {
-    flatrate: [
-      { provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.jpg' },
-      { provider_id: 119, provider_name: 'Amazon Prime Video', logo_path: '/prime.jpg' },
-    ],
-  },
-  US: {
-    flatrate: [{ provider_id: 337, provider_name: 'Disney Plus', logo_path: '/disney.jpg' }],
-  },
+const ofertasTmdb = {
+  AR: [
+    { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
+    { tmdbProviderId: 119, tipoOferta: 'suscripcion', logoPath: '/prime.jpg' },
+    { tmdbProviderId: 337, tipoOferta: 'alquiler', logoPath: '/disney.jpg' },
+  ],
+  US: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: '/disney.jpg' }],
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   tmdbIntegration.obtenerPelicula.mockResolvedValue(detallePelicula);
   tmdbIntegration.obtenerSerie.mockResolvedValue(detalleSerie);
-  tmdbIntegration.obtenerProveedores.mockResolvedValue(proveedoresTmdb);
+  tmdbIntegration.obtenerOfertas.mockResolvedValue(ofertasTmdb);
   plataformaRepository.listarActivas.mockResolvedValue(plataformasActivas);
 });
 
@@ -202,7 +199,7 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
         ],
       },
     });
-    expect(tmdbIntegration.obtenerProveedores).toHaveBeenCalledWith('pelicula', 1);
+    expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledWith({ tipo: 'pelicula', tmdbId: 1 });
   });
 
   it('permite consultar la disponibilidad para una región específica', async () => {
@@ -225,7 +222,7 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
         ],
       },
     });
-    expect(tmdbIntegration.obtenerProveedores).toHaveBeenCalledWith('serie', 2);
+    expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledWith({ tipo: 'serie', tmdbId: 2 });
   });
 
   it('devuelve lista vacía si el título no está disponible en la región solicitada', async () => {
@@ -258,20 +255,18 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body.error.code).toBe('VALIDATION');
   });
 
-  it('responde 404 cuando el título no existe en TMDB', async () => {
-    tmdbIntegration.obtenerProveedores.mockRejectedValueOnce(
-      new NotFoundError('No se encontró el título solicitado'),
-    );
+  it('devuelve lista vacía cuando TMDB no tiene ofertas del título', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValueOnce({});
 
     const response = await request(createApp()).get('/api/titulos/pelicula/999/disponibilidad');
 
-    expect(response.status).toBe(404);
-    expect(response.body.error.code).toBe('NOT_FOUND');
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ data: { region: 'AR', plataformas: [] } });
   });
 
   it('responde 502 cuando la integración con TMDB falla', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    tmdbIntegration.obtenerProveedores.mockRejectedValueOnce(
+    tmdbIntegration.obtenerOfertas.mockRejectedValueOnce(
       new ExternalServiceError('TMDB', new Error('timeout')),
     );
 

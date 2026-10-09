@@ -9,6 +9,7 @@ export const TIPOS_TITULO = Object.values(TIPO_TITULO);
 // Límites técnicos del formulario de búsqueda.
 export const ANIO_MINIMO = 1888;
 export const ANIO_MAXIMO = 2100;
+export const PAGINA_MAXIMA = 500;
 
 export const TIPO_OFERTA = Object.freeze({
   SUSCRIPCION: 'suscripcion',

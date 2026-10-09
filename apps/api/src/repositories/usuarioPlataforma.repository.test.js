@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
 import { USUARIO_PLATAFORMA_PRIMARY_KEY } from '../models/usuarioPlataforma.model.js';
 import { FALLO, SIN_DATOS, mockearConsulta } from '../test/queryBuilderMock.js';
-import { USUARIO } from '../test/fixtures.js';
+import { FILA_NETFLIX, NETFLIX, USUARIO } from '../test/fixtures.js';
 import * as usuarioPlataformaRepository from './usuarioPlataforma.repository.js';
 
 vi.mock('../config/supabase.config.js', () => ({ supabaseAdmin: { from: vi.fn() } }));
@@ -12,22 +12,18 @@ beforeEach(() => {
   vi.resetAllMocks();
 });
 
-describe('listarActivasPorUsuario', () => {
+describe('listarPlataformasActivasPorUsuario', () => {
   it('devuelve las plataformas activas del usuario', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, {
-      data: [
-        { plataforma_id: 1, agregada_en: '2026-10-01T10:00:00Z' },
-        { plataforma_id: 3, agregada_en: '2026-10-02T10:00:00Z' },
-      ],
+      data: [{ plataforma: FILA_NETFLIX }],
       error: null,
     });
 
-    await expect(usuarioPlataformaRepository.listarActivasPorUsuario(USUARIO.id)).resolves.toEqual([
-      { plataformaId: 1, agregadaEn: '2026-10-01T10:00:00Z' },
-      { plataformaId: 3, agregadaEn: '2026-10-02T10:00:00Z' },
-    ]);
+    await expect(
+      usuarioPlataformaRepository.listarPlataformasActivasPorUsuario(USUARIO.id),
+    ).resolves.toEqual([NETFLIX]);
     expect(supabaseAdmin.from).toHaveBeenCalledWith('usuario_plataforma');
-    expect(builder.select).toHaveBeenCalledWith(expect.stringContaining('plataforma!inner()'));
+    expect(builder.select).toHaveBeenCalledWith(expect.stringContaining('plataforma!inner('));
     expect(builder.eq).toHaveBeenCalledWith('usuario_id', USUARIO.id);
     expect(builder.eq).toHaveBeenCalledWith('plataforma.activa', true);
   });
@@ -35,16 +31,16 @@ describe('listarActivasPorUsuario', () => {
   it('devuelve una lista vacía si el usuario no eligió plataformas', async () => {
     mockearConsulta(supabaseAdmin.from, { data: [], error: null });
 
-    await expect(usuarioPlataformaRepository.listarActivasPorUsuario(USUARIO.id)).resolves.toEqual(
-      [],
-    );
+    await expect(
+      usuarioPlataformaRepository.listarPlataformasActivasPorUsuario(USUARIO.id),
+    ).resolves.toEqual([]);
   });
 
   it('lanza DatabaseError si falla la consulta', async () => {
     mockearConsulta(supabaseAdmin.from, FALLO);
 
     await expect(
-      usuarioPlataformaRepository.listarActivasPorUsuario(USUARIO.id),
+      usuarioPlataformaRepository.listarPlataformasActivasPorUsuario(USUARIO.id),
     ).rejects.toBeInstanceOf(DatabaseError);
   });
 });

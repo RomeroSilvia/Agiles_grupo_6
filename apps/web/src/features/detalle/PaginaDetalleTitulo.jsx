@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
+import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
+import { useSession } from '../../contexts/session/SessionContext.js';
 import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
-import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
+import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 
 const LINK_VOLVER_CLASS_NAME =
@@ -30,6 +33,19 @@ export function PaginaDetalleTitulo() {
     reintentar: reintentarDisponibilidad,
   } = useDisponibilidad({ tipo, tmdbId, region });
   const estadoBusqueda = location.state?.busqueda;
+  const { user, loading: cargandoSesion } = useSession();
+  const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
+  const distinguirPropias = Boolean(user) && !cargandoSesion && !cargandoPropias;
+
+  const plataformasConPropiedad = useMemo(() => {
+    const conPropiedad = plataformas.map((plataforma) => ({
+      plataforma,
+      esPropia: !distinguirPropias || seleccionadas.has(plataforma.id),
+    }));
+    return distinguirPropias
+      ? conPropiedad.sort((a, b) => Number(b.esPropia) - Number(a.esPropia))
+      : conPropiedad;
+  }, [plataformas, distinguirPropias, seleccionadas]);
 
   if (isLoading) {
     return (
@@ -168,25 +184,9 @@ export function PaginaDetalleTitulo() {
                 className="grid grid-cols-1 gap-3 sm:grid-cols-2"
                 aria-label="Plataformas disponibles"
               >
-                {plataformas.map((plataforma) => (
+                {plataformasConPropiedad.map(({ plataforma, esPropia }) => (
                   <li key={plataforma.id}>
-                    {plataforma.urlHome ? (
-                      <a
-                        href={plataforma.urlHome}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3 transition-colors duration-150 hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                        title={`Ir a ${plataforma.nombre}`}
-                      >
-                        <LogoPlataforma plataforma={plataforma} />
-                        <span className="font-semibold text-foreground">{plataforma.nombre}</span>
-                      </a>
-                    ) : (
-                      <div className="flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3">
-                        <LogoPlataforma plataforma={plataforma} />
-                        <span className="font-semibold text-foreground">{plataforma.nombre}</span>
-                      </div>
-                    )}
+                    <TarjetaDisponibilidad plataforma={plataforma} esPropia={esPropia} />
                   </li>
                 ))}
               </ul>

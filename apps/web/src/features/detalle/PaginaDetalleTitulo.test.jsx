@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { TIPO_OFERTA } from '@buscador/shared/constants';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { PaginaDetalleTitulo } from './PaginaDetalleTitulo.jsx';
@@ -44,9 +45,17 @@ function renderDetalle(
   );
 }
 
+function respuestaDisponibilidad(region = 'AR', plataformas = []) {
+  return {
+    region,
+    ofertas: plataformas.length ? [{ tipoOferta: TIPO_OFERTA.SUSCRIPCION, plataformas }] : [],
+    enlaceTmdb: null,
+  };
+}
+
 function configurarFetch(
   data = detallePelicula,
-  disponibilidad = { region: 'AR', plataformas: [] },
+  disponibilidad = respuestaDisponibilidad(),
   regionDetectada = { region: 'AR', source: 'ip' },
 ) {
   const fetchMock = vi.fn().mockImplementation((url) => {
@@ -105,7 +114,7 @@ describe('PaginaDetalleTitulo', () => {
       if (urlStr.includes('/disponibilidad')) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ data: { region: 'BR', plataformas: [] } }),
+          json: async () => ({ data: respuestaDisponibilidad('BR') }),
         });
       }
       return Promise.resolve({
@@ -142,11 +151,10 @@ describe('PaginaDetalleTitulo', () => {
   });
 
   it('avisa cuando usa la región predeterminada porque no pudo detectar la región por IP', async () => {
-    configurarFetch(
-      detallePelicula,
-      { region: 'AR', plataformas: [] },
-      { region: 'AR', source: 'default' },
-    );
+    configurarFetch(detallePelicula, respuestaDisponibilidad(), {
+      region: 'AR',
+      source: 'default',
+    });
 
     renderDetalle();
 
@@ -224,12 +232,15 @@ describe('PaginaDetalleTitulo', () => {
     const fetchMock = vi.fn((url, options) => {
       const urlStr = url?.toString() ?? '';
       if (urlStr.includes('/region')) {
-        return Promise.resolve({ ok: true, json: async () => ({ data: { region: 'AR' } }) });
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: { region: 'AR', source: 'ip' } }),
+        });
       }
       if (urlStr.includes('/disponibilidad')) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ data: { region: 'AR', plataformas: [] } }),
+          json: async () => ({ data: respuestaDisponibilidad() }),
         });
       }
 
@@ -302,9 +313,9 @@ describe('PaginaDetalleTitulo', () => {
 
   describe('Disponibilidad de plataformas (E1HU2)', () => {
     it('muestra una única plataforma cuando el título está disponible en ella (Escenario 1)', async () => {
-      configurarFetch(detallePelicula, {
-        region: 'AR',
-        plataformas: [
+      configurarFetch(
+        detallePelicula,
+        respuestaDisponibilidad('AR', [
           {
             id: 1,
             tmdbProviderId: 8,
@@ -312,8 +323,8 @@ describe('PaginaDetalleTitulo', () => {
             logoPath: '/netflix.jpg',
             urlHome: 'https://www.netflix.com',
           },
-        ],
-      });
+        ]),
+      );
 
       renderDetalle();
 
@@ -327,9 +338,9 @@ describe('PaginaDetalleTitulo', () => {
     });
 
     it('muestra todas las plataformas cuando el título está en varias plataformas (Escenario 2)', async () => {
-      configurarFetch(detallePelicula, {
-        region: 'AR',
-        plataformas: [
+      configurarFetch(
+        detallePelicula,
+        respuestaDisponibilidad('AR', [
           {
             id: 1,
             tmdbProviderId: 8,
@@ -344,8 +355,8 @@ describe('PaginaDetalleTitulo', () => {
             logoPath: '/prime.jpg',
             urlHome: 'https://www.primevideo.com',
           },
-        ],
-      });
+        ]),
+      );
 
       renderDetalle();
 
@@ -353,11 +364,55 @@ describe('PaginaDetalleTitulo', () => {
       expect(screen.getByText('Amazon Prime Video')).toBeInTheDocument();
     });
 
-    it('muestra un mensaje indicando que no está disponible cuando no hay plataformas en la región (Escenario 3)', async () => {
+    it('muestra la modalidad de cada oferta y el enlace de TMDB', async () => {
+      const enlaceTmdb = 'https://www.themoviedb.org/movie/1/watch';
       configurarFetch(detallePelicula, {
         region: 'AR',
-        plataformas: [],
+        ofertas: [
+          {
+            tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+            plataformas: [
+              {
+                id: 1,
+                tmdbProviderId: 8,
+                nombre: 'Netflix',
+                logoPath: '/netflix.jpg',
+                urlHome: 'https://www.netflix.com',
+              },
+            ],
+          },
+          {
+            tipoOferta: TIPO_OFERTA.CON_ANUNCIOS,
+            plataformas: [
+              {
+                id: 3,
+                tmdbProviderId: 337,
+                nombre: 'Disney Plus',
+                logoPath: '/disney.jpg',
+                urlHome: 'https://www.disneyplus.com',
+              },
+            ],
+          },
+        ],
+        enlaceTmdb,
       });
+
+      renderDetalle();
+
+      expect(
+        await screen.findByRole('heading', { level: 3, name: 'Suscripción' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 3, name: 'Gratis con anuncios' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Ver disponibilidad en TMDB' })).toHaveAttribute(
+        'href',
+        enlaceTmdb,
+      );
+    });
+
+    it('muestra un mensaje indicando que no está disponible cuando no hay plataformas en la región (Escenario 3)', async () => {
+      configurarFetch(detallePelicula, respuestaDisponibilidad());
 
       renderDetalle();
 
@@ -390,15 +445,21 @@ describe('PaginaDetalleTitulo', () => {
             json: async () => ({
               data: {
                 region: 'AR',
-                plataformas: [
+                ofertas: [
                   {
-                    id: 1,
-                    tmdbProviderId: 8,
-                    nombre: 'Netflix',
-                    logoPath: '/netflix.jpg',
-                    urlHome: 'https://www.netflix.com',
+                    tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+                    plataformas: [
+                      {
+                        id: 1,
+                        tmdbProviderId: 8,
+                        nombre: 'Netflix',
+                        logoPath: '/netflix.jpg',
+                        urlHome: 'https://www.netflix.com',
+                      },
+                    ],
                   },
                 ],
+                enlaceTmdb: null,
               },
             }),
           });
@@ -406,7 +467,7 @@ describe('PaginaDetalleTitulo', () => {
         if (urlStr.includes('/region')) {
           return Promise.resolve({
             ok: true,
-            json: async () => ({ data: { region: 'AR' } }),
+            json: async () => ({ data: { region: 'AR', source: 'ip' } }),
           });
         }
         return Promise.resolve({
@@ -444,7 +505,7 @@ describe('PaginaDetalleTitulo', () => {
     };
 
     function configurarDisponibilidad() {
-      configurarFetch(detallePelicula, { region: 'AR', plataformas: [NETFLIX, PRIME] });
+      configurarFetch(detallePelicula, respuestaDisponibilidad('AR', [NETFLIX, PRIME]));
     }
 
     it('sin sesión permite ir a todas las plataformas', async () => {
@@ -489,7 +550,9 @@ describe('PaginaDetalleTitulo', () => {
         propias: plataformasPropias([PRIME.id]),
       });
 
-      const lista = await screen.findByRole('list', { name: 'Plataformas disponibles' });
+      const lista = await screen.findByRole('list', {
+        name: 'Plataformas disponibles: Suscripción',
+      });
       const items = within(lista).getAllByRole('listitem');
       expect(items[0]).toHaveTextContent('Amazon Prime Video');
       expect(items[1]).toHaveTextContent('Netflix');

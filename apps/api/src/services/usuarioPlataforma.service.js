@@ -15,7 +15,7 @@ export async function obtenerPlataformasDelUsuarioPorTitulo({ titulos, region, p
       ? {
           verificado: true,
           plataformas: plataformaService
-            .filtrarPlataformasConOfertaIncluida(consulta.value[region] ?? [], plataformas)
+            .filtrarPlataformasConOfertaIncluida(consulta.value[region]?.ofertas ?? [], plataformas)
             .map(aPlataformaDeResultado),
         }
       : { verificado: false, plataformas: [] },

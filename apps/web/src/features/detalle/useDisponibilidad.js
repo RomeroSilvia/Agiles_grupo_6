@@ -5,7 +5,8 @@ export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false 
   const tieneParametros = Boolean(tipo && tmdbId);
   const regionResuelta = Boolean(region) && !regionLoading;
   const claveParametros = tieneParametros ? `${tipo}/${tmdbId}/${region ?? ''}` : null;
-  const [plataformas, setPlataformas] = useState([]);
+  const [ofertas, setOfertas] = useState([]);
+  const [enlaceTmdb, setEnlaceTmdb] = useState(null);
   const [error, setError] = useState(null);
   const [claveCargada, setClaveCargada] = useState(null);
   const [recarga, setRecarga] = useState(0);
@@ -29,7 +30,8 @@ export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false 
     )
       .then((data) => {
         if (!controller.signal.aborted) {
-          setPlataformas(Array.isArray(data?.plataformas) ? data.plataformas : []);
+          setOfertas(Array.isArray(data?.ofertas) ? data.ofertas : []);
+          setEnlaceTmdb(typeof data?.enlaceTmdb === 'string' ? data.enlaceTmdb : null);
           setError(null);
           setClaveCargada(claveParametros);
         }
@@ -39,7 +41,8 @@ export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false 
           return;
         }
 
-        setPlataformas([]);
+        setOfertas([]);
+        setEnlaceTmdb(null);
         setError(
           requestError instanceof ApiError
             ? requestError.message
@@ -54,7 +57,8 @@ export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false 
   const esDetalleActual = tieneParametros && regionResuelta && claveCargada === claveParametros;
 
   return {
-    plataformas: esDetalleActual ? plataformas : [],
+    ofertas: esDetalleActual ? ofertas : [],
+    enlaceTmdb: esDetalleActual ? enlaceTmdb : null,
     isLoading: tieneParametros && (!regionResuelta || !esDetalleActual),
     error: !tieneParametros ? 'No se pudo identificar el título.' : esDetalleActual ? error : null,
     reintentar,

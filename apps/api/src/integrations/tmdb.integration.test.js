@@ -25,7 +25,10 @@ describe('disponibilidad de TMDB', () => {
       ok: true,
       json: async () => ({
         results: {
-          AR: { flatrate: [{ provider_id: 337, provider_name: 'Disney Plus' }] },
+          AR: {
+            link: 'https://www.themoviedb.org/movie/1/watch',
+            flatrate: [{ provider_id: 337, provider_name: 'Disney Plus' }],
+          },
           BR: {
             flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/n.jpg' }],
           },
@@ -38,8 +41,14 @@ describe('disponibilidad de TMDB', () => {
 
     expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/movie/1/watch/providers');
     expect(ofertas).toEqual({
-      AR: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: null }],
-      BR: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/n.jpg' }],
+      AR: {
+        enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+        ofertas: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: null }],
+      },
+      BR: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/n.jpg' }],
+      },
     });
   });
 
@@ -49,7 +58,9 @@ describe('disponibilidad de TMDB', () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: { UY: {} } }) }),
     );
 
-    await expect(obtenerOfertas({ tipo: 'serie', tmdbId: 2 })).resolves.toEqual({ UY: [] });
+    await expect(obtenerOfertas({ tipo: 'serie', tmdbId: 2 })).resolves.toEqual({
+      UY: { enlaceTmdb: null, ofertas: [] },
+    });
   });
 
   it('asigna a cada modalidad de TMDB el tipo de oferta compartido', async () => {
@@ -72,7 +83,7 @@ describe('disponibilidad de TMDB', () => {
 
     const ofertas = await obtenerOfertas({ tipo: 'serie', tmdbId: 3 });
 
-    expect(ofertas.AR.map(({ tipoOferta }) => tipoOferta)).toEqual(TIPOS_OFERTA);
+    expect(ofertas.AR.ofertas.map(({ tipoOferta }) => tipoOferta)).toEqual(TIPOS_OFERTA);
   });
 });
 
@@ -287,10 +298,14 @@ describe('obtenerOfertas', () => {
         id: 101,
         results: {
           AR: {
+            link: 'https://www.themoviedb.org/movie/101/watch',
             flatrate: [{ provider_id: 8, logo_path: '/netflix.jpg' }],
             rent: [{ provider_id: 119 }],
           },
-          MX: { ads: [{ provider_id: 337 }], free: [{ provider_id: 11 }] },
+          MX: {
+            ads: [{ provider_id: 337 }],
+            free: [{ provider_id: 11 }],
+          },
         },
       }),
     });
@@ -300,14 +315,20 @@ describe('obtenerOfertas', () => {
 
     expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/movie/101/watch/providers');
     expect(ofertas).toEqual({
-      AR: [
-        { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
-        { tmdbProviderId: 119, tipoOferta: 'alquiler', logoPath: null },
-      ],
-      MX: [
-        { tmdbProviderId: 11, tipoOferta: 'gratis', logoPath: null },
-        { tmdbProviderId: 337, tipoOferta: 'con_anuncios', logoPath: null },
-      ],
+      AR: {
+        enlaceTmdb: 'https://www.themoviedb.org/movie/101/watch',
+        ofertas: [
+          { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
+          { tmdbProviderId: 119, tipoOferta: 'alquiler', logoPath: null },
+        ],
+      },
+      MX: {
+        enlaceTmdb: null,
+        ofertas: [
+          { tmdbProviderId: 11, tipoOferta: 'gratis', logoPath: null },
+          { tmdbProviderId: 337, tipoOferta: 'con_anuncios', logoPath: null },
+        ],
+      },
     });
   });
 
@@ -337,7 +358,9 @@ describe('obtenerOfertas', () => {
       }),
     );
 
-    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 104 })).resolves.toEqual({ AR: [] });
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 104 })).resolves.toEqual({
+      AR: { enlaceTmdb: null, ofertas: [] },
+    });
   });
 
   it('reutiliza la respuesta en memoria para el mismo título', async () => {

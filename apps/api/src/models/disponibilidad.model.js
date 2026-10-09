@@ -9,9 +9,11 @@ export const disponibilidadSchema = z.object({
       tipoOferta: z.enum(TIPOS_OFERTA),
       plataformas: z.array(
         z.object({
+          id: z.number().int().positive(),
           tmdbProviderId: z.number().int().positive(),
           nombre: z.string().min(1),
           logoPath: z.string().min(1).nullable(),
+          urlHome: z.url().nullable(),
         }),
       ),
     }),

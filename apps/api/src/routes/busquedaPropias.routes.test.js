@@ -18,7 +18,12 @@ vi.mock('../integrations/tmdb.integration.js', () => ({
 }));
 
 const COOKIE_SESION = 'access_token=access-de-prueba';
-const EN_NETFLIX = { AR: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion' }] };
+const EN_NETFLIX = {
+  AR: {
+    enlaceTmdb: null,
+    ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion' }],
+  },
+};
 const SIN_OFERTAS = {};
 
 function pelicula(tmdbId, nombre = `Película ${tmdbId}`) {

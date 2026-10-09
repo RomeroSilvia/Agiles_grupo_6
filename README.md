@@ -67,23 +67,27 @@ Las IPs privadas o reservadas no se envían al servicio de país. `true` y `1` n
 válidos para `TRUST_PROXY`.
 
 `GET /api/titulos/:tipo/:tmdbId/disponibilidad?region=BR` consulta la disponibilidad del país
-indicado por el contexto de región. La página de detalle ofrece el enlace de TMDB cuando
-está disponible. Los deep links directos a las plataformas y la watchlist todavía no están implementados.
+indicado por el contexto de región y devuelve `{ region, ofertas, enlaceTmdb }`. Cada oferta agrupa
+las plataformas activas por modalidad (`suscripcion`, `gratis` o `con_anuncios`); `enlaceTmdb` es
+`null` cuando TMDB no informa un enlace para esa región. La ficha muestra las modalidades y el
+enlace de TMDB cuando está disponible. Las tarjetas llevan al sitio de cada plataforma; los deep
+links directos al título y la watchlist todavía no están implementados.
 
-| Método | Ruta                                 | Sesión | Descripción                                                                  |
-| ------ | ------------------------------------ | :----: | ---------------------------------------------------------------------------- |
-| GET    | `/health`                            |        | Estado de la API                                                             |
-| POST   | `/auth/sign-up`                      |        | Registro con mail y contraseña                                               |
-| POST   | `/auth/sign-in`                      |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                       |
-| POST   | `/auth/sign-out`                     |        | Cierre de sesión                                                             |
-| GET    | `/auth/session`                      |        | Usuario de la sesión actual, o `null`                                        |
-| GET    | `/region`                            |        | Región detectada del usuario                                                 |
-| GET    | `/busqueda`                          |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `pagina` |
-| GET    | `/busqueda/propias`                  |   si   | Misma búsqueda, solo con lo disponible en las plataformas del usuario        |
-| GET    | `/titulos/:tipo/:tmdbId`             |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)               |
-| GET    | `/plataformas`                       |        | Catálogo de plataformas activas                                              |
-| GET    | `/plataformas/propias`               |   si   | Ids de las plataformas que eligió el usuario                                 |
-| PUT    | `/plataformas/propias/:plataformaId` |   si   | Agrega una plataforma propia                                                 |
-| DELETE | `/plataformas/propias/:plataformaId` |   si   | Quita una plataforma propia                                                  |
+| Método | Ruta                                    | Sesión | Descripción                                                                  |
+| ------ | --------------------------------------- | :----: | ---------------------------------------------------------------------------- |
+| GET    | `/health`                               |        | Estado de la API                                                             |
+| POST   | `/auth/sign-up`                         |        | Registro con mail y contraseña                                               |
+| POST   | `/auth/sign-in`                         |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                       |
+| POST   | `/auth/sign-out`                        |        | Cierre de sesión                                                             |
+| GET    | `/auth/session`                         |        | Usuario de la sesión actual, o `null`                                        |
+| GET    | `/region`                               |        | Región detectada del usuario                                                 |
+| GET    | `/busqueda`                             |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `pagina` |
+| GET    | `/busqueda/propias`                     |   si   | Misma búsqueda, solo con lo disponible en las plataformas del usuario        |
+| GET    | `/titulos/:tipo/:tmdbId`                |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)               |
+| GET    | `/titulos/:tipo/:tmdbId/disponibilidad` |        | Plataformas activas por modalidad y enlace de TMDB para la región indicada   |
+| GET    | `/plataformas`                          |        | Catálogo de plataformas activas                                              |
+| GET    | `/plataformas/propias`                  |   si   | Ids de las plataformas que eligió el usuario                                 |
+| PUT    | `/plataformas/propias/:plataformaId`    |   si   | Agrega una plataforma propia                                                 |
+| DELETE | `/plataformas/propias/:plataformaId`    |   si   | Quita una plataforma propia                                                  |
 
 Los endpoints con sesión responden `401` (`UNAUTHENTICATED`) si no hay un usuario logueado.

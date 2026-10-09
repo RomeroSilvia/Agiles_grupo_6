@@ -8,8 +8,7 @@ import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 vi.mock('../integrations/tmdb.integration.js', () => ({
   buscarPeliculas: vi.fn(),
   buscarSeries: vi.fn(),
-  obtenerPelicula: vi.fn(),
-  obtenerSerie: vi.fn(),
+  obtenerDetalle: vi.fn(),
   obtenerOfertas: vi.fn(),
 }));
 
@@ -78,8 +77,9 @@ const ofertasTmdb = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  tmdbIntegration.obtenerPelicula.mockResolvedValue(detallePelicula);
-  tmdbIntegration.obtenerSerie.mockResolvedValue(detalleSerie);
+  tmdbIntegration.obtenerDetalle.mockImplementation((tipo) =>
+    Promise.resolve(tipo === 'pelicula' ? detallePelicula : detalleSerie),
+  );
   tmdbIntegration.obtenerOfertas.mockResolvedValue(ofertasTmdb);
   plataformaRepository.listarActivas.mockResolvedValue(plataformasActivas);
 });
@@ -90,8 +90,7 @@ describe('GET /api/titulos/:tipo/:tmdbId', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ data: detallePelicula });
-    expect(tmdbIntegration.obtenerPelicula).toHaveBeenCalledWith(1);
-    expect(tmdbIntegration.obtenerSerie).not.toHaveBeenCalled();
+    expect(tmdbIntegration.obtenerDetalle).toHaveBeenCalledWith('pelicula', 1);
   });
 
   it('devuelve el detalle de una serie', async () => {
@@ -99,8 +98,7 @@ describe('GET /api/titulos/:tipo/:tmdbId', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ data: detalleSerie });
-    expect(tmdbIntegration.obtenerSerie).toHaveBeenCalledWith(2);
-    expect(tmdbIntegration.obtenerPelicula).not.toHaveBeenCalled();
+    expect(tmdbIntegration.obtenerDetalle).toHaveBeenCalledWith('serie', 2);
   });
 
   it('responde 400 cuando los parámetros no son válidos', async () => {
@@ -114,8 +112,7 @@ describe('GET /api/titulos/:tipo/:tmdbId', () => {
         expect.objectContaining({ field: 'tmdbId' }),
       ]),
     );
-    expect(tmdbIntegration.obtenerPelicula).not.toHaveBeenCalled();
-    expect(tmdbIntegration.obtenerSerie).not.toHaveBeenCalled();
+    expect(tmdbIntegration.obtenerDetalle).not.toHaveBeenCalled();
   });
 
   it('responde 400 cuando el identificador no es un entero positivo', async () => {
@@ -123,12 +120,12 @@ describe('GET /api/titulos/:tipo/:tmdbId', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('VALIDATION');
-    expect(tmdbIntegration.obtenerPelicula).not.toHaveBeenCalled();
+    expect(tmdbIntegration.obtenerDetalle).not.toHaveBeenCalled();
   });
 
   it('responde 502 cuando TMDB falla', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    tmdbIntegration.obtenerPelicula.mockRejectedValueOnce(
+    tmdbIntegration.obtenerDetalle.mockRejectedValueOnce(
       new ExternalServiceError('TMDB', new Error('sin conexión')),
     );
 
@@ -146,7 +143,7 @@ describe('GET /api/titulos/:tipo/:tmdbId', () => {
   });
 
   it('responde 404 cuando TMDB no encuentra el título', async () => {
-    tmdbIntegration.obtenerPelicula.mockRejectedValueOnce(
+    tmdbIntegration.obtenerDetalle.mockRejectedValueOnce(
       new NotFoundError('No se encontró el título solicitado'),
     );
 
@@ -163,7 +160,7 @@ describe('GET /api/titulos/:tipo/:tmdbId', () => {
 
   it('responde 502 cuando TMDB devuelve una estructura inválida', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    tmdbIntegration.obtenerPelicula.mockResolvedValueOnce({ id: 1 });
+    tmdbIntegration.obtenerDetalle.mockResolvedValueOnce({ id: 1 });
 
     const response = await request(createApp()).get('/api/titulos/pelicula/1');
 

@@ -8,9 +8,10 @@ import { TextField } from '../../components/ui/TextField.jsx';
 import { PasswordField } from '../../components/ui/PasswordField.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
+import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
+import { RUTAS } from '../../app/rutas.js';
 
-const linkClassName =
-  'rounded-sm font-semibold text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+const linkClassName = `rounded-sm font-semibold text-link underline-offset-4 hover:underline ${FOCUS_RING_CLASS_NAME}`;
 
 /** E4HU2: inicio de sesión con mail y contraseña. */
 export function PaginaInicioSesion() {
@@ -31,7 +32,7 @@ export function PaginaInicioSesion() {
     setSubmitting(true);
     try {
       await signIn(credenciales);
-      navigate('/', { replace: true });
+      navigate(RUTAS.BUSQUEDA, { replace: true });
     } catch (error) {
       setFormError(error.message);
       setSubmitting(false);
@@ -75,7 +76,7 @@ export function PaginaInicioSesion() {
 
       <p className="mt-8 text-center text-muted">
         ¿No tenés cuenta?{' '}
-        <Link to="/registro" className={linkClassName}>
+        <Link to={RUTAS.REGISTRO} className={linkClassName}>
           Registrate
         </Link>
       </p>

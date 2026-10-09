@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router';
 import { useSession } from '../../contexts/session/SessionContext.js';
+import { RUTAS } from '../../app/rutas.js';
 
 /** Rutas de ingreso y registro: si ya hay sesión iniciada, lleva al inicio. */
 export function SoloSinSesion() {
@@ -9,7 +10,7 @@ export function SoloSinSesion() {
     return null;
   }
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={RUTAS.BUSQUEDA} replace />;
   }
   return <Outlet />;
 }

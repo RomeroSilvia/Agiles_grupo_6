@@ -5,6 +5,11 @@ export const ETIQUETAS_TIPO_TITULO = Object.freeze({
   [TIPO_TITULO.SERIE]: 'Series',
 });
 
+export const ETIQUETAS_TIPO_TITULO_SINGULAR = Object.freeze({
+  [TIPO_TITULO.PELICULA]: 'Película',
+  [TIPO_TITULO.SERIE]: 'Serie',
+});
+
 export const RUTAS_API_BUSQUEDA = Object.freeze({
   TODAS: '/busqueda',
   PROPIAS: '/busqueda/propias',

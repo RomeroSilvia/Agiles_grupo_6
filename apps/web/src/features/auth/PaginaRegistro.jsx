@@ -10,6 +10,8 @@ import { CheckIcon } from '../../components/ui/icons.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
 import { PasswordRequirements } from './PasswordRequirements.jsx';
+import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
+import { RUTAS } from '../../app/rutas.js';
 
 const BENEFICIOS = [
   'Búsqueda ilimitada y disponibilidad por región',
@@ -17,8 +19,7 @@ const BENEFICIOS = [
   'Redireccionamiento directo a la plataforma',
 ];
 
-const linkClassName =
-  'rounded-sm font-semibold text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+const linkClassName = `rounded-sm font-semibold text-link underline-offset-4 hover:underline ${FOCUS_RING_CLASS_NAME}`;
 
 /** E4HU2: registro con mail y contraseña. Al terminar deja la sesión iniciada. */
 export function PaginaRegistro() {
@@ -43,7 +44,7 @@ export function PaginaRegistro() {
     setSubmitting(true);
     try {
       await signUp({ email: datos.email, password: datos.password });
-      navigate('/', { replace: true });
+      navigate(RUTAS.BUSQUEDA, { replace: true });
     } catch (error) {
       setFormError(error.message);
       setSubmitting(false);
@@ -101,7 +102,7 @@ export function PaginaRegistro() {
 
       <p className="mt-8 text-center text-muted">
         ¿Ya tenés cuenta?{' '}
-        <Link to="/iniciar-sesion" className={linkClassName}>
+        <Link to={RUTAS.INICIAR_SESION} className={linkClassName}>
           Iniciá sesión
         </Link>
       </p>

@@ -66,7 +66,7 @@ afterEach(() => {
 });
 
 describe('router de la aplicación', () => {
-  it('navega de una tarjeta a la ficha y conserva la búsqueda al volver', async () => {
+  it('navega de una tarjeta a la ficha y restaura la búsqueda desde la URL al volver', async () => {
     const fetchMock = configurarFetch();
     const user = userEvent.setup();
 
@@ -91,7 +91,7 @@ describe('router de la aplicación', () => {
       const url = new URL(input.toString(), window.location.origin);
       return url.pathname === '/api/busqueda';
     });
-    expect(llamadasDeBusqueda).toHaveLength(1);
+    expect(llamadasDeBusqueda).toHaveLength(2);
   }, 10_000);
 
   it('restaura la búsqueda y su desplazamiento al usar Atrás del navegador', async () => {
@@ -136,6 +136,6 @@ describe('router de la aplicación', () => {
       const url = new URL(input.toString(), window.location.origin);
       return url.pathname === '/api/busqueda';
     });
-    expect(llamadasDeBusqueda).toHaveLength(1);
+    expect(llamadasDeBusqueda).toHaveLength(2);
   });
 });

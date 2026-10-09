@@ -8,13 +8,12 @@ import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
 import { IconButton } from '../components/ui/IconButton.jsx';
 import { MenuIcon, XIcon } from '../components/ui/icons.jsx';
+import { FOCUS_RING_CLASS_NAME } from '../components/ui/focusRing.js';
+import { RUTAS } from './rutas.js';
 
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+const cerrarSesionClassName = `cursor-pointer items-center text-sm font-semibold text-muted transition-colors duration-150 hover:text-foreground ${FOCUS_RING_CLASS_NAME}`;
 
-const cerrarSesionClassName = `cursor-pointer items-center text-sm font-semibold text-muted transition-colors duration-150 hover:text-foreground ${focusRing}`;
-
-const ENLACES = [{ to: '/mis-plataformas', label: 'Mis plataformas' }];
+const ENLACES = [{ to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' }];
 
 function Enlaces({ onNavigate }) {
   return ENLACES.map(({ to, label }) => (
@@ -23,7 +22,7 @@ function Enlaces({ onNavigate }) {
       to={to}
       onClick={onNavigate}
       className={({ isActive }) =>
-        `inline-flex min-h-11 items-center rounded-sm text-sm transition-colors duration-150 hover:text-foreground ${isActive ? 'font-bold text-foreground' : 'text-muted'} ${focusRing}`
+        `inline-flex min-h-11 items-center rounded-sm text-sm transition-colors duration-150 hover:text-foreground ${isActive ? 'font-bold text-foreground' : 'text-muted'} ${FOCUS_RING_CLASS_NAME}`
       }
     >
       {label}
@@ -62,14 +61,14 @@ function AccionesDeSesion() {
   return (
     <div className="flex items-center gap-1 sm:gap-2">
       <Link
-        to="/iniciar-sesion"
-        className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-foreground transition-colors duration-150 hover:text-link ${focusRing}`}
+        to={RUTAS.INICIAR_SESION}
+        className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-foreground transition-colors duration-150 hover:text-link ${FOCUS_RING_CLASS_NAME}`}
       >
         Iniciar sesión
       </Link>
       <Link
-        to="/registro"
-        className={`inline-flex min-h-11 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors duration-150 hover:bg-accent-hover ${focusRing}`}
+        to={RUTAS.REGISTRO}
+        className={`inline-flex min-h-11 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors duration-150 hover:bg-accent-hover ${FOCUS_RING_CLASS_NAME}`}
       >
         Crear cuenta
       </Link>
@@ -94,7 +93,11 @@ export function MainLayout() {
       <ScrollRestoration />
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3">
-          <Link to="/" aria-label="Streamly, ir al inicio" className={`rounded-sm ${focusRing}`}>
+          <Link
+            to={RUTAS.BUSQUEDA}
+            aria-label="Streamly, ir al inicio"
+            className={`rounded-sm ${FOCUS_RING_CLASS_NAME}`}
+          >
             <Logo />
           </Link>
           {user && (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { TIPOS_OFERTA } from '@buscador/shared/constants';
+import { TIPOS_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 
 const envMock = vi.hoisted(() => ({ env: { TMDB_API_KEY: 'clave-prueba' } }));
 
@@ -9,8 +9,7 @@ import {
   buscarPeliculas,
   buscarSeries,
   obtenerOfertas,
-  obtenerPelicula,
-  obtenerSerie,
+  obtenerDetalle,
 } from './tmdb.integration.js';
 import { env } from '../config/env.config.js';
 
@@ -102,7 +101,7 @@ describe('tmdb.integration', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const respuesta = await obtenerPelicula(1);
+    const respuesta = await obtenerDetalle(TIPO_TITULO.PELICULA, 1);
     const [url] = fetchMock.mock.calls[0];
 
     expect(url.pathname).toBe('/3/movie/1');
@@ -132,7 +131,7 @@ describe('tmdb.integration', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const respuesta = await obtenerSerie(2);
+    const respuesta = await obtenerDetalle(TIPO_TITULO.SERIE, 2);
     const [url] = fetchMock.mock.calls[0];
 
     expect(url.pathname).toBe('/3/tv/2');
@@ -156,7 +155,7 @@ describe('tmdb.integration', () => {
       }),
     );
 
-    await expect(obtenerPelicula(3)).resolves.toEqual({
+    await expect(obtenerDetalle(TIPO_TITULO.PELICULA, 3)).resolves.toEqual({
       tmdbId: 3,
       tipo: 'pelicula',
       nombre: null,
@@ -176,16 +175,40 @@ describe('tmdb.integration', () => {
       }),
     );
 
-    await expect(obtenerPelicula(3)).resolves.toMatchObject({
+    await expect(obtenerDetalle(TIPO_TITULO.PELICULA, 3)).resolves.toMatchObject({
       tmdbId: 3,
       anio: null,
     });
   });
 
+  it('normaliza igual el nombre ausente en búsquedas y detalles', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            page: 1,
+            results: [{ id: 3 }],
+            total_results: 1,
+            total_pages: 1,
+          }),
+        })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 3 }) }),
+    );
+
+    const busqueda = await buscarPeliculas({ q: 'sin nombre', pagina: 1 });
+    const detalle = await obtenerDetalle(TIPO_TITULO.PELICULA, 3);
+
+    expect(busqueda.resultados[0].nombre).toBe(null);
+    expect(detalle.nombre).toBe(busqueda.resultados[0].nombre);
+  });
+
   it('convierte un 404 del endpoint de detalle en un recurso no encontrado', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
 
-    await expect(obtenerSerie(999)).rejects.toMatchObject({
+    await expect(obtenerDetalle(TIPO_TITULO.SERIE, 999)).rejects.toMatchObject({
       code: 'NOT_FOUND',
       status: 404,
       message: 'No se encontró el título solicitado',
@@ -244,6 +267,15 @@ describe('tmdb.integration', () => {
 
   it('convierte una respuesta no exitosa en un error externo', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+
+    await expect(buscarPeliculas({ q: 'dune', pagina: 1 })).rejects.toMatchObject({
+      code: 'EXTERNAL_SERVICE',
+      status: 502,
+    });
+  });
+
+  it('mantiene un 404 de búsqueda como error externo', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
 
     await expect(buscarPeliculas({ q: 'dune', pagina: 1 })).rejects.toMatchObject({
       code: 'EXTERNAL_SERVICE',

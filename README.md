@@ -26,30 +26,33 @@ Consumidores habituales de streaming que tienen 2 o más suscripciones activas (
 
 ```bash
 npm install
-npm run dev
-npm run check
+npm run dev     # API en :3000 y web en :5173
+npm run check   # lint + formato + tests
 ```
 
-Para habilitar la búsqueda, copiar `apps/api/.env.example` como `apps/api/.env` y completar
-`TMDB_API_KEY`. El servidor carga ese archivo automáticamente en desarrollo.
+Copiar `apps/api/.env.example` como `apps/api/.env` y completar las claves de Supabase (las pasa quien administra el proyecto) y `TMDB_API_KEY`.
 
-## Búsqueda
+## Estructura
 
-La API expone `GET /api/busqueda` con estos parámetros:
+Monorepo con npm workspaces, en JavaScript (sin TypeScript).
 
-- `q`: título obligatorio.
-- `tipo`: `pelicula` o `serie`.
-- `anio`: año entre 1888 y 2100.
-- `pagina`: página de resultados, opcional; por defecto es `1`.
+```
+apps/
+  api/        Express 5: routes → controllers → services → repositories / integrations
+  web/        React 19 + Vite + Tailwind CSS v4, organizado por funcionalidad (features/)
+packages/
+  shared/     Esquemas Zod y constantes que usan la API y la web
+supabase/
+  migrations/ Esquema de la base
+```
 
-La respuesta contiene resultados resumidos con título, tipo, año, póster y puntuación.
+- Los datos viven en Supabase y solo la API accede a ellos; la web habla únicamente con la API.
+- Catálogo y disponibilidad: TMDB (con datos de JustWatch).
+- Las convenciones del proyecto (capas, nombres, idioma, commits) están en [AGENTS.md](./AGENTS.md).
 
-## Detalle de títulos
+## Endpoints
 
-La API expone `GET /api/titulos/:tipo/:tmdbId` para consultar el detalle de una película o
-serie. `tipo` puede ser `pelicula` o `serie`, y `tmdbId` es el identificador numérico de TMDB.
-La respuesta contiene `{ data: ... }` con nombre, sinopsis, póster, año y puntuación. Si TMDB no
-encuentra el título, la API responde `404` con el código `NOT_FOUND`.
+Todas las rutas empiezan con `/api`. Las respuestas exitosas tienen la forma `{ "data": ... }` y los errores `{ "error": { "code", "message" } }`.
 
 La pantalla de detalle también muestra la disponibilidad de TMDB/JustWatch para la región del usuario.
 La API expone `GET /api/region`, que consulta la IP desde el backend y devuelve
@@ -67,7 +70,20 @@ válidos para `TRUST_PROXY`.
 indicado por el contexto de región. La página de detalle ofrece el enlace de TMDB cuando
 está disponible. Los deep links directos a las plataformas y la watchlist todavía no están implementados.
 
-Los tokens visuales basados en el Figma están definidos en
-`apps/web/src/styles.css` y contemplan los modos claro y oscuro.
+| Método | Ruta                                 | Sesión | Descripción                                                                  |
+| ------ | ------------------------------------ | :----: | ---------------------------------------------------------------------------- |
+| GET    | `/health`                            |        | Estado de la API                                                             |
+| POST   | `/auth/sign-up`                      |        | Registro con mail y contraseña                                               |
+| POST   | `/auth/sign-in`                      |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                       |
+| POST   | `/auth/sign-out`                     |        | Cierre de sesión                                                             |
+| GET    | `/auth/session`                      |        | Usuario de la sesión actual, o `null`                                        |
+| GET    | `/region`                            |        | Región detectada del usuario                                                 |
+| GET    | `/busqueda`                          |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `pagina` |
+| GET    | `/busqueda/propias`                  |   si   | Misma búsqueda, solo con lo disponible en las plataformas del usuario        |
+| GET    | `/titulos/:tipo/:tmdbId`             |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)               |
+| GET    | `/plataformas`                       |        | Catálogo de plataformas activas                                              |
+| GET    | `/plataformas/propias`               |   si   | Ids de las plataformas que eligió el usuario                                 |
+| PUT    | `/plataformas/propias/:plataformaId` |   si   | Agrega una plataforma propia                                                 |
+| DELETE | `/plataformas/propias/:plataformaId` |   si   | Quita una plataforma propia                                                  |
 
-Las convenciones del proyecto están en [AGENTS.md](./AGENTS.md).
+Los endpoints con sesión responden `401` (`UNAUTHENTICATED`) si no hay un usuario logueado.

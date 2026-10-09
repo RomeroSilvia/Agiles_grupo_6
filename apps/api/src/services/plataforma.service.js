@@ -1,14 +1,31 @@
+import { TIPOS_OFERTA_INCLUIDOS } from '@buscador/shared/constants';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
 import * as usuarioPlataformaRepository from '../repositories/usuarioPlataforma.repository.js';
 import { NotFoundError } from '../errors/index.js';
+
+export function filtrarPlataformasConOfertaIncluida(ofertasDeRegion, plataformas) {
+  const ofertasPorProveedor = new Map(
+    ofertasDeRegion
+      .filter(({ tipoOferta }) => TIPOS_OFERTA_INCLUIDOS.includes(tipoOferta))
+      .map((oferta) => [oferta.tmdbProviderId, oferta]),
+  );
+
+  return plataformas
+    .filter(({ tmdbProviderId }) => ofertasPorProveedor.has(tmdbProviderId))
+    .map((plataforma) => ({
+      ...plataforma,
+      logoPath:
+        plataforma.logoPath ?? ofertasPorProveedor.get(plataforma.tmdbProviderId).logoPath ?? null,
+    }));
+}
 
 export function listarPlataformasDisponibles() {
   return plataformaRepository.listarActivas();
 }
 
 export async function listarPlataformasPropias(usuarioId) {
-  const propias = await usuarioPlataformaRepository.listarActivasPorUsuario(usuarioId);
-  return propias.map(({ plataformaId }) => plataformaId);
+  const propias = await usuarioPlataformaRepository.listarPlataformasActivasPorUsuario(usuarioId);
+  return propias.map(({ id }) => id);
 }
 
 export async function agregarPlataformaPropia(usuarioId, plataformaId) {

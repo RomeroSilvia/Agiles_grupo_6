@@ -1,0 +1,4 @@
+export const FILTRO_PLATAFORMAS = Object.freeze({
+  RESULTADOS_OBJETIVO: 12,
+  MAX_PAGINAS_POR_REQUEST: 2,
+});

@@ -6,9 +6,8 @@ export async function obtenerDetalle(req, res) {
 }
 
 export async function obtenerDisponibilidad(req, res) {
-  const data = await tituloService.obtenerDisponibilidadTitulo({
-    ...req.validated.params,
-    region: req.validated.query.region,
-  });
+  const { tipo, tmdbId } = req.validated.params;
+  const region = req.validated.query?.region ?? req.region;
+  const data = await tituloService.obtenerDisponibilidad({ tipo, tmdbId, region });
   res.json({ data });
 }

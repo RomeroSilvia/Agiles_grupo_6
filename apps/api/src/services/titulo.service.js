@@ -1,8 +1,9 @@
-import { TIPO_TITULO } from '@buscador/shared/constants';
+import { DEFAULT_REGION, TIPO_TITULO } from '@buscador/shared/constants';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
+import * as plataformaRepository from '../repositories/plataforma.repository.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { tituloSchema } from '../models/titulo.model.js';
-import { disponibilidadSchema } from '../models/disponibilidad.model.js';
+import * as plataformaService from './plataforma.service.js';
 
 function validarRespuesta(respuesta) {
   const resultado = tituloSchema.safeParse(respuesta);
@@ -16,11 +17,11 @@ function validarRespuesta(respuesta) {
 
 function obtenerFuncionDetalle(tipo) {
   if (tipo === TIPO_TITULO.PELICULA) {
-    return tmdbIntegration.obtenerPelicula ?? tmdbIntegration.obtenerDetallePelicula;
+    return tmdbIntegration.obtenerPelicula;
   }
 
   if (tipo === TIPO_TITULO.SERIE) {
-    return tmdbIntegration.obtenerSerie ?? tmdbIntegration.obtenerDetalleSerie;
+    return tmdbIntegration.obtenerSerie;
   }
 
   throw new ExternalServiceError('TMDB', new Error('Tipo de título inválido'));
@@ -33,13 +34,25 @@ export async function obtenerDetalleTitulo({ tipo, tmdbId }) {
   return validarRespuesta(respuesta);
 }
 
-export async function obtenerDisponibilidadTitulo({ tipo, tmdbId, region }) {
-  const respuesta = await tmdbIntegration.obtenerDisponibilidad({ tipo, tmdbId, region });
-  const resultado = disponibilidadSchema.safeParse(respuesta);
+export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REGION }) {
+  const codigoRegion = String(region).toUpperCase();
+  const [ofertas, plataformasActivas] = await Promise.all([
+    tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
+    plataformaRepository.listarActivas(),
+  ]);
 
-  if (!resultado.success) {
-    throw new ExternalServiceError('TMDB', resultado.error);
-  }
+  const plataformas = plataformaService
+    .filtrarPlataformasConOfertaIncluida(ofertas[codigoRegion] ?? [], plataformasActivas)
+    .map(({ id, tmdbProviderId, nombre, logoPath, urlHome }) => ({
+      id,
+      tmdbProviderId,
+      nombre,
+      logoPath,
+      urlHome,
+    }));
 
-  return resultado.data;
+  return {
+    region: codigoRegion,
+    plataformas,
+  };
 }

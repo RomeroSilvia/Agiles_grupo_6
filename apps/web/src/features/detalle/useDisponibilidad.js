@@ -1,46 +1,62 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ApiError, request } from '../../services/api.service.js';
 
-export function useDisponibilidad({ tipo, tmdbId, region, regionLoading }) {
-  const active = Boolean(tipo && tmdbId && region && !regionLoading);
-  const key = active ? `${tipo}/${tmdbId}/${region}` : null;
-  const [state, setState] = useState({ key: null, disponibilidad: null, error: null });
+export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false } = {}) {
+  const tieneParametros = Boolean(tipo && tmdbId);
+  const regionResuelta = Boolean(region) && !regionLoading;
+  const claveParametros = tieneParametros ? `${tipo}/${tmdbId}/${region ?? ''}` : null;
+  const [plataformas, setPlataformas] = useState([]);
+  const [error, setError] = useState(null);
+  const [claveCargada, setClaveCargada] = useState(null);
+  const [recarga, setRecarga] = useState(0);
+
+  const reintentar = useCallback(() => {
+    setClaveCargada(null);
+    setRecarga((n) => n + 1);
+  }, []);
 
   useEffect(() => {
-    if (!active) {
-      return;
+    const controller = new AbortController();
+
+    if (!tieneParametros || !regionResuelta) {
+      return () => controller.abort();
     }
 
-    const controller = new AbortController();
-    request(`/titulos/${encodeURIComponent(tipo)}/${encodeURIComponent(tmdbId)}/disponibilidad`, {
-      params: { region },
-      signal: controller.signal,
-    })
-      .then((disponibilidad) => {
+    const queryRegion = region ? `?region=${encodeURIComponent(region)}` : '';
+    request(
+      `/titulos/${encodeURIComponent(tipo)}/${encodeURIComponent(tmdbId)}/disponibilidad${queryRegion}`,
+      { signal: controller.signal },
+    )
+      .then((data) => {
         if (!controller.signal.aborted) {
-          setState({ key, disponibilidad, error: null });
+          setPlataformas(Array.isArray(data?.plataformas) ? data.plataformas : []);
+          setError(null);
+          setClaveCargada(claveParametros);
         }
       })
-      .catch((error) => {
-        if (error.name === 'AbortError' || controller.signal.aborted) {
+      .catch((requestError) => {
+        if (requestError.name === 'AbortError' || controller.signal.aborted) {
           return;
         }
-        setState({
-          key,
-          disponibilidad: null,
-          error:
-            error instanceof ApiError
-              ? error.message
-              : 'No se pudo consultar la disponibilidad del título.',
-        });
+
+        setPlataformas([]);
+        setError(
+          requestError instanceof ApiError
+            ? requestError.message
+            : 'No se pudo consultar la disponibilidad.',
+        );
+        setClaveCargada(claveParametros);
       });
 
     return () => controller.abort();
-  }, [active, key, region, tipo, tmdbId]);
+  }, [claveParametros, tieneParametros, regionResuelta, tipo, tmdbId, region, recarga]);
+
+  const esDetalleActual = tieneParametros && regionResuelta && claveCargada === claveParametros;
 
   return {
-    disponibilidad: state.key === key ? state.disponibilidad : null,
-    isLoading: active && state.key !== key,
-    error: state.key === key ? state.error : null,
+    plataformas: esDetalleActual ? plataformas : [],
+    isLoading: tieneParametros && (!regionResuelta || !esDetalleActual),
+    error: !tieneParametros ? 'No se pudo identificar el título.' : esDetalleActual ? error : null,
+    reintentar,
   };
 }

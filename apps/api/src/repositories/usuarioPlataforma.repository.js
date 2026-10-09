@@ -1,22 +1,19 @@
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
-import {
-  USUARIO_PLATAFORMA_COLUMNS,
-  USUARIO_PLATAFORMA_PRIMARY_KEY,
-  fromRow,
-} from '../models/usuarioPlataforma.model.js';
+import { USUARIO_PLATAFORMA_PRIMARY_KEY } from '../models/usuarioPlataforma.model.js';
+import { PLATAFORMA_COLUMNS, fromRow as plataformaFromRow } from '../models/plataforma.model.js';
 
-export async function listarActivasPorUsuario(usuarioId) {
+export async function listarPlataformasActivasPorUsuario(usuarioId) {
   const { data, error } = await supabaseAdmin
     .from('usuario_plataforma')
-    .select(`${USUARIO_PLATAFORMA_COLUMNS}, plataforma!inner()`)
+    .select(`plataforma!inner(${PLATAFORMA_COLUMNS})`)
     .eq('usuario_id', usuarioId)
     .eq('plataforma.activa', true);
 
   if (error) {
     throw new DatabaseError(error);
   }
-  return data.map(fromRow);
+  return data.map((row) => plataformaFromRow(row.plataforma));
 }
 
 export async function agregar(usuarioId, plataformaId) {

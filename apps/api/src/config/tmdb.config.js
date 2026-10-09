@@ -1,0 +1,7 @@
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+export const TMDB_CONFIG = Object.freeze({
+  MAX_CONCURRENT_REQUESTS: 8,
+  CACHE_TTL_MS: 24 * ONE_HOUR_MS,
+  CACHE_MAX_ENTRIES: 5000,
+});

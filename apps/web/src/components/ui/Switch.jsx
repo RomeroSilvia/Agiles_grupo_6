@@ -1,6 +1,7 @@
-export function Switch({ checked, onChange, label, disabled = false }) {
+export function Switch({ id, checked, onChange, label, disabled = false }) {
   return (
     <button
+      id={id}
       type="button"
       role="switch"
       aria-checked={checked}

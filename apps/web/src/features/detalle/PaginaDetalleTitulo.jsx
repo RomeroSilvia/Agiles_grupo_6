@@ -1,9 +1,12 @@
-import { REGION_SOURCE, TIPO_OFERTA } from '@buscador/shared/constants';
+import { useMemo } from 'react';
+import { REGION_SOURCE } from '@buscador/shared/constants';
 import { Link, useLocation, useParams } from 'react-router';
-import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
-import { useRegion } from '../../contexts/region/RegionContext.js';
 import { Attribution } from '../../components/ui/Attribution.jsx';
-import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
+import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
+import { useRegion } from '../../contexts/region/RegionContext.js';
+import { useSession } from '../../contexts/session/SessionContext.js';
+import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
+import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 
 const LINK_VOLVER_CLASS_NAME =
@@ -12,14 +15,6 @@ const LINK_VOLVER_CLASS_NAME =
 const ETIQUETAS_TIPO = {
   pelicula: 'Película',
   serie: 'Serie',
-};
-
-const ETIQUETAS_OFERTA = {
-  [TIPO_OFERTA.SUSCRIPCION]: 'Suscripción',
-  [TIPO_OFERTA.GRATIS]: 'Gratis',
-  [TIPO_OFERTA.CON_ANUNCIOS]: 'Con anuncios',
-  [TIPO_OFERTA.ALQUILER]: 'Alquiler',
-  [TIPO_OFERTA.COMPRA]: 'Compra',
 };
 
 function formatearPuntuacion(puntuacion) {
@@ -31,14 +26,28 @@ function formatearPuntuacion(puntuacion) {
 export function PaginaDetalleTitulo() {
   const location = useLocation();
   const { tipo, tmdbId } = useParams();
-  const { titulo, isLoading, error } = useDetalleTitulo({ tipo, tmdbId });
   const { region, source, loading: regionLoading } = useRegion();
+  const { titulo, isLoading, error } = useDetalleTitulo({ tipo, tmdbId });
   const {
-    disponibilidad,
-    isLoading: disponibilidadLoading,
-    error: disponibilidadError,
+    plataformas,
+    isLoading: cargandoDisponibilidad,
+    error: errorDisponibilidad,
+    reintentar: reintentarDisponibilidad,
   } = useDisponibilidad({ tipo, tmdbId, region, regionLoading });
   const estadoBusqueda = location.state?.busqueda;
+  const { user, loading: cargandoSesion } = useSession();
+  const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
+  const distinguirPropias = Boolean(user) && !cargandoSesion && !cargandoPropias;
+
+  const plataformasConPropiedad = useMemo(() => {
+    const conPropiedad = plataformas.map((plataforma) => ({
+      plataforma,
+      esPropia: !distinguirPropias || seleccionadas.has(plataforma.id),
+    }));
+    return distinguirPropias
+      ? conPropiedad.sort((a, b) => Number(b.esPropia) - Number(a.esPropia))
+      : conPropiedad;
+  }, [plataformas, distinguirPropias, seleccionadas]);
 
   if (isLoading) {
     return (
@@ -128,60 +137,78 @@ export function PaginaDetalleTitulo() {
               {titulo.sinopsis ?? 'Sinopsis no disponible'}
             </p>
           </div>
-        </div>
-      </article>
 
-      <section className="space-y-4 rounded-3xl border border-border bg-surface p-5 sm:p-8 dark:bg-surface">
-        <h2 className="text-xl font-semibold">
-          Disponibilidad{regionLoading ? '' : ` en ${region}`}
-        </h2>
-        {!regionLoading && source === REGION_SOURCE.DEFAULT && (
-          <p className="text-sm text-muted">
-            No pudimos detectar tu región. Mostramos la región predeterminada {region}.
-          </p>
-        )}
-        {regionLoading ? (
-          <p role="status">Detectando región...</p>
-        ) : disponibilidadLoading ? (
-          <p role="status">Consultando disponibilidad...</p>
-        ) : disponibilidadError ? (
-          <p role="alert" className="text-danger">
-            {disponibilidadError}
-          </p>
-        ) : disponibilidad?.ofertas.length ? (
-          <div className="space-y-5">
-            {disponibilidad.ofertas.map(({ tipoOferta, plataformas }) => (
-              <div key={tipoOferta} className="space-y-2">
-                <h3 className="font-semibold">{ETIQUETAS_OFERTA[tipoOferta]}</h3>
-                <ul className="flex flex-wrap gap-2">
-                  {plataformas.map((plataforma) => (
-                    <li
-                      key={plataforma.tmdbProviderId}
-                      className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm dark:bg-background"
-                    >
-                      <LogoPlataforma plataforma={plataforma} size="small" />
-                      {plataforma.nombre}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-            {disponibilidad.enlaceTmdb && (
-              <a
-                href={disponibilidad.enlaceTmdb}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={LINK_VOLVER_CLASS_NAME}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="seccion-disponibilidad" className="text-xl font-semibold">
+                Plataformas disponibles
+              </h2>
+              {!regionLoading && region && (
+                <span
+                  aria-label={`Región de disponibilidad: ${region}`}
+                  className="rounded-full bg-chip px-2.5 py-0.5 font-mono text-xs font-medium text-chip-foreground"
+                >
+                  {region}
+                </span>
+              )}
+            </div>
+
+            {regionLoading && (
+              <p role="status" aria-live="polite" className="text-sm text-muted">
+                Detectando región...
+              </p>
+            )}
+
+            {!regionLoading && source === REGION_SOURCE.DEFAULT && (
+              <p className="text-sm text-muted">
+                No pudimos detectar tu región. Mostramos la región predeterminada {region}.
+              </p>
+            )}
+
+            {!regionLoading && cargandoDisponibilidad && (
+              <p role="status" aria-live="polite" className="text-sm text-muted">
+                Consultando disponibilidad...
+              </p>
+            )}
+
+            {!cargandoDisponibilidad && errorDisponibilidad && (
+              <div
+                role="alert"
+                className="flex flex-col gap-2 rounded-2xl border border-danger/30 bg-danger-surface p-4 text-sm text-danger sm:flex-row sm:items-center sm:justify-between"
               >
-                Ver opciones en TMDB
-              </a>
+                <span>{errorDisponibilidad}</span>
+                <button
+                  type="button"
+                  onClick={reintentarDisponibilidad}
+                  className="cursor-pointer font-semibold underline underline-offset-4 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {!cargandoDisponibilidad && !errorDisponibilidad && plataformas.length === 0 && (
+              <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
+                No encontramos disponibilidad en plataformas de streaming para tu región.
+              </p>
+            )}
+
+            {!cargandoDisponibilidad && !errorDisponibilidad && plataformas.length > 0 && (
+              <ul
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                aria-label="Plataformas disponibles"
+              >
+                {plataformasConPropiedad.map(({ plataforma, esPropia }) => (
+                  <li key={plataforma.id}>
+                    <TarjetaDisponibilidad plataforma={plataforma} esPropia={esPropia} />
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-        ) : (
-          <p>No encontramos disponibilidad para este título en {region}.</p>
-        )}
-        <Attribution />
-      </section>
+        </div>
+      </article>
+      <Attribution />
     </section>
   );
 }

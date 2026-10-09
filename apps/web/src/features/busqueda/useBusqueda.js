@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { busquedaSchema } from '@buscador/shared/schemas';
 import { ApiError } from '../../services/api.service.js';
 import { buscarTitulos } from './busqueda.api.js';
@@ -88,7 +88,7 @@ export function useBusqueda(estadoGuardado) {
   );
 
   const buscar = useCallback(
-    (filtrosConsulta) => ejecutarBusqueda(filtrosConsulta),
+    (filtrosConsulta, opciones) => ejecutarBusqueda(filtrosConsulta, opciones),
     [ejecutarBusqueda],
   );
 
@@ -118,38 +118,6 @@ export function useBusqueda(estadoGuardado) {
     return () => abortControllerRef.current?.abort();
   }, []);
 
-  const {
-    filtros,
-    resultados,
-    totalResultados,
-    verificacionIncompleta,
-    hasSearched,
-    ultimaBusqueda,
-  } = estado;
-
-  const estadoGuardable = useMemo(
-    () => ({
-      filtros,
-      resultados,
-      pagina,
-      totalResultados,
-      totalPaginas,
-      verificacionIncompleta,
-      hasSearched,
-      ultimaBusqueda,
-    }),
-    [
-      filtros,
-      resultados,
-      pagina,
-      totalResultados,
-      totalPaginas,
-      verificacionIncompleta,
-      hasSearched,
-      ultimaBusqueda,
-    ],
-  );
-
   return {
     ...estado,
     setFiltros,
@@ -157,6 +125,5 @@ export function useBusqueda(estadoGuardado) {
     buscarConFiltros,
     cargarMas,
     isLoading: isLoading || isLoadingMore,
-    estadoGuardable,
   };
 }

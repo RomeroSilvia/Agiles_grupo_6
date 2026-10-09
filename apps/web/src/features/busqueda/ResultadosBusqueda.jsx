@@ -58,7 +58,6 @@ export function ResultadosBusqueda({
   hasSearched,
   busquedaFiltrada,
   tituloBuscado,
-  estadoBusqueda,
   onReintentar,
   onCargarMas,
   onVerTodos,
@@ -157,11 +156,7 @@ export function ResultadosBusqueda({
           )}
           <GrillaResultados>
             {resultados.map((resultado) => (
-              <ResultadoCard
-                key={`${resultado.tipo}-${resultado.tmdbId}`}
-                resultado={resultado}
-                estadoBusqueda={estadoBusqueda}
-              />
+              <ResultadoCard key={`${resultado.tipo}-${resultado.tmdbId}`} resultado={resultado} />
             ))}
             {isLoadingMore && <CardsCargando />}
           </GrillaResultados>

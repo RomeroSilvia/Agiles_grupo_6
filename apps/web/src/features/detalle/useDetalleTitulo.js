@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ApiError, request } from '../services/api.service.js';
+import { ApiError, request } from '../../services/api.service.js';
 
 export function useDetalleTitulo({ tipo, tmdbId } = {}) {
   const tieneParametros = Boolean(tipo && tmdbId);
   const claveParametros = tieneParametros ? `${tipo}/${tmdbId}` : null;
   const [titulo, setTitulo] = useState(null);
   const [error, setError] = useState(null);
+  const [errorCode, setErrorCode] = useState(null);
   const [claveCargada, setClaveCargada] = useState(null);
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export function useDetalleTitulo({ tipo, tmdbId } = {}) {
         if (!controller.signal.aborted) {
           setTitulo(data);
           setError(null);
+          setErrorCode(null);
           setClaveCargada(claveParametros);
         }
       })
@@ -36,6 +38,7 @@ export function useDetalleTitulo({ tipo, tmdbId } = {}) {
             ? requestError.message
             : 'No se pudo cargar el detalle del título.',
         );
+        setErrorCode(requestError instanceof ApiError ? requestError.code : null);
         setClaveCargada(claveParametros);
       });
 
@@ -48,5 +51,6 @@ export function useDetalleTitulo({ tipo, tmdbId } = {}) {
     titulo: esDetalleActual ? titulo : null,
     isLoading: tieneParametros && !esDetalleActual,
     error: !tieneParametros ? 'No se pudo identificar el título.' : esDetalleActual ? error : null,
+    errorCode: esDetalleActual ? errorCode : null,
   };
 }

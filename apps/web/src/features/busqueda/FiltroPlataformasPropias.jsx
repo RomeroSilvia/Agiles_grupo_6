@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Switch } from '../../components/ui/Switch.jsx';
+import { RUTAS } from '../../app/rutas.js';
 
 const ID_SWITCH = 'solo-propias';
 const ETIQUETA = 'Solo mis plataformas';
@@ -8,7 +9,7 @@ function TextoDelFiltro({ sinPlataformas, error }) {
   if (sinPlataformas) {
     return (
       <Link
-        to="/mis-plataformas"
+        to={RUTAS.MIS_PLATAFORMAS}
         className="text-sm font-semibold text-link underline underline-offset-4"
       >
         Elegí tus plataformas

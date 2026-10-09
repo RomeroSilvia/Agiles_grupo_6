@@ -1,3 +1,5 @@
+import { FOCUS_RING_CLASS_NAME } from './focusRing.js';
+
 export function Switch({ id, checked, onChange, label, disabled = false }) {
   return (
     <button
@@ -8,7 +10,7 @@ export function Switch({ id, checked, onChange, label, disabled = false }) {
       aria-label={label}
       aria-disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
-      className={`inline-flex h-6.5 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.75 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-60 ${checked ? 'bg-primary' : 'bg-border'}`}
+      className={`inline-flex h-6.5 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.75 transition-colors duration-150 ${FOCUS_RING_CLASS_NAME} aria-disabled:cursor-not-allowed aria-disabled:opacity-60 ${checked ? 'bg-primary' : 'bg-border'}`}
     >
       <span
         aria-hidden="true"

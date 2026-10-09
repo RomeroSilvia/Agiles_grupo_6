@@ -4,7 +4,7 @@ import { PAGINA_MAXIMA, TIPOS_TITULO } from '@buscador/shared/constants';
 const resultadoBusquedaSchema = z.object({
   tmdbId: z.number().int(),
   tipo: z.enum(TIPOS_TITULO),
-  nombre: z.string(),
+  nombre: z.string().nullable(),
   anio: z.number().int().nullable(),
   posterUrl: z.url().nullable(),
   puntuacion: z.number().min(0).max(10).nullable(),

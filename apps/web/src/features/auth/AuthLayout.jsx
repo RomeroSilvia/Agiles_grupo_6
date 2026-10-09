@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { Logo } from '../../components/ui/Logo.jsx';
 import { ThemeToggle } from '../../components/ui/ThemeToggle.jsx';
+import { RUTAS } from '../../app/rutas.js';
 
 /**
  * Pantallas de ingreso: en escritorio, panel oscuro con el mensaje a la izquierda
@@ -13,7 +14,7 @@ export function AuthLayout({ aside, children }) {
     <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="hidden flex-col justify-between bg-panel p-12 text-panel-foreground lg:flex xl:p-16">
         <Link
-          to="/"
+          to={RUTAS.BUSQUEDA}
           aria-label="Streamly, ir al inicio"
           className="self-start rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-panel-accent"
         >
@@ -28,7 +29,7 @@ export function AuthLayout({ aside, children }) {
       <div className="flex min-h-dvh flex-col px-4 py-4 sm:px-8">
         <div className="flex items-center justify-between lg:justify-end">
           <Link
-            to="/"
+            to={RUTAS.BUSQUEDA}
             aria-label="Streamly, ir al inicio"
             className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary lg:hidden"
           >

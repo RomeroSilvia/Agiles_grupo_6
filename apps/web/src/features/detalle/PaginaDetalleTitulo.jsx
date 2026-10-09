@@ -1,20 +1,21 @@
 import { useMemo } from 'react';
 import { REGION_SOURCE, TIPO_OFERTA } from '@buscador/shared/constants';
-import { Link, useLocation, useParams } from 'react-router';
+import { useParams } from 'react-router';
+import { NotFoundPage } from '../../app/NotFoundPage.jsx';
+import { Chip } from '../../components/ui/Chip.jsx';
+import { Poster } from '../../components/ui/Poster.jsx';
+import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
+import { formatearPuntuacion } from '../../utils/formatearPuntuacion.js';
 import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
-import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
+import { ETIQUETAS_TIPO_TITULO_SINGULAR } from '../busqueda/busqueda.constants.js';
+import { useDetalleTitulo } from './useDetalleTitulo.js';
 import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
+import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 
-const LINK_CLASS_NAME =
-  'font-semibold text-link underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
-
-const ETIQUETAS_TIPO = {
-  pelicula: 'Película',
-  serie: 'Serie',
-};
+const LINK_CLASS_NAME = `font-semibold text-link underline underline-offset-4 ${FOCUS_RING_CLASS_NAME}`;
 
 const ETIQUETAS_OFERTA = Object.freeze({
   [TIPO_OFERTA.SUSCRIPCION]: 'Suscripción',
@@ -24,17 +25,10 @@ const ETIQUETAS_OFERTA = Object.freeze({
   [TIPO_OFERTA.COMPRA]: 'Compra',
 });
 
-function formatearPuntuacion(puntuacion) {
-  return puntuacion === null || puntuacion === undefined
-    ? 'Puntuación no disponible'
-    : `${puntuacion.toFixed(1)}/10`;
-}
-
 export function PaginaDetalleTitulo() {
-  const location = useLocation();
   const { tipo, tmdbId } = useParams();
   const { region, source, loading: regionLoading } = useRegion();
-  const { titulo, isLoading, error } = useDetalleTitulo({ tipo, tmdbId });
+  const { titulo, isLoading, error, errorCode } = useDetalleTitulo({ tipo, tmdbId });
   const {
     ofertas,
     enlaceTmdb,
@@ -42,7 +36,6 @@ export function PaginaDetalleTitulo() {
     error: errorDisponibilidad,
     reintentar: reintentarDisponibilidad,
   } = useDisponibilidad({ tipo, tmdbId, region, regionLoading });
-  const estadoBusqueda = location.state?.busqueda;
   const { user, loading: cargandoSesion } = useSession();
   const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
   const distinguirPropias = Boolean(user) && !cargandoSesion && !cargandoPropias;
@@ -74,15 +67,13 @@ export function PaginaDetalleTitulo() {
   }
 
   if (error) {
+    if (errorCode === 'NOT_FOUND') {
+      return <NotFoundPage />;
+    }
+
     return (
       <section className="space-y-6">
-        <Link
-          to="/"
-          state={estadoBusqueda ? { busqueda: estadoBusqueda } : undefined}
-          className={LINK_CLASS_NAME}
-        >
-          Volver a la búsqueda
-        </Link>
+        <VolverBusqueda />
         <p
           role="alert"
           className="rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
@@ -98,37 +89,23 @@ export function PaginaDetalleTitulo() {
   }
 
   const nombre = titulo.nombre ?? 'Título no disponible';
+  const puntuacion = formatearPuntuacion(titulo.puntuacion) ?? 'Puntuación no disponible';
 
   return (
     <section className="space-y-8">
-      <Link
-        to="/"
-        state={estadoBusqueda ? { busqueda: estadoBusqueda } : undefined}
-        className={LINK_CLASS_NAME}
-      >
-        Volver a la búsqueda
-      </Link>
+      <VolverBusqueda />
 
       <article className="grid gap-8 rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-8 md:grid-cols-[minmax(12rem,18rem)_1fr]">
-        <div className="mx-auto aspect-2/3 w-full max-w-xs overflow-hidden rounded-2xl bg-background">
-          {titulo.posterUrl ? (
-            <img
-              src={titulo.posterUrl}
-              alt={`Póster de ${nombre}`}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted">
-              Sin imagen disponible
-            </div>
-          )}
-        </div>
+        <Poster
+          posterUrl={titulo.posterUrl}
+          nombre={nombre}
+          loading="eager"
+          className="mx-auto aspect-2/3 max-w-xs rounded-2xl"
+        />
 
         <div className="flex flex-col justify-center gap-6">
           <div className="space-y-3">
-            <span className="inline-flex rounded-full bg-chip px-2.5 py-1 font-mono text-xs font-medium text-chip-foreground">
-              {ETIQUETAS_TIPO[titulo.tipo] ?? 'Título'}
-            </span>
+            <Chip>{ETIQUETAS_TIPO_TITULO_SINGULAR[titulo.tipo] ?? 'Título'}</Chip>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">{nombre}</h1>
           </div>
 
@@ -139,7 +116,7 @@ export function PaginaDetalleTitulo() {
             </div>
             <div className="rounded-2xl border border-border bg-background p-4">
               <dt className="text-sm text-muted">Puntuación</dt>
-              <dd className="mt-1 font-semibold">{formatearPuntuacion(titulo.puntuacion)}</dd>
+              <dd className="mt-1 font-semibold">{puntuacion}</dd>
             </div>
           </dl>
 
@@ -192,7 +169,7 @@ export function PaginaDetalleTitulo() {
                 <button
                   type="button"
                   onClick={reintentarDisponibilidad}
-                  className="cursor-pointer font-semibold underline underline-offset-4 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className={`cursor-pointer font-semibold underline underline-offset-4 hover:opacity-80 ${FOCUS_RING_CLASS_NAME}`}
                 >
                   Reintentar
                 </button>

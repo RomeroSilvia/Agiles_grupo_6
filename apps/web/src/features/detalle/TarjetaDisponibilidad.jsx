@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
 
 const tarjetaClassName =
@@ -22,7 +23,7 @@ function TarjetaNoPropia({ plataforma }) {
       tabIndex={0}
       aria-label={`${plataforma.nombre} (no está en tus plataformas)`}
       aria-describedby={tooltipId}
-      className={`${tarjetaClassName} group relative cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+      className={`${tarjetaClassName} group relative cursor-not-allowed ${FOCUS_RING_CLASS_NAME}`}
     >
       <div aria-hidden="true" className="flex items-center gap-3.5 opacity-60 blur-[2px]">
         <ContenidoTarjeta plataforma={plataforma} />
@@ -56,7 +57,7 @@ export function TarjetaDisponibilidad({ plataforma, esPropia }) {
       href={plataforma.urlHome}
       target="_blank"
       rel="noreferrer"
-      className={`${tarjetaClassName} transition-colors duration-150 hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+      className={`${tarjetaClassName} transition-colors duration-150 hover:border-primary/50 ${FOCUS_RING_CLASS_NAME}`}
       title={`Ir a ${plataforma.nombre}`}
     >
       <ContenidoTarjeta plataforma={plataforma} />

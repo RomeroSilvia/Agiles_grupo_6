@@ -11,6 +11,10 @@ const PLATAFORMAS = [NETFLIX, DISNEY];
 const DUNE = { tipo: 'pelicula', tmdbId: 1 };
 const MATRIX = { tipo: 'pelicula', tmdbId: 2 };
 
+function ofertasPorRegion(ofertas) {
+  return { AR: { enlaceTmdb: null, ofertas } };
+}
+
 function plataformaDeResultado({ id, tmdbProviderId, nombre, logoPath }) {
   return { id, tmdbProviderId, nombre, logoPath };
 }
@@ -21,12 +25,12 @@ beforeEach(() => {
 
 describe('obtenerPlataformasDelUsuarioPorTitulo', () => {
   it('devuelve las plataformas del usuario con suscripción, gratis o con anuncios', async () => {
-    tmdbIntegration.obtenerOfertas.mockResolvedValue({
-      AR: [
+    tmdbIntegration.obtenerOfertas.mockResolvedValue(
+      ofertasPorRegion([
         { tmdbProviderId: 8, tipoOferta: 'suscripcion' },
         { tmdbProviderId: 337, tipoOferta: 'con_anuncios' },
-      ],
-    });
+      ]),
+    );
 
     const [disponibilidad] = await obtenerPlataformasDelUsuarioPorTitulo({
       titulos: [DUNE],
@@ -42,12 +46,12 @@ describe('obtenerPlataformasDelUsuarioPorTitulo', () => {
   });
 
   it('no cuenta alquiler ni compra', async () => {
-    tmdbIntegration.obtenerOfertas.mockResolvedValue({
-      AR: [
+    tmdbIntegration.obtenerOfertas.mockResolvedValue(
+      ofertasPorRegion([
         { tmdbProviderId: 8, tipoOferta: 'alquiler' },
         { tmdbProviderId: 337, tipoOferta: 'compra' },
-      ],
-    });
+      ]),
+    );
 
     const [disponibilidad] = await obtenerPlataformasDelUsuarioPorTitulo({
       titulos: [DUNE],
@@ -60,7 +64,10 @@ describe('obtenerPlataformasDelUsuarioPorTitulo', () => {
 
   it('usa solo las ofertas de la región del usuario', async () => {
     tmdbIntegration.obtenerOfertas.mockResolvedValue({
-      MX: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion' }],
+      MX: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion' }],
+      },
     });
 
     const [disponibilidad] = await obtenerPlataformasDelUsuarioPorTitulo({
@@ -73,9 +80,9 @@ describe('obtenerPlataformasDelUsuarioPorTitulo', () => {
   });
 
   it('ignora plataformas que el usuario no tiene', async () => {
-    tmdbIntegration.obtenerOfertas.mockResolvedValue({
-      AR: [{ tmdbProviderId: 350, tipoOferta: 'suscripcion' }],
-    });
+    tmdbIntegration.obtenerOfertas.mockResolvedValue(
+      ofertasPorRegion([{ tmdbProviderId: 350, tipoOferta: 'suscripcion' }]),
+    );
 
     const [disponibilidad] = await obtenerPlataformasDelUsuarioPorTitulo({
       titulos: [DUNE],
@@ -87,9 +94,11 @@ describe('obtenerPlataformasDelUsuarioPorTitulo', () => {
   });
 
   it('usa el logo de TMDB si la plataforma no tiene uno propio', async () => {
-    tmdbIntegration.obtenerOfertas.mockResolvedValue({
-      AR: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' }],
-    });
+    tmdbIntegration.obtenerOfertas.mockResolvedValue(
+      ofertasPorRegion([
+        { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
+      ]),
+    );
 
     const [disponibilidad] = await obtenerPlataformasDelUsuarioPorTitulo({
       titulos: [DUNE],
@@ -105,7 +114,7 @@ describe('obtenerPlataformasDelUsuarioPorTitulo', () => {
   it('marca como no verificado el título cuya consulta falla, sin afectar a los demás', async () => {
     tmdbIntegration.obtenerOfertas
       .mockRejectedValueOnce(new ExternalServiceError('TMDB', new Error('caída')))
-      .mockResolvedValueOnce({ AR: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion' }] });
+      .mockResolvedValueOnce(ofertasPorRegion([{ tmdbProviderId: 8, tipoOferta: 'suscripcion' }]));
 
     const disponibilidades = await obtenerPlataformasDelUsuarioPorTitulo({
       titulos: [DUNE, MATRIX],

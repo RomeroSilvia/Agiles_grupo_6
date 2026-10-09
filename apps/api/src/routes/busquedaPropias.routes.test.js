@@ -4,11 +4,13 @@ import { createApp } from '../app.js';
 import * as authRepository from '../repositories/auth.repository.js';
 import * as usuarioPlataformaRepository from '../repositories/usuarioPlataforma.repository.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
+import * as regionService from '../services/region.service.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { NETFLIX, USUARIO } from '../test/fixtures.js';
 
 vi.mock('../repositories/auth.repository.js');
 vi.mock('../repositories/usuarioPlataforma.repository.js');
+vi.mock('../services/region.service.js');
 vi.mock('../integrations/tmdb.integration.js', () => ({
   buscarPeliculas: vi.fn(),
   buscarSeries: vi.fn(),
@@ -16,7 +18,12 @@ vi.mock('../integrations/tmdb.integration.js', () => ({
 }));
 
 const COOKIE_SESION = 'access_token=access-de-prueba';
-const EN_NETFLIX = { AR: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion' }] };
+const EN_NETFLIX = {
+  AR: {
+    enlaceTmdb: null,
+    ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion' }],
+  },
+};
 const SIN_OFERTAS = {};
 
 function pelicula(tmdbId, nombre = `Película ${tmdbId}`) {
@@ -56,6 +63,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   authRepository.obtenerUsuarioPorToken.mockResolvedValue(USUARIO);
   usuarioPlataformaRepository.listarPlataformasActivasPorUsuario.mockResolvedValue([NETFLIX]);
+  regionService.obtenerRegion.mockResolvedValue({ region: 'AR', source: 'profile' });
   ofertasPorId({});
 });
 
@@ -74,6 +82,7 @@ describe('GET /api/busqueda/propias', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION');
+    expect(regionService.obtenerRegion).not.toHaveBeenCalled();
   });
 
   it('devuelve solo los títulos disponibles en las plataformas del usuario', async () => {

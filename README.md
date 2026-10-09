@@ -54,20 +54,40 @@ supabase/
 
 Todas las rutas empiezan con `/api`. Las respuestas exitosas tienen la forma `{ "data": ... }` y los errores `{ "error": { "code", "message" } }`.
 
-| Método | Ruta                                 | Sesión | Descripción                                                                  |
-| ------ | ------------------------------------ | :----: | ---------------------------------------------------------------------------- |
-| GET    | `/health`                            |        | Estado de la API                                                             |
-| POST   | `/auth/sign-up`                      |        | Registro con mail y contraseña                                               |
-| POST   | `/auth/sign-in`                      |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                       |
-| POST   | `/auth/sign-out`                     |        | Cierre de sesión                                                             |
-| GET    | `/auth/session`                      |        | Usuario de la sesión actual, o `null`                                        |
-| GET    | `/region`                            |        | Región detectada del usuario                                                 |
-| GET    | `/busqueda`                          |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `pagina` |
-| GET    | `/busqueda/propias`                  |   si   | Misma búsqueda, solo con lo disponible en las plataformas del usuario        |
-| GET    | `/titulos/:tipo/:tmdbId`             |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)               |
-| GET    | `/plataformas`                       |        | Catálogo de plataformas activas                                              |
-| GET    | `/plataformas/propias`               |   si   | Ids de las plataformas que eligió el usuario                                 |
-| PUT    | `/plataformas/propias/:plataformaId` |   si   | Agrega una plataforma propia                                                 |
-| DELETE | `/plataformas/propias/:plataformaId` |   si   | Quita una plataforma propia                                                  |
+La pantalla de detalle también muestra la disponibilidad de TMDB/JustWatch para la región del usuario.
+La API expone `GET /api/region`, que consulta la IP desde el backend y devuelve
+`{ data: { region, source } }`. Para usuarios autenticados reutiliza `perfil.region`; si aún está
+vacío, guarda el país detectado. El servicio de país usado es `https://api.country.is` y no
+requiere una clave nueva. Si no se puede detectar, devuelve `DEFAULT_REGION` con
+`source: "default"` y la pantalla lo indica. En desarrollo local, la IP suele ser local y se
+aplica ese respaldo. Si la API corre detrás de un proxy, configurar `TRUST_PROXY` en
+`apps/api/.env` con las IPs o subredes CIDR de los proxies de confianza, separadas por comas.
+Debe configurarse antes de registrar usuarios: la primera región detectada se guarda en el perfil.
+Las IPs privadas o reservadas no se envían al servicio de país. `true` y `1` no son valores
+válidos para `TRUST_PROXY`.
+
+`GET /api/titulos/:tipo/:tmdbId/disponibilidad?region=BR` consulta la disponibilidad del país
+indicado por el contexto de región y devuelve `{ region, ofertas, enlaceTmdb }`. Cada oferta agrupa
+las plataformas activas por modalidad (`suscripcion`, `gratis` o `con_anuncios`); `enlaceTmdb` es
+`null` cuando TMDB no informa un enlace para esa región. La ficha muestra las modalidades y el
+enlace de TMDB cuando está disponible. Las tarjetas llevan al sitio de cada plataforma; los deep
+links directos al título y la watchlist todavía no están implementados.
+
+| Método | Ruta                                    | Sesión | Descripción                                                                  |
+| ------ | --------------------------------------- | :----: | ---------------------------------------------------------------------------- |
+| GET    | `/health`                               |        | Estado de la API                                                             |
+| POST   | `/auth/sign-up`                         |        | Registro con mail y contraseña                                               |
+| POST   | `/auth/sign-in`                         |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                       |
+| POST   | `/auth/sign-out`                        |        | Cierre de sesión                                                             |
+| GET    | `/auth/session`                         |        | Usuario de la sesión actual, o `null`                                        |
+| GET    | `/region`                               |        | Región detectada del usuario                                                 |
+| GET    | `/busqueda`                             |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `pagina` |
+| GET    | `/busqueda/propias`                     |   si   | Misma búsqueda, solo con lo disponible en las plataformas del usuario        |
+| GET    | `/titulos/:tipo/:tmdbId`                |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)               |
+| GET    | `/titulos/:tipo/:tmdbId/disponibilidad` |        | Plataformas activas por modalidad y enlace de TMDB para la región indicada   |
+| GET    | `/plataformas`                          |        | Catálogo de plataformas activas                                              |
+| GET    | `/plataformas/propias`                  |   si   | Ids de las plataformas que eligió el usuario                                 |
+| PUT    | `/plataformas/propias/:plataformaId`    |   si   | Agrega una plataforma propia                                                 |
+| DELETE | `/plataformas/propias/:plataformaId`    |   si   | Quita una plataforma propia                                                  |
 
 Los endpoints con sesión responden `401` (`UNAUTHENTICATED`) si no hay un usuario logueado.

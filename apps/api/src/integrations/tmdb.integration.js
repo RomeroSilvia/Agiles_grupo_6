@@ -174,16 +174,32 @@ function normalizarOfertasDeRegion(datosRegion) {
   });
 }
 
+function normalizarEnlaceTmdb(enlace) {
+  if (typeof enlace !== 'string') {
+    return null;
+  }
+
+  try {
+    const url = new URL(enlace);
+    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizarOfertas(response) {
   const regiones = response?.results;
-  if (!regiones || typeof regiones !== 'object') {
+  if (!regiones || typeof regiones !== 'object' || Array.isArray(regiones)) {
     return {};
   }
 
   return Object.fromEntries(
     Object.entries(regiones).map(([region, datosRegion]) => [
       region,
-      normalizarOfertasDeRegion(datosRegion),
+      {
+        enlaceTmdb: normalizarEnlaceTmdb(datosRegion?.link),
+        ofertas: normalizarOfertasDeRegion(datosRegion),
+      },
     ]),
   );
 }

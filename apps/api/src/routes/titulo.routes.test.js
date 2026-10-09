@@ -62,12 +62,18 @@ const plataformasActivas = [
 ];
 
 const ofertasTmdb = {
-  AR: [
-    { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
-    { tmdbProviderId: 119, tipoOferta: 'suscripcion', logoPath: '/prime.jpg' },
-    { tmdbProviderId: 337, tipoOferta: 'alquiler', logoPath: '/disney.jpg' },
-  ],
-  US: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: '/disney.jpg' }],
+  AR: {
+    enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+    ofertas: [
+      { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
+      { tmdbProviderId: 119, tipoOferta: 'suscripcion', logoPath: '/prime.jpg' },
+      { tmdbProviderId: 337, tipoOferta: 'alquiler', logoPath: '/disney.jpg' },
+    ],
+  },
+  US: {
+    enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+    ofertas: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: '/disney.jpg' }],
+  },
 };
 
 beforeEach(() => {
@@ -181,22 +187,28 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body).toEqual({
       data: {
         region: 'AR',
-        plataformas: [
+        ofertas: [
           {
-            id: 1,
-            tmdbProviderId: 8,
-            nombre: 'Netflix',
-            logoPath: '/netflix.jpg',
-            urlHome: 'https://www.netflix.com',
-          },
-          {
-            id: 2,
-            tmdbProviderId: 119,
-            nombre: 'Amazon Prime Video',
-            logoPath: '/prime.jpg',
-            urlHome: 'https://www.primevideo.com',
+            tipoOferta: 'suscripcion',
+            plataformas: [
+              {
+                id: 1,
+                tmdbProviderId: 8,
+                nombre: 'Netflix',
+                logoPath: '/netflix.jpg',
+                urlHome: 'https://www.netflix.com',
+              },
+              {
+                id: 2,
+                tmdbProviderId: 119,
+                nombre: 'Amazon Prime Video',
+                logoPath: '/prime.jpg',
+                urlHome: 'https://www.primevideo.com',
+              },
+            ],
           },
         ],
+        enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
       },
     });
     expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledWith({ tipo: 'pelicula', tmdbId: 1 });
@@ -211,15 +223,21 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body).toEqual({
       data: {
         region: 'US',
-        plataformas: [
+        ofertas: [
           {
-            id: 3,
-            tmdbProviderId: 337,
-            nombre: 'Disney Plus',
-            logoPath: '/disney.jpg',
-            urlHome: 'https://www.disneyplus.com',
+            tipoOferta: 'suscripcion',
+            plataformas: [
+              {
+                id: 3,
+                tmdbProviderId: 337,
+                nombre: 'Disney Plus',
+                logoPath: '/disney.jpg',
+                urlHome: 'https://www.disneyplus.com',
+              },
+            ],
           },
         ],
+        enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
       },
     });
     expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledWith({ tipo: 'serie', tmdbId: 2 });
@@ -234,7 +252,8 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body).toEqual({
       data: {
         region: 'ES',
-        plataformas: [],
+        ofertas: [],
+        enlaceTmdb: null,
       },
     });
   });
@@ -261,7 +280,35 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     const response = await request(createApp()).get('/api/titulos/pelicula/999/disponibilidad');
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ data: { region: 'AR', plataformas: [] } });
+    expect(response.body).toEqual({
+      data: { region: 'AR', ofertas: [], enlaceTmdb: null },
+    });
+  });
+
+  it('separa las plataformas según la modalidad de oferta', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValueOnce({
+      AR: {
+        enlaceTmdb: null,
+        ofertas: [
+          { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: null },
+          { tmdbProviderId: 337, tipoOferta: 'con_anuncios', logoPath: '/disney.jpg' },
+        ],
+      },
+    });
+
+    const response = await request(createApp()).get('/api/titulos/pelicula/1/disponibilidad');
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.ofertas).toEqual([
+      {
+        tipoOferta: 'suscripcion',
+        plataformas: [expect.objectContaining({ id: 1, nombre: 'Netflix' })],
+      },
+      {
+        tipoOferta: 'con_anuncios',
+        plataformas: [expect.objectContaining({ id: 3, nombre: 'Disney Plus' })],
+      },
+    ]);
   });
 
   it('responde 502 cuando la integración con TMDB falla', async () => {

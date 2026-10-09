@@ -1,12 +1,36 @@
 import { REGION_SOURCE } from '@buscador/shared/constants';
 import { env } from '../config/env.config.js';
-import { ExternalServiceError } from '../errors/index.js';
+import { DatabaseError, ExternalServiceError } from '../errors/index.js';
 import * as geoipIntegration from '../integrations/geoip.integration.js';
 import * as perfilRepository from '../repositories/perfil.repository.js';
 
+async function obtenerRegionGuardada(usuarioId) {
+  try {
+    return await perfilRepository.obtenerRegion(usuarioId);
+  } catch (error) {
+    if (!(error instanceof DatabaseError)) {
+      throw error;
+    }
+    console.warn('No se pudo consultar la región del perfil', error);
+    return null;
+  }
+}
+
+async function guardarRegionDetectada(usuarioId, region) {
+  try {
+    return await perfilRepository.guardarRegionSiVacia(usuarioId, region);
+  } catch (error) {
+    if (!(error instanceof DatabaseError)) {
+      throw error;
+    }
+    console.warn('No se pudo guardar la región del perfil', error);
+    return null;
+  }
+}
+
 export async function obtenerRegion({ usuarioId, ip }) {
   if (usuarioId) {
-    const regionGuardada = await perfilRepository.obtenerRegion(usuarioId);
+    const regionGuardada = await obtenerRegionGuardada(usuarioId);
     if (regionGuardada) {
       return { region: regionGuardada, source: REGION_SOURCE.PROFILE };
     }
@@ -27,9 +51,9 @@ export async function obtenerRegion({ usuarioId, ip }) {
   }
 
   if (usuarioId) {
-    const regionGuardada = await perfilRepository.guardarRegionSiVacia(usuarioId, regionDetectada);
+    const regionGuardada = await guardarRegionDetectada(usuarioId, regionDetectada);
     if (!regionGuardada) {
-      const regionActual = await perfilRepository.obtenerRegion(usuarioId);
+      const regionActual = await obtenerRegionGuardada(usuarioId);
       if (regionActual) {
         return { region: regionActual, source: REGION_SOURCE.PROFILE };
       }

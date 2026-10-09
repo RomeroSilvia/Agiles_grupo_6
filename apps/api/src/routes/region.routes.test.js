@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { env } from '../config/env.config.js';
-import { ExternalServiceError } from '../errors/index.js';
+import { DatabaseError, ExternalServiceError } from '../errors/index.js';
 import * as geoipIntegration from '../integrations/geoip.integration.js';
 import * as authRepository from '../repositories/auth.repository.js';
 import * as perfilRepository from '../repositories/perfil.repository.js';
@@ -100,6 +100,35 @@ describe('GET /api/region', () => {
     expect(res.body).toEqual({ data: { region: env.DEFAULT_REGION, source: 'default' } });
     expect(perfilRepository.guardarRegionSiVacia).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith('No se pudo detectar la región por IP', error);
+  });
+
+  it('usa la región detectada y registra un warning si no puede leer el perfil', async () => {
+    const error = new DatabaseError(new Error('base no disponible'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    perfilRepository.obtenerRegion.mockRejectedValueOnce(error);
+
+    const res = await request(createApp())
+      .get('/api/region')
+      .set('Cookie', 'access_token=access-de-prueba');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ data: { region: 'UY', source: 'ip' } });
+    expect(geoipIntegration.getRegionByIp).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('No se pudo consultar la región del perfil', error);
+  });
+
+  it('conserva la región detectada y registra un warning si no puede guardarla', async () => {
+    const error = new DatabaseError(new Error('base no disponible'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    perfilRepository.guardarRegionSiVacia.mockRejectedValueOnce(error);
+
+    const res = await request(createApp())
+      .get('/api/region')
+      .set('Cookie', 'access_token=access-de-prueba');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ data: { region: 'UY', source: 'ip' } });
+    expect(warn).toHaveBeenCalledWith('No se pudo guardar la región del perfil', error);
   });
 
   it('no hace detección en una ruta que no requiere región', async () => {

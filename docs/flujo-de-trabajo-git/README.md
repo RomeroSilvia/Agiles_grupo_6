@@ -66,10 +66,10 @@ git push -u origin feat/filtro-tipo-anio
 
 ### 6. Revisión
 
-- Pedir revisión a al menos una persona del equipo.
+- Pedir revisión de solo 1 (una) persona del equipo, la misma se mantendrá hasta que la PR sea aprobada.
 - Quien revisa prueba el cambio siguiendo "Cómo probarlo" y deja comentarios concretos. Si algo bloquea el merge, marca **Request changes**; si son sugerencias, **Comment**.
 - Quien abrió el PR responde cada comentario: lo corrige con un commit nuevo (por ejemplo `fix(busqueda): corrige los puntos de la revisión`) o explica por qué no.
-- Cuando todo está resuelto, quien revisó aprueba.
+- Cuando todo está resuelto, quien revisó aprueba y mergea.
 
 ### 7. Mantener la rama al día
 

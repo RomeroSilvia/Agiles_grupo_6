@@ -42,4 +42,12 @@ describe('MainLayout', () => {
     expect(screen.getAllByText(/Datos de títulos provistos por/)).toHaveLength(1);
     expect(screen.queryByRole('link', { name: 'Buscar títulos' })).not.toBeInTheDocument();
   });
+
+  it('muestra el logo como enlace al inicio', () => {
+    renderLayout();
+
+    const inicio = screen.getByRole('link', { name: 'Streamly, ir al inicio' });
+    expect(inicio).toHaveAttribute('href', '/');
+    expect(inicio.querySelector('img')).toBeInTheDocument();
+  });
 });

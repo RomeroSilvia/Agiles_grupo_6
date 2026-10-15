@@ -17,6 +17,8 @@ export const RUTAS_API_BUSQUEDA = Object.freeze({
 
 export const CARDS_CARGANDO = 10;
 
+export const MAX_PAGINAS_RESTAURABLES = 5;
+
 export const MAX_LOGOS_POR_CARD = 3;
 
 export const MENSAJES_ERROR_FILTRO = Object.freeze({

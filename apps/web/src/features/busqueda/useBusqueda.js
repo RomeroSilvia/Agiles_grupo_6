@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { ApiError } from '../../services/api.service.js';
 import { buscarTitulos } from './busqueda.api.js';
-import { MENSAJES_ERROR_FILTRO } from './busqueda.constants.js';
+import { MAX_PAGINAS_RESTAURABLES, MENSAJES_ERROR_FILTRO } from './busqueda.constants.js';
 import {
   ACCIONES_BUSQUEDA,
   busquedaReducer,
@@ -97,7 +97,9 @@ export function useBusqueda(estadoGuardado) {
 
   const buscarHastaPagina = useCallback(
     async (filtrosConsulta, paginaFinal) => {
-      for (let paginaConsulta = 1; paginaConsulta <= paginaFinal; paginaConsulta += 1) {
+      const paginaHasta = Math.min(paginaFinal, MAX_PAGINAS_RESTAURABLES);
+
+      for (let paginaConsulta = 1; paginaConsulta <= paginaHasta; paginaConsulta += 1) {
         const data = await ejecutarBusqueda(filtrosConsulta, {
           pagina: paginaConsulta,
           acumular: paginaConsulta > 1,

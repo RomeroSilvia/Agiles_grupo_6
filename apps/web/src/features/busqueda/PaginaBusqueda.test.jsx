@@ -11,6 +11,7 @@ import { SessionContext } from '../../contexts/session/SessionContext.js';
 import { PlataformasPropiasContext } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { PaginaBusqueda } from './PaginaBusqueda.jsx';
 import { VolverBusqueda } from '../detalle/VolverBusqueda.jsx';
+import { MAX_PAGINAS_RESTAURABLES } from './busqueda.constants.js';
 
 const SIN_SESION = { user: null, loading: false };
 const CON_SESION = { user: { id: 'u1', email: 'ana@mail.com' }, loading: false };
@@ -147,6 +148,37 @@ describe('PaginaBusqueda', () => {
       'pelicula',
     );
     expect(new URL(fetchMock.mock.calls[0][0].toString()).searchParams.get('anio')).toBe('2021');
+  });
+
+  it('limita las páginas restauradas aunque la URL solicite más', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const pagina = Number(new URL(input.toString()).searchParams.get('pagina'));
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            resultados: [
+              {
+                ...respuestaConResultados.data.resultados[0],
+                tmdbId: pagina,
+                nombre: `Dune ${pagina}`,
+              },
+            ],
+            pagina,
+            totalResultados: 500,
+            totalPaginas: 500,
+          },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<PaginaBusqueda />, { initialEntries: ['/?q=Dune&pagina=500'] });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(MAX_PAGINAS_RESTAURABLES));
+    expect(
+      fetchMock.mock.calls.map(([url]) => new URL(url.toString()).searchParams.get('pagina')),
+    ).toEqual(Array.from({ length: MAX_PAGINAS_RESTAURABLES }, (_, indice) => String(indice + 1)));
   });
 
   it('conserva los resultados cargados al ir al detalle y volver', async () => {

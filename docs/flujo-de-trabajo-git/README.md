@@ -66,10 +66,10 @@ git push -u origin feat/filtro-tipo-anio
 
 ### 6. Revisión
 
-- Pedir revisión de solo 1 (una) persona del equipo, la misma se mantendrá hasta que la PR sea aprobada.
+- Pedir revisión a una sola persona del equipo. Esa persona revisa hasta que el PR quede aprobado.
 - Quien revisa prueba el cambio siguiendo "Cómo probarlo" y deja comentarios concretos. Si algo bloquea el merge, marca **Request changes**; si son sugerencias, **Comment**.
 - Quien abrió el PR responde cada comentario: lo corrige con un commit nuevo (por ejemplo `fix(busqueda): corrige los puntos de la revisión`) o explica por qué no.
-- Cuando todo está resuelto, quien revisó aprueba y mergea.
+- Cuando todo está resuelto, quien revisó aprueba y mergea apenas se cumplen las condiciones del paso 8, para que no haya demoras ni conflictos con lo que integren otras personas.
 
 ### 7. Mantener la rama al día
 
@@ -91,10 +91,10 @@ El commit `Merge branch 'main' into ...` no lo valida commitlint, así que no ha
 Se mergea solo si se cumplen las tres condiciones:
 
 1. El CI está en verde.
-2. Hay al menos una aprobación y no quedan pedidos de cambio abiertos.
+2. La persona que revisa aprobó y no quedan pedidos de cambio abiertos.
 3. La rama está al día con `main`.
 
-Quien abrió el PR lo mergea con **Create a merge commit** y después borra la rama (el botón **Delete branch** de GitHub y `git branch -d feat/filtro-tipo-anio` en tu máquina).
+Quien aprobó el PR lo mergea con **Create a merge commit**. La rama no se borra.
 
 ## Qué corre el CI en cada PR
 

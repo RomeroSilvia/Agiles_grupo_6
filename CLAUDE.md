@@ -17,13 +17,18 @@ Las convenciones, el stack y las reglas de capas están en `AGENTS.md` (importad
 
 - **Front ↔ API**: Vite hace proxy de `/api` a `http://localhost:3000`, así las cookies de sesión son del mismo origen. `request()` de `apps/web/src/services/api.service.js` devuelve `data` o lanza `ApiError` con `status`, `code` y `message` (`code: 'NETWORK'` si no hubo respuesta). Las pantallas deciden según `error.code`.
 - **Sesión**: `loadSession` deja `req.user` (`{ id, email }` o `null`) sin cortar el request y, si el access token venció, lo renueva con el refresh token y reescribe las cookies. Para exigir sesión, montar `requireSession` después de `loadSession` en la ruta.
-- **Región**: `detectRegion` se aplica a toda la app en `app.js`, pero por ahora siempre usa `env.DEFAULT_REGION` (la detección por IP está pendiente).
+- **Región**: `detectRegion` se monta solo en las rutas que la necesitan (`/api/region` y la búsqueda en plataformas propias), después de `loadSession`. `regionService.obtenerRegion` usa la región del perfil si hay sesión; si no, la detecta por IP con `geoip.integration.js` (y la guarda en el perfil si estaba vacía); si eso falla, usa `env.DEFAULT_REGION`. Deja `req.region` y `req.regionSource`.
 - **Providers del front**: `Theme → Session → Region → PlataformasPropias → Router`, en ese orden en `main.jsx`. Un provider nuevo se agrega también en `apps/web/src/test/renderRoute.jsx`.
 
 ## Helpers de test existentes
 
 - API: `apps/api/src/test/queryBuilderMock.js` (`mockearConsulta`, `SIN_DATOS`, `FALLO`) simula el query builder de supabase-js para los tests de repositories; `apps/api/src/test/fixtures.js` tiene datos de ejemplo. Los tests de rutas usan `createApp()` con supertest y mockean repositories o integrations.
 - Web: `renderRoute(path)` de `apps/web/src/test/renderRoute.jsx` renderiza la app completa en una ruta con todos los providers; `fetch` se mockea en cada test con `vi.stubGlobal('fetch', ...)`.
+
+## Flujo de trabajo
+
+- Las guías del equipo están en `docs/`: [flujo de trabajo con git](docs/flujo-de-trabajo-git/README.md) (ramas, PRs, revisión, CI y migraciones) y [guía de commits](docs/guia-de-commits/README.md).
+- Cada PR lo revisa una sola persona. Esa persona aprueba y mergea apenas el CI está en verde y la rama está al día con `main`. La rama no se borra.
 
 ## Entorno local
 

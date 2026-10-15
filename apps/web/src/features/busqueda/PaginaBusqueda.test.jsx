@@ -6,10 +6,12 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { SessionContext } from '../../contexts/session/SessionContext.js';
 import { PlataformasPropiasContext } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { PaginaBusqueda } from './PaginaBusqueda.jsx';
+import { VolverBusqueda } from '../detalle/VolverBusqueda.jsx';
+import { MAX_PAGINAS_RESTAURABLES } from './busqueda.constants.js';
 
 const SIN_SESION = { user: null, loading: false };
 const CON_SESION = { user: { id: 'u1', email: 'ana@mail.com' }, loading: false };
@@ -45,13 +47,30 @@ function configurarFetch(respuesta = respuestaConResultados) {
   return fetchMock;
 }
 
-function render(ui, { sesion = SIN_SESION, propias = plataformasPropias() } = {}) {
+function render(
+  ui,
+  { sesion = SIN_SESION, propias = plataformasPropias(), initialEntries = ['/'] } = {},
+) {
   return renderComponent(
     <SessionContext.Provider value={sesion}>
       <PlataformasPropiasContext.Provider value={propias}>
-        <MemoryRouter>{ui}</MemoryRouter>
+        <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
       </PlataformasPropiasContext.Provider>
     </SessionContext.Provider>,
+  );
+}
+
+function UbicacionActual() {
+  const location = useLocation();
+  return <output data-testid="parametros-url">{location.search}</output>;
+}
+
+function PaginaDetallePrueba() {
+  return (
+    <section>
+      <h1>Detalle</h1>
+      <VolverBusqueda />
+    </section>
   );
 }
 
@@ -83,6 +102,198 @@ describe('PaginaBusqueda', () => {
     expect(url.toString()).toContain('/api/busqueda?q=Dune&pagina=1');
     expect(screen.queryByRole('button', { name: 'Cargar más' })).not.toBeInTheDocument();
     expect(screen.queryByText(/Datos de títulos provistos por/)).not.toBeInTheDocument();
+  });
+
+  it('restaura en orden las páginas guardadas en los parámetros de la URL', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const url = new URL(input.toString());
+      const pagina = Number(url.searchParams.get('pagina'));
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            resultados: [
+              {
+                ...respuestaConResultados.data.resultados[0],
+                tmdbId: pagina,
+                nombre: `Dune ${pagina}`,
+              },
+            ],
+            pagina,
+            totalResultados: 2,
+            totalPaginas: 2,
+          },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<PaginaBusqueda />, {
+      initialEntries: ['/?q=Dune&tipo=pelicula&anio=2021&pagina=2'],
+    });
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune 2' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Dune 1' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Título')).toHaveValue('Dune');
+    expect(screen.getByLabelText('Tipo')).toHaveValue('pelicula');
+    expect(screen.getByLabelText('Año')).toHaveValue(2021);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const paginasSolicitadas = fetchMock.mock.calls.map(([url]) =>
+      new URL(url.toString()).searchParams.get('pagina'),
+    );
+    expect(paginasSolicitadas).toEqual(['1', '2']);
+    expect(new URL(fetchMock.mock.calls[0][0].toString()).searchParams.get('q')).toBe('Dune');
+    expect(new URL(fetchMock.mock.calls[0][0].toString()).searchParams.get('tipo')).toBe(
+      'pelicula',
+    );
+    expect(new URL(fetchMock.mock.calls[0][0].toString()).searchParams.get('anio')).toBe('2021');
+  });
+
+  it('limita las páginas restauradas aunque la URL solicite más', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const pagina = Number(new URL(input.toString()).searchParams.get('pagina'));
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            resultados: [
+              {
+                ...respuestaConResultados.data.resultados[0],
+                tmdbId: pagina,
+                nombre: `Dune ${pagina}`,
+              },
+            ],
+            pagina,
+            totalResultados: 500,
+            totalPaginas: 500,
+          },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<PaginaBusqueda />, { initialEntries: ['/?q=Dune&pagina=500'] });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(MAX_PAGINAS_RESTAURABLES));
+    expect(
+      fetchMock.mock.calls.map(([url]) => new URL(url.toString()).searchParams.get('pagina')),
+    ).toEqual(Array.from({ length: MAX_PAGINAS_RESTAURABLES }, (_, indice) => String(indice + 1)));
+  });
+
+  it('conserva los resultados cargados al ir al detalle y volver', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const pagina = Number(new URL(input.toString()).searchParams.get('pagina'));
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            resultados: [
+              {
+                ...respuestaConResultados.data.resultados[0],
+                tmdbId: pagina,
+                nombre: `Dune ${pagina}`,
+              },
+            ],
+            pagina,
+            totalResultados: 3,
+            totalPaginas: 3,
+          },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <PaginaBusqueda />
+              <UbicacionActual />
+            </>
+          }
+        />
+        <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetallePrueba />} />
+      </Routes>,
+    );
+
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Dune' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune 1' })).toBeInTheDocument();
+
+    for (const pagina of [2, 3]) {
+      fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+      expect(
+        await screen.findByRole('heading', { level: 3, name: `Dune ${pagina}` }),
+      ).toBeInTheDocument();
+    }
+
+    await waitFor(() => expect(screen.getByTestId('parametros-url')).toHaveTextContent('pagina=3'));
+    fireEvent.click(screen.getByRole('link', { name: 'Ver detalle de Dune 1' }));
+    expect(await screen.findByRole('heading', { name: 'Detalle' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Volver a la búsqueda' }));
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune 3' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Dune 1' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Dune 2' })).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    expect(
+      fetchMock.mock.calls.map(([url]) => new URL(url.toString()).searchParams.get('pagina')),
+    ).toEqual(['1', '2', '3', '1', '2', '3']);
+  });
+
+  it('actualiza los parámetros al buscar y al cargar más resultados', async () => {
+    const fetchMock = vi.fn().mockImplementation((input) => {
+      const pagina = Number(new URL(input.toString()).searchParams.get('pagina'));
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          data: {
+            resultados: [
+              {
+                ...respuestaConResultados.data.resultados[0],
+                tmdbId: pagina,
+                nombre: `Dune ${pagina}`,
+              },
+            ],
+            pagina,
+            totalResultados: 2,
+            totalPaginas: 2,
+          },
+        }),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <>
+        <PaginaBusqueda />
+        <UbicacionActual />
+      </>,
+    );
+
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Dune' } });
+    expect(screen.getByTestId('parametros-url')).toBeEmptyDOMElement();
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    await screen.findByRole('heading', { level: 3, name: 'Dune 1' });
+    await waitFor(() =>
+      expect(
+        new URLSearchParams(screen.getByTestId('parametros-url').textContent).get('pagina'),
+      ).toBe('1'),
+    );
+    expect(new URLSearchParams(screen.getByTestId('parametros-url').textContent).get('q')).toBe(
+      'Dune',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+    await screen.findByRole('heading', { level: 3, name: 'Dune 2' });
+    await waitFor(() =>
+      expect(
+        new URLSearchParams(screen.getByTestId('parametros-url').textContent).get('pagina'),
+      ).toBe('2'),
+    );
   });
 
   it('enlaza el resultado con el detalle usando tipo e identificador', async () => {
@@ -534,23 +745,11 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
   });
 
   describe('al volver con el navegador', () => {
-    const FILTROS_GUARDADOS = { q: 'Dune', tipo: '', anio: '', soloPropias: true };
-
-    function renderConEstadoGuardado({ firmaGuardada, idsActuales }) {
-      const busqueda = {
-        filtros: FILTROS_GUARDADOS,
-        resultados: [duneEn()],
-        pagina: 1,
-        totalResultados: 1,
-        totalPaginas: 1,
-        hasSearched: true,
-        ultimaBusqueda: { ...FILTROS_GUARDADOS, firmaPlataformas: firmaGuardada },
-      };
-
+    function renderConBusquedaCompartida(idsActuales) {
       return renderComponent(
         <SessionContext.Provider value={CON_SESION}>
           <PlataformasPropiasContext.Provider value={plataformasPropias(idsActuales)}>
-            <MemoryRouter initialEntries={[{ pathname: '/', state: { busqueda } }]}>
+            <MemoryRouter initialEntries={['/?q=Dune&pagina=1&propias=true']}>
               <PaginaBusqueda />
             </MemoryRouter>
           </PlataformasPropiasContext.Provider>
@@ -560,7 +759,7 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
 
     it('repite la búsqueda filtrada si cambiaron las plataformas propias', async () => {
       configurarFetch(respuestaFiltrada({ resultados: [] }));
-      renderConEstadoGuardado({ firmaGuardada: '1,3', idsActuales: [3] });
+      renderConBusquedaCompartida([3]);
 
       await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
       expect(rutaPedida(0)).toBe('/api/busqueda/propias');
@@ -572,13 +771,14 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
       ).toBeInTheDocument();
     });
 
-    it('restaura los resultados sin consultar si las plataformas no cambiaron', async () => {
-      renderConEstadoGuardado({ firmaGuardada: '1,3', idsActuales: [3, 1] });
+    it('recupera la búsqueda filtrada y sus plataformas desde la URL', async () => {
+      configurarFetch(respuestaFiltrada({ resultados: [duneEn()] }));
+      renderConBusquedaCompartida([3, 1]);
 
       expect(
         await screen.findByRole('link', { name: 'Ver detalle de Dune, disponible en Netflix' }),
       ).toBeInTheDocument();
-      expect(fetch).not.toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledTimes(1);
     });
   });
 

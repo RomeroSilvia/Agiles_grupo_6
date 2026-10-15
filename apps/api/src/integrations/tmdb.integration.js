@@ -8,6 +8,7 @@ import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const TMDB_LANGUAGE = 'es-AR';
 
 const RUTA_TMDB_POR_TIPO = Object.freeze({
   [TIPO_TITULO.PELICULA]: 'movie',
@@ -57,11 +58,9 @@ async function tmdbFetch(path, params = {}) {
   }
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new NotFoundError('No se encontró el título solicitado');
-    }
-
-    throw new ExternalServiceError('TMDB', new Error(`HTTP ${response.status} en ${path}`));
+    const cause = new Error(`HTTP ${response.status} en ${path}`);
+    cause.status = response.status;
+    throw new ExternalServiceError('TMDB', cause);
   }
 
   try {
@@ -74,7 +73,7 @@ async function tmdbFetch(path, params = {}) {
 function searchParams({ q, pagina }) {
   return {
     query: q,
-    language: 'es-AR',
+    language: TMDB_LANGUAGE,
     include_adult: false,
     page: pagina,
   };
@@ -89,30 +88,29 @@ function obtenerTexto(valor) {
   return typeof valor === 'string' && valor.trim() ? valor : null;
 }
 
-function normalizarDetalle(item, tipo) {
+function normalizarBase(item, tipo) {
   const fecha = tipo === TIPO_TITULO.PELICULA ? item?.release_date : item?.first_air_date;
 
   return {
     tmdbId: item?.id,
     tipo,
     nombre: obtenerTexto(item?.title) ?? obtenerTexto(item?.name),
-    sinopsis: obtenerTexto(item?.overview),
     posterUrl: item?.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : null,
     anio: obtenerAnio(fecha),
     puntuacion: Number.isFinite(item?.vote_average) ? Number(item.vote_average) : null,
   };
 }
 
-function normalizarResultado(item, tipo) {
-  const fecha = tipo === TIPO_TITULO.PELICULA ? item?.release_date : item?.first_air_date;
-
+function normalizarDetalle(item, tipo) {
   return {
-    tmdbId: item?.id,
-    tipo,
-    nombre: item?.title ?? item?.name ?? 'Sin título',
-    anio: obtenerAnio(fecha),
-    posterUrl: item?.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : null,
-    puntuacion: Number.isFinite(item?.vote_average) ? Number(item.vote_average) : null,
+    ...normalizarBase(item, tipo),
+    sinopsis: obtenerTexto(item?.overview),
+  };
+}
+
+function normalizarResultado(item, tipo) {
+  return {
+    ...normalizarBase(item, tipo),
     relevancia: Number.isFinite(item?.popularity) ? item.popularity : 0,
   };
 }
@@ -146,19 +144,25 @@ export async function buscarSeries({ q, anio, pagina }) {
   return normalizarRespuesta(response, TIPO_TITULO.SERIE);
 }
 
-async function obtenerDetalle(tipo, tmdbId) {
-  const response = await tmdbRequest(`/${RUTA_TMDB_POR_TIPO[tipo]}/${tmdbId}`, {
-    language: 'es-AR',
-  });
+export async function obtenerDetalle(tipo, tmdbId) {
+  const ruta = RUTA_TMDB_POR_TIPO[tipo];
+  if (!ruta) {
+    throw new TypeError(`Tipo de título inválido: ${tipo}`);
+  }
+
+  let response;
+  try {
+    response = await tmdbRequest(`/${ruta}/${tmdbId}`, {
+      language: TMDB_LANGUAGE,
+    });
+  } catch (error) {
+    if (error instanceof ExternalServiceError && error.cause?.status === 404) {
+      throw new NotFoundError('No se encontró el título solicitado');
+    }
+    throw error;
+  }
+
   return normalizarDetalle(response, tipo);
-}
-
-export function obtenerPelicula(tmdbId) {
-  return obtenerDetalle(TIPO_TITULO.PELICULA, tmdbId);
-}
-
-export function obtenerSerie(tmdbId) {
-  return obtenerDetalle(TIPO_TITULO.SERIE, tmdbId);
 }
 
 function normalizarOfertasDeRegion(datosRegion) {
@@ -209,7 +213,7 @@ async function consultarOfertas(tipo, tmdbId) {
     const response = await tmdbRequest(`/${RUTA_TMDB_POR_TIPO[tipo]}/${tmdbId}/watch/providers`);
     return normalizarOfertas(response);
   } catch (error) {
-    if (error instanceof NotFoundError) {
+    if (error instanceof ExternalServiceError && error.cause?.status === 404) {
       return {};
     }
     throw error;

@@ -203,6 +203,40 @@ describe('PaginaDetalleTitulo', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo consultar TMDB');
   });
 
+  it('muestra la página de no encontrado cuando la API devuelve NOT_FOUND', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/region')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ data: { region: 'AR', source: 'ip' } }),
+          });
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ data: respuestaDisponibilidad() }),
+          });
+        }
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({
+            error: { code: 'NOT_FOUND', message: 'No se encontró el título solicitado' },
+          }),
+        });
+      }),
+    );
+
+    renderDetalle('/titulos/pelicula/999');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Página no encontrada' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('muestra mensajes explícitos para los campos faltantes', async () => {
     configurarFetch({
       tmdbId: 3,

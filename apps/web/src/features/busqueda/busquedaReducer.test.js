@@ -6,6 +6,7 @@ import {
   convertirFiltros,
   obtenerEstadoInicial,
   prepararFiltros,
+  validarFiltros,
 } from './busquedaReducer.js';
 
 const DUNE = { tmdbId: 1, tipo: 'pelicula', nombre: 'Dune' };
@@ -34,7 +35,7 @@ describe('obtenerEstadoInicial', () => {
     expect(estado.isLoading).toBe(false);
   });
 
-  it('recupera el estado guardado al volver del detalle', () => {
+  it('recupera solo los filtros guardados', () => {
     const estado = obtenerEstadoInicial({
       filtros: { q: 'Dune', tipo: 'pelicula', anio: '2021' },
       resultados: [DUNE],
@@ -51,16 +52,12 @@ describe('obtenerEstadoInicial', () => {
       anio: '2021',
       soloPropias: false,
     });
-    expect(estado.resultados).toEqual([DUNE]);
-    expect(estado.pagina).toBe(2);
-    expect(estado.ultimaBusqueda).toEqual(ULTIMA_BUSQUEDA);
+    expect(estado.resultados).toEqual([]);
+    expect(estado.pagina).toBe(1);
+    expect(estado.totalPaginas).toBe(0);
+    expect(estado.hasSearched).toBe(false);
+    expect(estado.ultimaBusqueda).toBeNull();
     expect(estado.verificacionIncompleta).toBe(false);
-  });
-
-  it('recupera si la verificación de la búsqueda guardada fue incompleta', () => {
-    const estado = obtenerEstadoInicial({ resultados: [DUNE], verificacionIncompleta: true });
-
-    expect(estado.verificacionIncompleta).toBe(true);
   });
 
   it('descarta valores guardados con un formato inválido', () => {
@@ -93,6 +90,15 @@ describe('prepararFiltros y convertirFiltros', () => {
       q: 'Dune',
       tipo: '',
       anio: '2021',
+    });
+  });
+
+  it('valida los filtros preparados con la página indicada', () => {
+    expect(validarFiltros({ q: ' Dune ', tipo: '', anio: '' }, '2').data).toEqual({
+      q: 'Dune',
+      tipo: undefined,
+      anio: undefined,
+      pagina: 2,
     });
   });
 });

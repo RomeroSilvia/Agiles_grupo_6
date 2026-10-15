@@ -1,14 +1,13 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
-import { busquedaSchema } from '@buscador/shared/schemas';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { ApiError } from '../../services/api.service.js';
 import { buscarTitulos } from './busqueda.api.js';
-import { MENSAJES_ERROR_FILTRO } from './busqueda.constants.js';
+import { MAX_PAGINAS_RESTAURABLES, MENSAJES_ERROR_FILTRO } from './busqueda.constants.js';
 import {
   ACCIONES_BUSQUEDA,
   busquedaReducer,
   convertirFiltros,
   obtenerEstadoInicial,
-  prepararFiltros,
+  validarFiltros,
 } from './busquedaReducer.js';
 
 function obtenerMensajeValidacion(error) {
@@ -34,7 +33,7 @@ export function useBusqueda(estadoGuardado) {
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const validacion = busquedaSchema.safeParse(prepararFiltros(filtrosConsulta, paginaConsulta));
+      const validacion = validarFiltros(filtrosConsulta, paginaConsulta);
 
       if (!validacion.success) {
         if (!acumular) {
@@ -45,7 +44,7 @@ export function useBusqueda(estadoGuardado) {
           mensaje: obtenerMensajeValidacion(validacion.error),
           acumular,
         });
-        return;
+        return null;
       }
 
       const filtrosValidos = validacion.data;
@@ -66,7 +65,10 @@ export function useBusqueda(estadoGuardado) {
 
         if (!controller.signal.aborted) {
           dispatch({ type: ACCIONES_BUSQUEDA.BUSQUEDA_EXITOSA, data, acumular });
+          return data;
         }
+
+        return null;
       } catch (requestError) {
         if (requestError.name === 'AbortError' || controller.signal.aborted) {
           return;
@@ -77,6 +79,7 @@ export function useBusqueda(estadoGuardado) {
           mensaje: obtenerMensajeError(requestError, soloPropias),
           acumular,
         });
+        return null;
       }
     },
     [],
@@ -88,7 +91,25 @@ export function useBusqueda(estadoGuardado) {
   );
 
   const buscar = useCallback(
-    (filtrosConsulta) => ejecutarBusqueda(filtrosConsulta),
+    (filtrosConsulta, opciones) => ejecutarBusqueda(filtrosConsulta, opciones),
+    [ejecutarBusqueda],
+  );
+
+  const buscarHastaPagina = useCallback(
+    async (filtrosConsulta, paginaFinal) => {
+      const paginaHasta = Math.min(paginaFinal, MAX_PAGINAS_RESTAURABLES);
+
+      for (let paginaConsulta = 1; paginaConsulta <= paginaHasta; paginaConsulta += 1) {
+        const data = await ejecutarBusqueda(filtrosConsulta, {
+          pagina: paginaConsulta,
+          acumular: paginaConsulta > 1,
+        });
+
+        if (!data || paginaConsulta >= (data.totalPaginas ?? paginaConsulta)) {
+          return;
+        }
+      }
+    },
     [ejecutarBusqueda],
   );
 
@@ -118,45 +139,13 @@ export function useBusqueda(estadoGuardado) {
     return () => abortControllerRef.current?.abort();
   }, []);
 
-  const {
-    filtros,
-    resultados,
-    totalResultados,
-    verificacionIncompleta,
-    hasSearched,
-    ultimaBusqueda,
-  } = estado;
-
-  const estadoGuardable = useMemo(
-    () => ({
-      filtros,
-      resultados,
-      pagina,
-      totalResultados,
-      totalPaginas,
-      verificacionIncompleta,
-      hasSearched,
-      ultimaBusqueda,
-    }),
-    [
-      filtros,
-      resultados,
-      pagina,
-      totalResultados,
-      totalPaginas,
-      verificacionIncompleta,
-      hasSearched,
-      ultimaBusqueda,
-    ],
-  );
-
   return {
     ...estado,
     setFiltros,
     buscar,
+    buscarHastaPagina,
     buscarConFiltros,
     cargarMas,
     isLoading: isLoading || isLoadingMore,
-    estadoGuardable,
   };
 }

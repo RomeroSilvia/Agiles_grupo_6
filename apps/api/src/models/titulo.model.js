@@ -10,5 +10,3 @@ export const tituloSchema = z.object({
   anio: z.number().int().nullable(),
   puntuacion: z.number().min(0).max(10).nullable(),
 });
-
-export const detalleTituloSchema = tituloSchema;

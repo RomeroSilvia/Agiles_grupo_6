@@ -1,28 +1,55 @@
-import { busquedaSchema } from '@buscador/shared/schemas';
-import { useEffect } from 'react';
-import { useLocation } from 'react-router';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { APP_NAME } from '../../config/app.config.js';
-import { useLocationStateSync } from '../../hooks/useLocationStateSync.js';
 import { useBusqueda } from './useBusqueda.js';
+import { convertirFiltros, validarFiltros } from './busquedaReducer.js';
 import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
 import { FormularioBusqueda } from './FormularioBusqueda.jsx';
 import { ResultadosBusqueda } from './ResultadosBusqueda.jsx';
 
-function esBusquedaValida(filtros) {
-  return busquedaSchema.safeParse({
-    q: filtros.q,
-    tipo: filtros.tipo || undefined,
-    anio: filtros.anio || undefined,
-    pagina: 1,
-  }).success;
+function obtenerBusquedaInicial(searchParams) {
+  const filtros = {
+    q: searchParams.get('q') ?? '',
+    tipo: searchParams.get('tipo') ?? '',
+    anio: searchParams.get('anio') ?? '',
+    soloPropias: searchParams.get('propias') === 'true',
+  };
+  const validacion = validarFiltros(filtros, searchParams.get('pagina') ?? 1);
+
+  if (validacion.success) {
+    Object.assign(filtros, convertirFiltros(validacion.data));
+  }
+
+  return {
+    filtros,
+    consulta: validacion.success ? validacion.data : null,
+  };
+}
+
+function crearSearchParams({ q, tipo, anio, soloPropias }, pagina) {
+  const params = new URLSearchParams();
+  params.set('q', q.trim());
+  if (tipo) {
+    params.set('tipo', tipo);
+  }
+  if (anio) {
+    params.set('anio', anio);
+  }
+  if (soloPropias) {
+    params.set('propias', 'true');
+  }
+  params.set('pagina', String(pagina));
+  return params;
 }
 
 export function PaginaBusqueda() {
-  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [busquedaInicial] = useState(() => obtenerBusquedaInicial(searchParams));
   const {
     filtros,
     setFiltros,
     buscar,
+    buscarHastaPagina,
     buscarConFiltros,
     cargarMas,
     resultados,
@@ -35,11 +62,43 @@ export function PaginaBusqueda() {
     error,
     hasSearched,
     ultimaBusqueda,
-    estadoGuardable,
-  } = useBusqueda(location.state?.busqueda);
+  } = useBusqueda({ filtros: busquedaInicial.filtros });
   const filtroPropias = useFiltroPlataformasPropias();
 
-  useLocationStateSync('busqueda', estadoGuardable);
+  useEffect(() => {
+    if (
+      busquedaInicial.consulta &&
+      !hasSearched &&
+      (!busquedaInicial.filtros.soloPropias || filtroPropias.resuelto)
+    ) {
+      buscarHastaPagina(
+        {
+          ...busquedaInicial.filtros,
+          soloPropias: busquedaInicial.filtros.soloPropias && filtroPropias.disponible,
+          firmaPlataformas: filtroPropias.firma,
+        },
+        busquedaInicial.consulta.pagina,
+      );
+    }
+  }, [
+    buscarHastaPagina,
+    busquedaInicial,
+    hasSearched,
+    filtroPropias.resuelto,
+    filtroPropias.disponible,
+    filtroPropias.firma,
+  ]);
+
+  useEffect(() => {
+    if (!ultimaBusqueda || isLoading) {
+      return;
+    }
+
+    const nextParams = crearSearchParams(ultimaBusqueda, pagina);
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true, preventScrollReset: true });
+    }
+  }, [isLoading, ultimaBusqueda, pagina, searchParams, setSearchParams]);
 
   function conFiltroDisponible(filtrosConsulta) {
     return {
@@ -58,7 +117,7 @@ export function PaginaBusqueda() {
       q: ultimaBusqueda?.q ?? '',
     };
 
-    if (hasSearched && nombre !== 'q' && esBusquedaValida(filtrosParaValidar)) {
+    if (hasSearched && nombre !== 'q' && validarFiltros(filtrosParaValidar).success) {
       buscarConFiltros(conFiltroDisponible(nextFiltros));
     }
   }
@@ -80,7 +139,10 @@ export function PaginaBusqueda() {
     }
     const nextFiltros = { ...filtros, soloPropias: false };
     setFiltros(nextFiltros);
-    if (ultimaBusqueda?.soloPropias && esBusquedaValida({ ...nextFiltros, q: ultimaBusqueda.q })) {
+    if (
+      ultimaBusqueda?.soloPropias &&
+      validarFiltros({ ...nextFiltros, q: ultimaBusqueda.q }).success
+    ) {
       buscarConFiltros(nextFiltros);
     }
   }, [filtroPerdido, filtros, setFiltros, ultimaBusqueda, buscarConFiltros]);
@@ -132,7 +194,6 @@ export function PaginaBusqueda() {
         hasSearched={hasSearched}
         busquedaFiltrada={Boolean(ultimaBusqueda?.soloPropias)}
         tituloBuscado={ultimaBusqueda?.q ?? filtros.q.trim()}
-        estadoBusqueda={estadoGuardable}
         onReintentar={() => buscar(ultimaBusqueda)}
         onCargarMas={cargarMas}
         onVerTodos={() => actualizarFiltro('soloPropias', false)}

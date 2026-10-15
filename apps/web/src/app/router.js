@@ -8,17 +8,18 @@ import { PaginaInicioSesion } from '../features/auth/PaginaInicioSesion.jsx';
 import { PaginaRegistro } from '../features/auth/PaginaRegistro.jsx';
 import { SoloConSesion } from '../features/auth/SoloConSesion.jsx';
 import { PaginaMisPlataformas } from '../features/plataformas/PaginaMisPlataformas.jsx';
+import { RUTAS } from './rutas.js';
 
 export const routes = [
   {
-    path: '/',
+    path: RUTAS.BUSQUEDA,
     Component: MainLayout,
     children: [
       { index: true, Component: PaginaBusqueda },
-      { path: 'titulos/:tipo/:tmdbId', Component: PaginaDetalleTitulo },
+      { path: RUTAS.DETALLE_TITULO, Component: PaginaDetalleTitulo },
       {
         Component: SoloConSesion,
-        children: [{ path: 'mis-plataformas', Component: PaginaMisPlataformas }],
+        children: [{ path: RUTAS.MIS_PLATAFORMAS, Component: PaginaMisPlataformas }],
       },
       { path: '*', Component: NotFoundPage },
     ],
@@ -27,8 +28,8 @@ export const routes = [
     // Pantallas de ingreso: pantalla completa, sin el header del sitio
     Component: SoloSinSesion,
     children: [
-      { path: '/iniciar-sesion', Component: PaginaInicioSesion },
-      { path: '/registro', Component: PaginaRegistro },
+      { path: RUTAS.INICIAR_SESION, Component: PaginaInicioSesion },
+      { path: RUTAS.REGISTRO, Component: PaginaRegistro },
     ],
   },
 ];

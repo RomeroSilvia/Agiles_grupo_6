@@ -5,6 +5,7 @@ import { usePlataformasPropias } from '../../contexts/plataformasPropias/Platafo
 import { useRegion } from '../../contexts/region/RegionContext.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
 import { useDetalleTitulo } from '../../hooks/useDetalleTitulo.js';
+import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
 import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 
@@ -236,6 +237,10 @@ export function PaginaDetalleTitulo() {
                 })}
               </div>
             )}
+
+            <div className="pt-2">
+              <AttributionDisponibilidad />
+            </div>
           </div>
         </div>
       </article>

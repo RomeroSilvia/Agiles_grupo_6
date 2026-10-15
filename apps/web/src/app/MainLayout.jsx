@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
 import { useSession } from '../contexts/session/SessionContext.js';
 import { useRegion } from '../contexts/region/RegionContext.js';
-import { Logo } from '../components/ui/Logo.jsx';
+import { LogoInicio } from '../components/ui/LogoInicio.jsx';
 import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
 import { IconButton } from '../components/ui/IconButton.jsx';
@@ -63,13 +63,15 @@ function AccionesDeSesion() {
     <div className="flex items-center gap-1 sm:gap-2">
       <Link
         to="/iniciar-sesion"
-        className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-foreground transition-colors duration-150 hover:text-link ${focusRing}`}
+        className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold whitespace-nowrap text-foreground transition-colors duration-150 hover:text-link ${focusRing}`}
       >
-        Iniciar sesión
+        {/* En celular no entran los dos botones junto al logo: queda solo "Ingresar" */}
+        <span className="sm:hidden">Ingresar</span>
+        <span className="hidden sm:inline">Iniciar sesión</span>
       </Link>
       <Link
         to="/registro"
-        className={`inline-flex min-h-11 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors duration-150 hover:bg-accent-hover ${focusRing}`}
+        className={`hidden min-h-11 items-center rounded-full bg-accent px-4 text-sm font-semibold whitespace-nowrap text-accent-foreground transition-colors duration-150 hover:bg-accent-hover sm:inline-flex ${focusRing}`}
       >
         Crear cuenta
       </Link>
@@ -94,9 +96,7 @@ export function MainLayout() {
       <ScrollRestoration />
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3">
-          <Link to="/" aria-label="Streamly, ir al inicio" className={`rounded-sm ${focusRing}`}>
-            <Logo />
-          </Link>
+          <LogoInicio className={focusRing} />
           {user && (
             <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
               <Enlaces />

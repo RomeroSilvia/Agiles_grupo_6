@@ -20,6 +20,12 @@ Las convenciones, el stack y las reglas de capas están en `AGENTS.md` (importad
 - **Región**: `detectRegion` se monta solo en las rutas que la necesitan (`/api/region` y la búsqueda en plataformas propias), después de `loadSession`. `regionService.obtenerRegion` usa la región del perfil si hay sesión; si no, la detecta por IP con `geoip.integration.js` (y la guarda en el perfil si estaba vacía); si eso falla, usa `env.DEFAULT_REGION`. Deja `req.region` y `req.regionSource`.
 - **Providers del front**: `Theme → Session → Region → PlataformasPropias → Router`, en ese orden en `main.jsx`. Un provider nuevo se agrega también en `apps/web/src/test/renderRoute.jsx`.
 
+## Marca y assets del front
+
+- El nombre de la app sale de `APP_NAME` en `apps/web/src/config/app.config.js`; no escribir "Streamly" a mano (las mayúsculas van con la clase `uppercase`). La única excepción es el `<title>` de `apps/web/index.html`, que es HTML estático.
+- El logo es `components/ui/Logo.jsx` (ícono `src/assets/logo-s.svg` + nombre). Para enlazarlo al inicio usar `components/ui/LogoInicio.jsx` y pasarle el anillo de foco por `className`.
+- `apps/web/public/` es para archivos que se sirven tal cual, como `favicon.ico` (tamaños de 16, 32 y 48 px). Las imágenes que importa el código van en `src/assets/` y las del README, en `docs/`. Antes de subirlas, achicarlas y comprimirlas.
+
 ## Helpers de test existentes
 
 - API: `apps/api/src/test/queryBuilderMock.js` (`mockearConsulta`, `SIN_DATOS`, `FALLO`) simula el query builder de supabase-js para los tests de repositories; `apps/api/src/test/fixtures.js` tiene datos de ejemplo. Los tests de rutas usan `createApp()` con supertest y mockean repositories o integrations.

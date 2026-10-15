@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
 import { useSession } from '../contexts/session/SessionContext.js';
 import { useRegion } from '../contexts/region/RegionContext.js';
-import { Logo } from '../components/ui/Logo.jsx';
+import { LogoInicio } from '../components/ui/LogoInicio.jsx';
 import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
 import { IconButton } from '../components/ui/IconButton.jsx';
@@ -96,13 +96,7 @@ export function MainLayout() {
       <ScrollRestoration />
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3">
-          <Link
-            to="/"
-            aria-label="Streamly, ir al inicio"
-            className={`inline-flex shrink-0 items-center rounded-sm ${focusRing}`}
-          >
-            <Logo />
-          </Link>
+          <LogoInicio className={focusRing} />
           {user && (
             <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
               <Enlaces />

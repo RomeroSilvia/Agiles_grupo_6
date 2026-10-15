@@ -1,6 +1,7 @@
 import { busquedaSchema } from '@buscador/shared/schemas';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
+import { APP_NAME } from '../../config/app.config.js';
 import { useLocationStateSync } from '../../hooks/useLocationStateSync.js';
 import { useBusqueda } from './useBusqueda.js';
 import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
@@ -99,7 +100,9 @@ export function PaginaBusqueda() {
   return (
     <>
       <header className="mb-12 max-w-2xl space-y-3">
-        <p className="font-mono text-xs font-medium tracking-[0.2em] text-primary">STREAMLY</p>
+        <p className="font-mono text-xs font-medium tracking-[0.2em] text-primary uppercase">
+          {APP_NAME}
+        </p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">
           Una búsqueda. Todas tus plataformas.
         </h1>

@@ -1,6 +1,6 @@
 # STREAMLY
 
-<p align="center"><img src="docs/logo.png" alt="Streamly" width="480"></p>
+<p align="center"><img src="docs/logo.jpg" alt="Streamly" width="480"></p>
 
 Proyecto desarrollado para la cursada 2026 de Metodologías Ágiles, UTN-FRLP.
 

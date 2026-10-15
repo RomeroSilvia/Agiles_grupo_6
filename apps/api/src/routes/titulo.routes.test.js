@@ -10,7 +10,7 @@ vi.mock('../integrations/tmdb.integration.js', () => ({
   buscarSeries: vi.fn(),
   obtenerPelicula: vi.fn(),
   obtenerSerie: vi.fn(),
-  obtenerProveedores: vi.fn(),
+  obtenerOfertas: vi.fn(),
 }));
 
 vi.mock('../repositories/plataforma.repository.js', () => ({
@@ -61,15 +61,18 @@ const plataformasActivas = [
   },
 ];
 
-const proveedoresTmdb = {
+const ofertasTmdb = {
   AR: {
-    flatrate: [
-      { provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.jpg' },
-      { provider_id: 119, provider_name: 'Amazon Prime Video', logo_path: '/prime.jpg' },
+    enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+    ofertas: [
+      { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
+      { tmdbProviderId: 119, tipoOferta: 'suscripcion', logoPath: '/prime.jpg' },
+      { tmdbProviderId: 337, tipoOferta: 'alquiler', logoPath: '/disney.jpg' },
     ],
   },
   US: {
-    flatrate: [{ provider_id: 337, provider_name: 'Disney Plus', logo_path: '/disney.jpg' }],
+    enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+    ofertas: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: '/disney.jpg' }],
   },
 };
 
@@ -77,7 +80,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   tmdbIntegration.obtenerPelicula.mockResolvedValue(detallePelicula);
   tmdbIntegration.obtenerSerie.mockResolvedValue(detalleSerie);
-  tmdbIntegration.obtenerProveedores.mockResolvedValue(proveedoresTmdb);
+  tmdbIntegration.obtenerOfertas.mockResolvedValue(ofertasTmdb);
   plataformaRepository.listarActivas.mockResolvedValue(plataformasActivas);
 });
 
@@ -184,25 +187,31 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body).toEqual({
       data: {
         region: 'AR',
-        plataformas: [
+        ofertas: [
           {
-            id: 1,
-            tmdbProviderId: 8,
-            nombre: 'Netflix',
-            logoPath: '/netflix.jpg',
-            urlHome: 'https://www.netflix.com',
-          },
-          {
-            id: 2,
-            tmdbProviderId: 119,
-            nombre: 'Amazon Prime Video',
-            logoPath: '/prime.jpg',
-            urlHome: 'https://www.primevideo.com',
+            tipoOferta: 'suscripcion',
+            plataformas: [
+              {
+                id: 1,
+                tmdbProviderId: 8,
+                nombre: 'Netflix',
+                logoPath: '/netflix.jpg',
+                urlHome: 'https://www.netflix.com',
+              },
+              {
+                id: 2,
+                tmdbProviderId: 119,
+                nombre: 'Amazon Prime Video',
+                logoPath: '/prime.jpg',
+                urlHome: 'https://www.primevideo.com',
+              },
+            ],
           },
         ],
+        enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
       },
     });
-    expect(tmdbIntegration.obtenerProveedores).toHaveBeenCalledWith('pelicula', 1);
+    expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledWith({ tipo: 'pelicula', tmdbId: 1 });
   });
 
   it('permite consultar la disponibilidad para una región específica', async () => {
@@ -214,18 +223,24 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body).toEqual({
       data: {
         region: 'US',
-        plataformas: [
+        ofertas: [
           {
-            id: 3,
-            tmdbProviderId: 337,
-            nombre: 'Disney Plus',
-            logoPath: '/disney.jpg',
-            urlHome: 'https://www.disneyplus.com',
+            tipoOferta: 'suscripcion',
+            plataformas: [
+              {
+                id: 3,
+                tmdbProviderId: 337,
+                nombre: 'Disney Plus',
+                logoPath: '/disney.jpg',
+                urlHome: 'https://www.disneyplus.com',
+              },
+            ],
           },
         ],
+        enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
       },
     });
-    expect(tmdbIntegration.obtenerProveedores).toHaveBeenCalledWith('serie', 2);
+    expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledWith({ tipo: 'serie', tmdbId: 2 });
   });
 
   it('devuelve lista vacía si el título no está disponible en la región solicitada', async () => {
@@ -237,7 +252,8 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body).toEqual({
       data: {
         region: 'ES',
-        plataformas: [],
+        ofertas: [],
+        enlaceTmdb: null,
       },
     });
   });
@@ -258,20 +274,46 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body.error.code).toBe('VALIDATION');
   });
 
-  it('responde 404 cuando el título no existe en TMDB', async () => {
-    tmdbIntegration.obtenerProveedores.mockRejectedValueOnce(
-      new NotFoundError('No se encontró el título solicitado'),
-    );
+  it('devuelve lista vacía cuando TMDB no tiene ofertas del título', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValueOnce({});
 
     const response = await request(createApp()).get('/api/titulos/pelicula/999/disponibilidad');
 
-    expect(response.status).toBe(404);
-    expect(response.body.error.code).toBe('NOT_FOUND');
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      data: { region: 'AR', ofertas: [], enlaceTmdb: null },
+    });
+  });
+
+  it('separa las plataformas según la modalidad de oferta', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValueOnce({
+      AR: {
+        enlaceTmdb: null,
+        ofertas: [
+          { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: null },
+          { tmdbProviderId: 337, tipoOferta: 'con_anuncios', logoPath: '/disney.jpg' },
+        ],
+      },
+    });
+
+    const response = await request(createApp()).get('/api/titulos/pelicula/1/disponibilidad');
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.ofertas).toEqual([
+      {
+        tipoOferta: 'suscripcion',
+        plataformas: [expect.objectContaining({ id: 1, nombre: 'Netflix' })],
+      },
+      {
+        tipoOferta: 'con_anuncios',
+        plataformas: [expect.objectContaining({ id: 3, nombre: 'Disney Plus' })],
+      },
+    ]);
   });
 
   it('responde 502 cuando la integración con TMDB falla', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    tmdbIntegration.obtenerProveedores.mockRejectedValueOnce(
+    tmdbIntegration.obtenerOfertas.mockRejectedValueOnce(
       new ExternalServiceError('TMDB', new Error('timeout')),
     );
 

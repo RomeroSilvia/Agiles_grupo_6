@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { TIPO_OFERTA } from '@buscador/shared/constants';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useDisponibilidad } from './useDisponibilidad.js';
 
@@ -16,7 +17,13 @@ describe('useDisponibilidad', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ data: { region: 'AR', plataformas: plataformasMock } }),
+        json: async () => ({
+          data: {
+            region: 'AR',
+            ofertas: [{ tipoOferta: TIPO_OFERTA.SUSCRIPCION, plataformas: plataformasMock }],
+            enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+          },
+        }),
       }),
     );
 
@@ -30,7 +37,10 @@ describe('useDisponibilidad', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.plataformas).toEqual(plataformasMock);
+    expect(result.current.ofertas).toEqual([
+      { tipoOferta: TIPO_OFERTA.SUSCRIPCION, plataformas: plataformasMock },
+    ]);
+    expect(result.current.enlaceTmdb).toBe('https://www.themoviedb.org/movie/1/watch');
     expect(result.current.error).toBeNull();
   });
 
@@ -53,7 +63,13 @@ describe('useDisponibilidad', () => {
           json: async () => ({
             data: {
               region: 'AR',
-              plataformas: [{ id: 1, tmdbProviderId: 8, nombre: 'Netflix' }],
+              ofertas: [
+                {
+                  tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+                  plataformas: [{ id: 1, tmdbProviderId: 8, nombre: 'Netflix' }],
+                },
+              ],
+              enlaceTmdb: null,
             },
           }),
         });
@@ -67,7 +83,7 @@ describe('useDisponibilidad', () => {
     await waitFor(() => {
       expect(result.current.error).toBe('Servicio no disponible');
     });
-    expect(result.current.plataformas).toEqual([]);
+    expect(result.current.ofertas).toEqual([]);
 
     act(() => {
       result.current.reintentar();
@@ -77,7 +93,7 @@ describe('useDisponibilidad', () => {
       expect(result.current.isLoading).toBe(false);
     });
     expect(result.current.error).toBeNull();
-    expect(result.current.plataformas).toHaveLength(1);
+    expect(result.current.ofertas).toHaveLength(1);
   });
 
   it('no ejecuta la consulta si faltan parámetros requeridos', () => {

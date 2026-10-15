@@ -65,7 +65,7 @@ describe('plataformas propias sin sesión', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('UNAUTHENTICATED');
-    expect(usuarioPlataformaRepository.listarActivasPorUsuario).not.toHaveBeenCalled();
+    expect(usuarioPlataformaRepository.listarPlataformasActivasPorUsuario).not.toHaveBeenCalled();
     expect(plataformaRepository.obtenerActivaPorId).not.toHaveBeenCalled();
     expect(usuarioPlataformaRepository.agregar).not.toHaveBeenCalled();
     expect(usuarioPlataformaRepository.quitar).not.toHaveBeenCalled();
@@ -74,20 +74,22 @@ describe('plataformas propias sin sesión', () => {
 
 describe('GET /api/plataformas/propias', () => {
   it('devuelve los ids de las plataformas del usuario de la sesión', async () => {
-    usuarioPlataformaRepository.listarActivasPorUsuario.mockResolvedValue([
-      { plataformaId: 1, agregadaEn: '2026-10-01T10:00:00Z' },
-      { plataformaId: 3, agregadaEn: '2026-10-02T10:00:00Z' },
+    usuarioPlataformaRepository.listarPlataformasActivasPorUsuario.mockResolvedValue([
+      NETFLIX,
+      { ...NETFLIX, id: 3, tmdbProviderId: 337, nombre: 'Disney Plus' },
     ]);
 
     const res = await pedirConSesion('get', '/api/plataformas/propias');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: [1, 3] });
-    expect(usuarioPlataformaRepository.listarActivasPorUsuario).toHaveBeenCalledWith(USUARIO.id);
+    expect(usuarioPlataformaRepository.listarPlataformasActivasPorUsuario).toHaveBeenCalledWith(
+      USUARIO.id,
+    );
   });
 
   it('devuelve una lista vacía si el usuario todavía no eligió plataformas', async () => {
-    usuarioPlataformaRepository.listarActivasPorUsuario.mockResolvedValue([]);
+    usuarioPlataformaRepository.listarPlataformasActivasPorUsuario.mockResolvedValue([]);
 
     const res = await pedirConSesion('get', '/api/plataformas/propias');
 
@@ -96,7 +98,7 @@ describe('GET /api/plataformas/propias', () => {
   });
 
   it('responde 500 si falla la base', async () => {
-    usuarioPlataformaRepository.listarActivasPorUsuario.mockRejectedValue(errorDeBase());
+    usuarioPlataformaRepository.listarPlataformasActivasPorUsuario.mockRejectedValue(errorDeBase());
 
     const res = await pedirConSesion('get', '/api/plataformas/propias');
 

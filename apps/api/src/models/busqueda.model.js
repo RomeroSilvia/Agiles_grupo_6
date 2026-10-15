@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TIPOS_TITULO } from '@buscador/shared/constants';
+import { PAGINA_MAXIMA, TIPOS_TITULO } from '@buscador/shared/constants';
 
 const resultadoBusquedaSchema = z.object({
   tmdbId: z.number().int(),
@@ -14,7 +14,7 @@ const resultadoBusquedaSchema = z.object({
 
 export const respuestaBusquedaSchema = z.object({
   resultados: z.array(resultadoBusquedaSchema),
-  pagina: z.number().int().min(1).max(500),
+  pagina: z.number().int().min(1).max(PAGINA_MAXIMA),
   totalResultados: z.number().int().min(0),
   totalPaginas: z.number().int().min(0),
 });

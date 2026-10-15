@@ -1,10 +1,11 @@
 import { busquedaSchema } from '@buscador/shared/schemas';
-import { ANIO_MAXIMO, ANIO_MINIMO, TIPOS_TITULO } from '@buscador/shared/constants';
-import { useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router';
-import { useBusqueda } from '../../hooks/useBusqueda.js';
-import { ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
-import { ResultadoCard } from './ResultadoCard.jsx';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router';
+import { useLocationStateSync } from '../../hooks/useLocationStateSync.js';
+import { useBusqueda } from './useBusqueda.js';
+import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
+import { FormularioBusqueda } from './FormularioBusqueda.jsx';
+import { ResultadosBusqueda } from './ResultadosBusqueda.jsx';
 
 function esBusquedaValida(filtros) {
   return busquedaSchema.safeParse({
@@ -17,7 +18,6 @@ function esBusquedaValida(filtros) {
 
 export function PaginaBusqueda() {
   const location = useLocation();
-  const navigate = useNavigate();
   const {
     filtros,
     setFiltros,
@@ -28,41 +28,28 @@ export function PaginaBusqueda() {
     pagina,
     totalResultados,
     totalPaginas,
+    verificacionIncompleta,
     isLoading,
     isLoadingMore,
     error,
     hasSearched,
     ultimaBusqueda,
+    estadoGuardable,
   } = useBusqueda(location.state?.busqueda);
+  const filtroPropias = useFiltroPlataformasPropias();
 
-  const estadoBusqueda = useMemo(
-    () => ({
-      filtros,
-      resultados,
-      pagina,
-      totalResultados,
-      totalPaginas,
-      hasSearched,
-      ultimaBusqueda,
-    }),
-    [filtros, resultados, pagina, totalResultados, totalPaginas, hasSearched, ultimaBusqueda],
-  );
+  useLocationStateSync('busqueda', estadoGuardable);
 
-  useEffect(() => {
-    navigate(location.pathname + location.search, {
-      replace: true,
-      state: { busqueda: estadoBusqueda },
-      preventScrollReset: true,
-    });
-  }, [navigate, location.pathname, location.search, estadoBusqueda]);
-
-  function handleSubmit(event) {
-    event.preventDefault();
-    buscar(filtros);
+  function conFiltroDisponible(filtrosConsulta) {
+    return {
+      ...filtrosConsulta,
+      soloPropias: filtrosConsulta.soloPropias && filtroPropias.disponible,
+      firmaPlataformas: filtroPropias.firma,
+    };
   }
 
-  function handleChange(event) {
-    const nextFiltros = { ...filtros, [event.target.name]: event.target.value };
+  function actualizarFiltro(nombre, valor) {
+    const nextFiltros = { ...filtros, [nombre]: valor };
     setFiltros(nextFiltros);
 
     const filtrosParaValidar = {
@@ -70,12 +57,44 @@ export function PaginaBusqueda() {
       q: ultimaBusqueda?.q ?? '',
     };
 
-    if (hasSearched && event.target.name !== 'q' && esBusquedaValida(filtrosParaValidar)) {
-      buscarConFiltros(nextFiltros);
+    if (hasSearched && nombre !== 'q' && esBusquedaValida(filtrosParaValidar)) {
+      buscarConFiltros(conFiltroDisponible(nextFiltros));
     }
   }
 
-  const tituloBuscado = ultimaBusqueda?.q ?? filtros.q.trim();
+  function handleSubmit(event) {
+    event.preventDefault();
+    buscar(conFiltroDisponible(filtros));
+  }
+
+  function handleChange(event) {
+    actualizarFiltro(event.target.name, event.target.value);
+  }
+
+  const filtroPerdido = filtros.soloPropias && filtroPropias.resuelto && !filtroPropias.disponible;
+
+  useEffect(() => {
+    if (!filtroPerdido) {
+      return;
+    }
+    const nextFiltros = { ...filtros, soloPropias: false };
+    setFiltros(nextFiltros);
+    if (ultimaBusqueda?.soloPropias && esBusquedaValida({ ...nextFiltros, q: ultimaBusqueda.q })) {
+      buscarConFiltros(nextFiltros);
+    }
+  }, [filtroPerdido, filtros, setFiltros, ultimaBusqueda, buscarConFiltros]);
+
+  const seleccionDesactualizada =
+    Boolean(ultimaBusqueda?.soloPropias) &&
+    filtroPropias.disponible &&
+    !isLoading &&
+    ultimaBusqueda.firmaPlataformas !== filtroPropias.firma;
+
+  useEffect(() => {
+    if (seleccionDesactualizada) {
+      buscar({ ...ultimaBusqueda, firmaPlataformas: filtroPropias.firma });
+    }
+  }, [seleccionDesactualizada, ultimaBusqueda, filtroPropias.firma, buscar]);
 
   return (
     <>
@@ -89,155 +108,32 @@ export function PaginaBusqueda() {
         </p>
       </header>
 
-      <form
-        aria-label="Buscar títulos"
-        className="mb-12 space-y-5 rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-6"
+      <FormularioBusqueda
+        filtros={filtros}
+        filtroPropias={filtroPropias}
+        isLoading={isLoading}
+        onChange={handleChange}
         onSubmit={handleSubmit}
-      >
-        <div className="space-y-2">
-          <label
-            htmlFor="q"
-            className="font-mono text-xs font-medium tracking-wide text-muted uppercase"
-          >
-            Título
-          </label>
-          <input
-            id="q"
-            name="q"
-            type="search"
-            value={filtros.q}
-            onChange={handleChange}
-            placeholder="Ej.: Dune, The Office..."
-            required
-            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground transition outline-none placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/20"
-          />
-        </div>
+        onCambiarSoloPropias={(activo) => actualizarFiltro('soloPropias', activo)}
+      />
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
-          <div className="space-y-2">
-            <label
-              htmlFor="tipo"
-              className="font-mono text-xs font-medium tracking-wide text-muted uppercase"
-            >
-              Tipo
-            </label>
-            <select
-              id="tipo"
-              name="tipo"
-              value={filtros.tipo}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground transition outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
-            >
-              <option value="">Todos</option>
-              {TIPOS_TITULO.map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {ETIQUETAS_TIPO_TITULO[tipo]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="anio"
-              className="font-mono text-xs font-medium tracking-wide text-muted uppercase"
-            >
-              Año
-            </label>
-            <input
-              id="anio"
-              name="anio"
-              type="number"
-              min={ANIO_MINIMO}
-              max={ANIO_MAXIMO}
-              value={filtros.anio}
-              onChange={handleChange}
-              placeholder="Cualquier año"
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground transition outline-none placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/20"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:bg-primary-hover focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
-          >
-            {isLoading ? 'Buscando...' : 'Buscar'}
-          </button>
-        </div>
-      </form>
-
-      <section>
-        {isLoading && !isLoadingMore && (
-          <p
-            role="status"
-            aria-live="polite"
-            className="rounded-2xl border border-primary/30 bg-primary/10 p-5 text-primary"
-          >
-            Buscando títulos...
-          </p>
-        )}
-
-        {!isLoading && error && resultados.length === 0 && (
-          <p
-            role="alert"
-            className="rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
-          >
-            {error}
-          </p>
-        )}
-
-        {!isLoading && !error && hasSearched && resultados.length === 0 && (
-          <p
-            role="status"
-            aria-live="polite"
-            className="rounded-2xl border border-border bg-surface p-5 text-muted"
-          >
-            No encontramos contenido disponible con esos filtros.
-          </p>
-        )}
-
-        {resultados.length > 0 && (
-          <>
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold">Resultados para &quot;{tituloBuscado}&quot;</h2>
-              <p className="text-sm text-muted">
-                Mostrando {resultados.length} de {totalResultados}{' '}
-                {totalResultados === 1 ? 'título' : 'títulos'}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-              {resultados.map((resultado) => (
-                <ResultadoCard
-                  key={`${resultado.tipo}-${resultado.tmdbId}`}
-                  resultado={resultado}
-                  estadoBusqueda={estadoBusqueda}
-                />
-              ))}
-            </div>
-            {pagina < totalPaginas && (
-              <>
-                <button
-                  type="button"
-                  onClick={cargarMas}
-                  disabled={isLoading}
-                  className="mx-auto mt-8 block rounded-xl border border-primary px-6 py-3 font-semibold text-primary transition hover:bg-primary/10 focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
-                >
-                  {isLoadingMore ? 'Cargando...' : 'Cargar más'}
-                </button>
-                {error && (
-                  <p
-                    role="alert"
-                    className="mx-auto mt-4 max-w-md rounded-2xl border border-danger/30 bg-danger-surface p-4 text-center text-danger"
-                  >
-                    {error}
-                  </p>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </section>
+      <ResultadosBusqueda
+        resultados={resultados}
+        pagina={pagina}
+        totalPaginas={totalPaginas}
+        totalResultados={totalResultados}
+        verificacionIncompleta={verificacionIncompleta}
+        isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
+        error={error}
+        hasSearched={hasSearched}
+        busquedaFiltrada={Boolean(ultimaBusqueda?.soloPropias)}
+        tituloBuscado={ultimaBusqueda?.q ?? filtros.q.trim()}
+        estadoBusqueda={estadoGuardable}
+        onReintentar={() => buscar(ultimaBusqueda)}
+        onCargarMas={cargarMas}
+        onVerTodos={() => actualizarFiltro('soloPropias', false)}
+      />
     </>
   );
 }

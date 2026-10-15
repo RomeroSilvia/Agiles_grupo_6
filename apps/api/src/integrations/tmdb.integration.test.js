@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { TIPOS_OFERTA } from '@buscador/shared/constants';
 
 const envMock = vi.hoisted(() => ({ env: { TMDB_API_KEY: 'clave-prueba' } }));
 
@@ -7,15 +8,83 @@ vi.mock('../config/env.config.js', () => envMock);
 import {
   buscarPeliculas,
   buscarSeries,
+  obtenerOfertas,
   obtenerPelicula,
   obtenerSerie,
-  obtenerProveedores,
 } from './tmdb.integration.js';
 import { env } from '../config/env.config.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
   env.TMDB_API_KEY = 'clave-prueba';
+});
+
+describe('disponibilidad de TMDB', () => {
+  it('normaliza las ofertas de cada región', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: {
+          AR: {
+            link: 'https://www.themoviedb.org/movie/1/watch',
+            flatrate: [{ provider_id: 337, provider_name: 'Disney Plus' }],
+          },
+          BR: {
+            flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/n.jpg' }],
+          },
+        },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const ofertas = await obtenerOfertas({ tipo: 'pelicula', tmdbId: 1 });
+
+    expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/movie/1/watch/providers');
+    expect(ofertas).toEqual({
+      AR: {
+        enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+        ofertas: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: null }],
+      },
+      BR: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/n.jpg' }],
+      },
+    });
+  });
+
+  it('devuelve una lista vacía para una región sin ofertas', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: { UY: {} } }) }),
+    );
+
+    await expect(obtenerOfertas({ tipo: 'serie', tmdbId: 2 })).resolves.toEqual({
+      UY: { enlaceTmdb: null, ofertas: [] },
+    });
+  });
+
+  it('asigna a cada modalidad de TMDB el tipo de oferta compartido', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: {
+            AR: Object.fromEntries(
+              ['flatrate', 'free', 'ads', 'rent', 'buy'].map((tipo, index) => [
+                tipo,
+                [{ provider_id: index + 1, provider_name: `Plataforma ${index + 1}` }],
+              ]),
+            ),
+          },
+        }),
+      }),
+    );
+
+    const ofertas = await obtenerOfertas({ tipo: 'serie', tmdbId: 3 });
+
+    expect(ofertas.AR.ofertas.map(({ tipoOferta }) => tipoOferta)).toEqual(TIPOS_OFERTA);
+  });
 });
 
 describe('tmdb.integration', () => {
@@ -219,46 +288,101 @@ describe('tmdb.integration', () => {
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+});
 
-  it('consulta los proveedores de streaming para una película', async () => {
-    const providersData = {
-      results: {
-        AR: {
-          flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.jpg' }],
+describe('obtenerOfertas', () => {
+  it('normaliza las ofertas de todas las regiones', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 101,
+        results: {
+          AR: {
+            link: 'https://www.themoviedb.org/movie/101/watch',
+            flatrate: [{ provider_id: 8, logo_path: '/netflix.jpg' }],
+            rent: [{ provider_id: 119 }],
+          },
+          MX: {
+            ads: [{ provider_id: 337 }],
+            free: [{ provider_id: 11 }],
+          },
         },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const ofertas = await obtenerOfertas({ tipo: 'pelicula', tmdbId: 101 });
+
+    expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/movie/101/watch/providers');
+    expect(ofertas).toEqual({
+      AR: {
+        enlaceTmdb: 'https://www.themoviedb.org/movie/101/watch',
+        ofertas: [
+          { tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' },
+          { tmdbProviderId: 119, tipoOferta: 'alquiler', logoPath: null },
+        ],
       },
-    };
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => providersData,
+      MX: {
+        enlaceTmdb: null,
+        ofertas: [
+          { tmdbProviderId: 11, tipoOferta: 'gratis', logoPath: null },
+          { tmdbProviderId: 337, tipoOferta: 'con_anuncios', logoPath: null },
+        ],
+      },
     });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const proveedores = await obtenerProveedores('pelicula', 1);
-
-    const [url] = fetchMock.mock.calls[0];
-    expect(url.pathname).toBe('/3/movie/1/watch/providers');
-    expect(proveedores).toEqual(providersData.results);
   });
 
-  it('consulta los proveedores de streaming para una serie', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: {} }),
-    });
+  it('usa la ruta de series para las series', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
     vi.stubGlobal('fetch', fetchMock);
 
-    const proveedores = await obtenerProveedores('serie', 2);
+    await obtenerOfertas({ tipo: 'serie', tmdbId: 102 });
 
-    const [url] = fetchMock.mock.calls[0];
-    expect(url.pathname).toBe('/3/tv/2/watch/providers');
-    expect(proveedores).toEqual({});
+    expect(fetchMock.mock.calls[0][0].pathname).toBe('/3/tv/102/watch/providers');
   });
 
-  it('lanza un error de servicio externo si el tipo de título es inválido en proveedores', async () => {
-    await expect(obtenerProveedores('anime', 1)).rejects.toMatchObject({
+  it('devuelve sin ofertas si TMDB no conoce el título', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 103 })).resolves.toEqual({});
+  });
+
+  it('ignora proveedores con un formato inválido', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: { AR: { flatrate: [{ provider_id: 'x' }, null], buy: 'no' } },
+        }),
+      }),
+    );
+
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 104 })).resolves.toEqual({
+      AR: { enlaceTmdb: null, ofertas: [] },
+    });
+  });
+
+  it('reutiliza la respuesta en memoria para el mismo título', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: {} }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await obtenerOfertas({ tipo: 'pelicula', tmdbId: 105 });
+    await obtenerOfertas({ tipo: 'pelicula', tmdbId: 105 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('propaga el error externo y no lo guarda', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 503 })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: {} }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 106 })).rejects.toMatchObject({
       code: 'EXTERNAL_SERVICE',
-      status: 502,
     });
+    await expect(obtenerOfertas({ tipo: 'pelicula', tmdbId: 106 })).resolves.toEqual({});
   });
 });

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, request } from '../../services/api.service.js';
 
-export function useDisponibilidad({ tipo, tmdbId, region } = {}) {
+export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false } = {}) {
   const tieneParametros = Boolean(tipo && tmdbId);
+  const regionResuelta = Boolean(region) && !regionLoading;
   const claveParametros = tieneParametros ? `${tipo}/${tmdbId}/${region ?? ''}` : null;
-  const [plataformas, setPlataformas] = useState([]);
+  const [ofertas, setOfertas] = useState([]);
+  const [enlaceTmdb, setEnlaceTmdb] = useState(null);
   const [error, setError] = useState(null);
   const [claveCargada, setClaveCargada] = useState(null);
   const [recarga, setRecarga] = useState(0);
@@ -17,7 +19,7 @@ export function useDisponibilidad({ tipo, tmdbId, region } = {}) {
   useEffect(() => {
     const controller = new AbortController();
 
-    if (!tieneParametros) {
+    if (!tieneParametros || !regionResuelta) {
       return () => controller.abort();
     }
 
@@ -28,7 +30,8 @@ export function useDisponibilidad({ tipo, tmdbId, region } = {}) {
     )
       .then((data) => {
         if (!controller.signal.aborted) {
-          setPlataformas(Array.isArray(data?.plataformas) ? data.plataformas : []);
+          setOfertas(Array.isArray(data?.ofertas) ? data.ofertas : []);
+          setEnlaceTmdb(typeof data?.enlaceTmdb === 'string' ? data.enlaceTmdb : null);
           setError(null);
           setClaveCargada(claveParametros);
         }
@@ -38,7 +41,8 @@ export function useDisponibilidad({ tipo, tmdbId, region } = {}) {
           return;
         }
 
-        setPlataformas([]);
+        setOfertas([]);
+        setEnlaceTmdb(null);
         setError(
           requestError instanceof ApiError
             ? requestError.message
@@ -48,13 +52,14 @@ export function useDisponibilidad({ tipo, tmdbId, region } = {}) {
       });
 
     return () => controller.abort();
-  }, [claveParametros, tieneParametros, tipo, tmdbId, region, recarga]);
+  }, [claveParametros, tieneParametros, regionResuelta, tipo, tmdbId, region, recarga]);
 
-  const esDetalleActual = tieneParametros && claveCargada === claveParametros;
+  const esDetalleActual = tieneParametros && regionResuelta && claveCargada === claveParametros;
 
   return {
-    plataformas: esDetalleActual ? plataformas : [],
-    isLoading: tieneParametros && !esDetalleActual,
+    ofertas: esDetalleActual ? ofertas : [],
+    enlaceTmdb: esDetalleActual ? enlaceTmdb : null,
+    isLoading: tieneParametros && (!regionResuelta || !esDetalleActual),
     error: !tieneParametros ? 'No se pudo identificar el título.' : esDetalleActual ? error : null,
     reintentar,
   };

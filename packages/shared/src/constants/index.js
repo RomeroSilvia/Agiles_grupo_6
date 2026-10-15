@@ -9,6 +9,7 @@ export const TIPOS_TITULO = Object.values(TIPO_TITULO);
 // Límites técnicos del formulario de búsqueda.
 export const ANIO_MINIMO = 1888;
 export const ANIO_MAXIMO = 2100;
+export const PAGINA_MAXIMA = 500;
 
 export const TIPO_OFERTA = Object.freeze({
   SUSCRIPCION: 'suscripcion',
@@ -30,6 +31,9 @@ export const ESTADOS_NOTIFICACION = ['pendiente', 'enviada', 'fallida'];
 
 // Valores técnicos
 export const DEFAULT_REGION = 'AR';
+
+export const REGION_SOURCE = Object.freeze({ PROFILE: 'profile', IP: 'ip', DEFAULT: 'default' });
+export const REGION_SOURCES = Object.values(REGION_SOURCE);
 
 // Código de país ISO 3166-1 alfa-2, igual que el CHECK de perfil.region
 export const REGION_PATTERN = /^[A-Z]{2}$/;

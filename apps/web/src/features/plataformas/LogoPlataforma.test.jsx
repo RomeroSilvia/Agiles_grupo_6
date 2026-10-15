@@ -30,4 +30,13 @@ describe('LogoPlataforma', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.getByText('N')).toHaveAttribute('data-plataforma', '8');
   });
+
+  it('usa el tamaño pequeño y conserva la inicial si falla el logo', () => {
+    render(<LogoPlataforma plataforma={{ ...NETFLIX, logoPath: '/netflix.jpg' }} size="small" />);
+
+    const logo = screen.getByRole('img', { name: 'Logo de Netflix' });
+    expect(logo).toHaveClass('size-6');
+    fireEvent.error(logo);
+    expect(screen.getByText('N')).toHaveClass('size-6');
+  });
 });

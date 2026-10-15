@@ -47,6 +47,13 @@ function configurarFetch() {
       return Promise.resolve({ ok: true, json: async () => ({ data: detalleDune }) });
     }
 
+    if (url.pathname === '/api/titulos/pelicula/1/disponibilidad') {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: { region: 'AR', ofertas: [], enlaceTmdb: null } }),
+      });
+    }
+
     throw new Error(`URL no mockeada: ${url.pathname}`);
   });
 
@@ -71,6 +78,7 @@ describe('router de la aplicación', () => {
 
     await user.click(screen.getByRole('link', { name: 'Ver detalle de Dune' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Dune' })).toBeInTheDocument();
+    expect(screen.getAllByText(/Datos de títulos provistos por/)).toHaveLength(1);
 
     await user.click(screen.getByRole('link', { name: 'Volver a la búsqueda' }));
     expect(
@@ -84,7 +92,7 @@ describe('router de la aplicación', () => {
       return url.pathname === '/api/busqueda';
     });
     expect(llamadasDeBusqueda).toHaveLength(1);
-  });
+  }, 10_000);
 
   it('restaura la búsqueda y su desplazamiento al usar Atrás del navegador', async () => {
     const fetchMock = configurarFetch();

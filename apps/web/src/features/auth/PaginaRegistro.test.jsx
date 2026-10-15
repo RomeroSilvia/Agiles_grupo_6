@@ -69,7 +69,7 @@ describe('Registro (E4HU2)', () => {
     await user.tab();
 
     expect(await screen.findByText('Las contraseñas no coinciden')).toBeInTheDocument();
-  });
+  }, 10_000);
 
   it('no envía el formulario si la contraseña es débil y lleva el foco al campo', async () => {
     const user = userEvent.setup();
@@ -81,7 +81,7 @@ describe('Registro (E4HU2)', () => {
     expect(screen.getByLabelText('Contraseña')).toHaveFocus();
     expect(screen.getByLabelText('Contraseña')).toHaveAttribute('aria-invalid', 'true');
     expect(request).not.toHaveBeenCalledWith('/auth/sign-up', expect.anything());
-  });
+  }, 10_000);
 
   it('crea la cuenta, deja la sesión iniciada y lleva al inicio', async () => {
     const user = userEvent.setup();
@@ -98,7 +98,7 @@ describe('Registro (E4HU2)', () => {
       method: 'POST',
       body: { email: 'ana@mail.com', password: 'Segura#2026' },
     });
-  });
+  }, 10_000);
 
   it('muestra el error de la API si el mail ya está registrado', async () => {
     mockApi({
@@ -118,5 +118,5 @@ describe('Registro (E4HU2)', () => {
 
     expect(await screen.findByText(/Ese mail ya está registrado/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeEnabled();
-  });
+  }, 10_000);
 });

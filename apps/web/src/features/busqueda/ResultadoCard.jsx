@@ -10,13 +10,12 @@ import { ETIQUETAS_TIPO_TITULO, MAX_LOGOS_POR_CARD } from './busqueda.constants.
 export const resultadoCardClassName =
   'overflow-hidden rounded-2xl border border-border bg-surface shadow-sm';
 
-function obtenerEtiquetaEnlace({ nombre, plataformas = [] }) {
-  const nombreTitulo = nombre ?? 'Título no disponible';
+function obtenerEtiquetaEnlace(nombre, plataformas = []) {
   if (plataformas.length === 0) {
-    return `Ver detalle de ${nombreTitulo}`;
+    return `Ver detalle de ${nombre}`;
   }
   const nombresPlataformas = plataformas.map((plataforma) => plataforma.nombre).join(', ');
-  return `Ver detalle de ${nombreTitulo}, disponible en ${nombresPlataformas}`;
+  return `Ver detalle de ${nombre}, disponible en ${nombresPlataformas}`;
 }
 
 export function ResultadoCard({ resultado }) {
@@ -30,7 +29,7 @@ export function ResultadoCard({ resultado }) {
     <Link
       to={rutaDetalle(resultado.tipo, resultado.tmdbId)}
       state={{ desdeBusqueda: true }}
-      aria-label={obtenerEtiquetaEnlace(resultado)}
+      aria-label={obtenerEtiquetaEnlace(nombre, plataformas)}
       className={`group block h-full rounded-2xl ${FOCUS_RING_CLASS_NAME}`}
     >
       <article

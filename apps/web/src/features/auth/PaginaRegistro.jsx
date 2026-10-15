@@ -10,7 +10,7 @@ import { CheckIcon } from '../../components/ui/icons.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
 import { PasswordRequirements } from './PasswordRequirements.jsx';
-import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
+import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { RUTAS } from '../../app/rutas.js';
 
 const BENEFICIOS = [
@@ -18,8 +18,6 @@ const BENEFICIOS = [
   'Filtro por tus plataformas propias',
   'Redireccionamiento directo a la plataforma',
 ];
-
-const linkClassName = `rounded-sm font-semibold text-link underline-offset-4 hover:underline ${FOCUS_RING_CLASS_NAME}`;
 
 /** E4HU2: registro con mail y contraseña. Al terminar deja la sesión iniciada. */
 export function PaginaRegistro() {
@@ -102,7 +100,7 @@ export function PaginaRegistro() {
 
       <p className="mt-8 text-center text-muted">
         ¿Ya tenés cuenta?{' '}
-        <Link to={RUTAS.INICIAR_SESION} className={linkClassName}>
+        <Link to={RUTAS.INICIAR_SESION} className={`${LINK_CLASS_NAME} rounded-sm hover:underline`}>
           Iniciá sesión
         </Link>
       </p>

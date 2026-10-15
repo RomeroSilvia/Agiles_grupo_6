@@ -1,8 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router';
 import { RUTAS } from '../../app/rutas.js';
-import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
-
-const LINK_CLASS_NAME = `rounded-sm font-semibold text-link underline underline-offset-4 ${FOCUS_RING_CLASS_NAME}`;
+import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 
 export function VolverBusqueda() {
   const location = useLocation();
@@ -16,7 +14,11 @@ export function VolverBusqueda() {
   }
 
   return (
-    <Link to={RUTAS.BUSQUEDA} onClick={volver} className={LINK_CLASS_NAME}>
+    <Link
+      to={RUTAS.BUSQUEDA}
+      onClick={volver}
+      className={`${LINK_CLASS_NAME} rounded-sm underline`}
+    >
       Volver a la búsqueda
     </Link>
   );

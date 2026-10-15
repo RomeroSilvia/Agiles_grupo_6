@@ -4,7 +4,7 @@ import { useParams } from 'react-router';
 import { NotFoundPage } from '../../app/NotFoundPage.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
 import { Poster } from '../../components/ui/Poster.jsx';
-import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
+import { FOCUS_RING_CLASS_NAME, LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { formatearPuntuacion } from '../../utils/formatearPuntuacion.js';
 import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
@@ -14,8 +14,6 @@ import { useDetalleTitulo } from './useDetalleTitulo.js';
 import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
-
-const LINK_CLASS_NAME = `font-semibold text-link underline underline-offset-4 ${FOCUS_RING_CLASS_NAME}`;
 
 const ETIQUETAS_OFERTA = Object.freeze({
   [TIPO_OFERTA.SUSCRIPCION]: 'Suscripción',
@@ -177,7 +175,12 @@ export function PaginaDetalleTitulo() {
             )}
 
             {!cargandoDisponibilidad && !errorDisponibilidad && enlaceTmdb && (
-              <a href={enlaceTmdb} target="_blank" rel="noreferrer" className={LINK_CLASS_NAME}>
+              <a
+                href={enlaceTmdb}
+                target="_blank"
+                rel="noreferrer"
+                className={`${LINK_CLASS_NAME} underline`}
+              >
                 Ver disponibilidad en TMDB
               </a>
             )}

@@ -1,3 +1,5 @@
+import { busquedaSchema } from '@buscador/shared/schemas';
+
 export const FILTROS_INICIALES = Object.freeze({
   q: '',
   tipo: '',
@@ -25,49 +27,22 @@ function textoGuardado(valor) {
   return typeof valor === 'string' ? valor : '';
 }
 
-function enteroGuardado(valor, porDefecto) {
-  return Number.isInteger(valor) ? valor : porDefecto;
-}
-
-function totalGuardado(valor) {
-  return enteroGuardado(valor, 0);
-}
-
 export function obtenerEstadoInicial(estadoGuardado) {
-  const base = {
-    filtros: FILTROS_INICIALES,
-    ...RESULTADOS_VACIOS,
-    isLoading: false,
-    isLoadingMore: false,
-    error: null,
-    hasSearched: false,
-    ultimaBusqueda: null,
-  };
-
-  if (!estadoGuardado || typeof estadoGuardado !== 'object') {
-    return base;
-  }
-
-  const filtrosGuardados = estadoGuardado.filtros;
+  const filtrosGuardados = estadoGuardado?.filtros;
 
   return {
-    ...base,
     filtros: {
       q: textoGuardado(filtrosGuardados?.q),
       tipo: textoGuardado(filtrosGuardados?.tipo),
       anio: textoGuardado(filtrosGuardados?.anio),
       soloPropias: Boolean(filtrosGuardados?.soloPropias),
     },
-    resultados: Array.isArray(estadoGuardado.resultados) ? estadoGuardado.resultados : [],
-    pagina: enteroGuardado(estadoGuardado.pagina, 1),
-    totalResultados: totalGuardado(estadoGuardado.totalResultados),
-    totalPaginas: totalGuardado(estadoGuardado.totalPaginas),
-    verificacionIncompleta: Boolean(estadoGuardado.verificacionIncompleta),
-    hasSearched: Boolean(estadoGuardado.hasSearched),
-    ultimaBusqueda:
-      estadoGuardado.ultimaBusqueda && typeof estadoGuardado.ultimaBusqueda === 'object'
-        ? estadoGuardado.ultimaBusqueda
-        : null,
+    ...RESULTADOS_VACIOS,
+    isLoading: false,
+    isLoadingMore: false,
+    error: null,
+    hasSearched: false,
+    ultimaBusqueda: null,
   };
 }
 
@@ -78,6 +53,10 @@ export function prepararFiltros(filtrosConsulta, pagina) {
     anio: filtrosConsulta.anio || undefined,
     pagina,
   };
+}
+
+export function validarFiltros(filtrosConsulta, pagina = 1) {
+  return busquedaSchema.safeParse(prepararFiltros(filtrosConsulta, pagina));
 }
 
 export function convertirFiltros(filtrosValidos) {

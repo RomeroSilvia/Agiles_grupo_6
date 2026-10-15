@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
-import { busquedaSchema } from '@buscador/shared/schemas';
 import { ApiError } from '../../services/api.service.js';
 import { buscarTitulos } from './busqueda.api.js';
 import { MENSAJES_ERROR_FILTRO } from './busqueda.constants.js';
@@ -8,7 +7,7 @@ import {
   busquedaReducer,
   convertirFiltros,
   obtenerEstadoInicial,
-  prepararFiltros,
+  validarFiltros,
 } from './busquedaReducer.js';
 
 function obtenerMensajeValidacion(error) {
@@ -34,7 +33,7 @@ export function useBusqueda(estadoGuardado) {
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const validacion = busquedaSchema.safeParse(prepararFiltros(filtrosConsulta, paginaConsulta));
+      const validacion = validarFiltros(filtrosConsulta, paginaConsulta);
 
       if (!validacion.success) {
         if (!acumular) {
@@ -45,7 +44,7 @@ export function useBusqueda(estadoGuardado) {
           mensaje: obtenerMensajeValidacion(validacion.error),
           acumular,
         });
-        return;
+        return null;
       }
 
       const filtrosValidos = validacion.data;
@@ -66,7 +65,10 @@ export function useBusqueda(estadoGuardado) {
 
         if (!controller.signal.aborted) {
           dispatch({ type: ACCIONES_BUSQUEDA.BUSQUEDA_EXITOSA, data, acumular });
+          return data;
         }
+
+        return null;
       } catch (requestError) {
         if (requestError.name === 'AbortError' || controller.signal.aborted) {
           return;
@@ -77,6 +79,7 @@ export function useBusqueda(estadoGuardado) {
           mensaje: obtenerMensajeError(requestError, soloPropias),
           acumular,
         });
+        return null;
       }
     },
     [],
@@ -89,6 +92,22 @@ export function useBusqueda(estadoGuardado) {
 
   const buscar = useCallback(
     (filtrosConsulta, opciones) => ejecutarBusqueda(filtrosConsulta, opciones),
+    [ejecutarBusqueda],
+  );
+
+  const buscarHastaPagina = useCallback(
+    async (filtrosConsulta, paginaFinal) => {
+      for (let paginaConsulta = 1; paginaConsulta <= paginaFinal; paginaConsulta += 1) {
+        const data = await ejecutarBusqueda(filtrosConsulta, {
+          pagina: paginaConsulta,
+          acumular: paginaConsulta > 1,
+        });
+
+        if (!data || paginaConsulta >= (data.totalPaginas ?? paginaConsulta)) {
+          return;
+        }
+      }
+    },
     [ejecutarBusqueda],
   );
 
@@ -122,6 +141,7 @@ export function useBusqueda(estadoGuardado) {
     ...estado,
     setFiltros,
     buscar,
+    buscarHastaPagina,
     buscarConFiltros,
     cargarMas,
     isLoading: isLoading || isLoadingMore,

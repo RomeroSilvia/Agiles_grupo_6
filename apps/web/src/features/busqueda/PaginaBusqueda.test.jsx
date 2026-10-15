@@ -6,10 +6,11 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { SessionContext } from '../../contexts/session/SessionContext.js';
 import { PlataformasPropiasContext } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { PaginaBusqueda } from './PaginaBusqueda.jsx';
+import { VolverBusqueda } from '../detalle/VolverBusqueda.jsx';
 
 const SIN_SESION = { user: null, loading: false };
 const CON_SESION = { user: { id: 'u1', email: 'ana@mail.com' }, loading: false };
@@ -63,6 +64,15 @@ function UbicacionActual() {
   return <output data-testid="parametros-url">{location.search}</output>;
 }
 
+function PaginaDetallePrueba() {
+  return (
+    <section>
+      <h1>Detalle</h1>
+      <VolverBusqueda />
+    </section>
+  );
+}
+
 async function ejecutarBusqueda(nombre = 'Dune') {
   fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Dune' } });
   fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
@@ -93,7 +103,7 @@ describe('PaginaBusqueda', () => {
     expect(screen.queryByText(/Datos de títulos provistos por/)).not.toBeInTheDocument();
   });
 
-  it('restaura la búsqueda y la página desde los parámetros de la URL', async () => {
+  it('restaura en orden las páginas guardadas en los parámetros de la URL', async () => {
     const fetchMock = vi.fn(async (input) => {
       const url = new URL(input.toString());
       const pagina = Number(url.searchParams.get('pagina'));
@@ -101,7 +111,13 @@ describe('PaginaBusqueda', () => {
         ok: true,
         json: async () => ({
           data: {
-            resultados: respuestaConResultados.data.resultados,
+            resultados: [
+              {
+                ...respuestaConResultados.data.resultados[0],
+                tmdbId: pagina,
+                nombre: `Dune ${pagina}`,
+              },
+            ],
             pagina,
             totalResultados: 2,
             totalPaginas: 2,
@@ -115,16 +131,85 @@ describe('PaginaBusqueda', () => {
       initialEntries: ['/?q=Dune&tipo=pelicula&anio=2021&pagina=2'],
     });
 
-    expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune 2' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Dune 1' })).toBeInTheDocument();
     expect(screen.getByLabelText('Título')).toHaveValue('Dune');
     expect(screen.getByLabelText('Tipo')).toHaveValue('pelicula');
     expect(screen.getByLabelText('Año')).toHaveValue(2021);
 
-    const [url] = fetchMock.mock.calls[0];
-    expect(new URL(url).searchParams.get('q')).toBe('Dune');
-    expect(new URL(url).searchParams.get('tipo')).toBe('pelicula');
-    expect(new URL(url).searchParams.get('anio')).toBe('2021');
-    expect(new URL(url).searchParams.get('pagina')).toBe('2');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const paginasSolicitadas = fetchMock.mock.calls.map(([url]) =>
+      new URL(url.toString()).searchParams.get('pagina'),
+    );
+    expect(paginasSolicitadas).toEqual(['1', '2']);
+    expect(new URL(fetchMock.mock.calls[0][0].toString()).searchParams.get('q')).toBe('Dune');
+    expect(new URL(fetchMock.mock.calls[0][0].toString()).searchParams.get('tipo')).toBe(
+      'pelicula',
+    );
+    expect(new URL(fetchMock.mock.calls[0][0].toString()).searchParams.get('anio')).toBe('2021');
+  });
+
+  it('conserva los resultados cargados al ir al detalle y volver', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const pagina = Number(new URL(input.toString()).searchParams.get('pagina'));
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            resultados: [
+              {
+                ...respuestaConResultados.data.resultados[0],
+                tmdbId: pagina,
+                nombre: `Dune ${pagina}`,
+              },
+            ],
+            pagina,
+            totalResultados: 3,
+            totalPaginas: 3,
+          },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <PaginaBusqueda />
+              <UbicacionActual />
+            </>
+          }
+        />
+        <Route path="/titulos/:tipo/:tmdbId" element={<PaginaDetallePrueba />} />
+      </Routes>,
+    );
+
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Dune' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune 1' })).toBeInTheDocument();
+
+    for (const pagina of [2, 3]) {
+      fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+      expect(
+        await screen.findByRole('heading', { level: 3, name: `Dune ${pagina}` }),
+      ).toBeInTheDocument();
+    }
+
+    await waitFor(() => expect(screen.getByTestId('parametros-url')).toHaveTextContent('pagina=3'));
+    fireEvent.click(screen.getByRole('link', { name: 'Ver detalle de Dune 1' }));
+    expect(await screen.findByRole('heading', { name: 'Detalle' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Volver a la búsqueda' }));
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune 3' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Dune 1' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Dune 2' })).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    expect(
+      fetchMock.mock.calls.map(([url]) => new URL(url.toString()).searchParams.get('pagina')),
+    ).toEqual(['1', '2', '3', '1', '2', '3']);
   });
 
   it('actualiza los parámetros al buscar y al cargar más resultados', async () => {

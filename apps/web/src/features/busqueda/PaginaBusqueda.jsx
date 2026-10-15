@@ -1,19 +1,10 @@
-import { busquedaSchema } from '@buscador/shared/schemas';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useBusqueda } from './useBusqueda.js';
+import { convertirFiltros, validarFiltros } from './busquedaReducer.js';
 import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
 import { FormularioBusqueda } from './FormularioBusqueda.jsx';
 import { ResultadosBusqueda } from './ResultadosBusqueda.jsx';
-
-function esBusquedaValida(filtros) {
-  return busquedaSchema.safeParse({
-    q: filtros.q,
-    tipo: filtros.tipo || undefined,
-    anio: filtros.anio || undefined,
-    pagina: 1,
-  }).success;
-}
 
 function obtenerBusquedaInicial(searchParams) {
   const filtros = {
@@ -22,17 +13,10 @@ function obtenerBusquedaInicial(searchParams) {
     anio: searchParams.get('anio') ?? '',
     soloPropias: searchParams.get('propias') === 'true',
   };
-  const validacion = busquedaSchema.safeParse({
-    q: filtros.q,
-    tipo: filtros.tipo || undefined,
-    anio: filtros.anio || undefined,
-    pagina: searchParams.get('pagina') ?? 1,
-  });
+  const validacion = validarFiltros(filtros, searchParams.get('pagina') ?? 1);
 
   if (validacion.success) {
-    filtros.q = validacion.data.q;
-    filtros.tipo = validacion.data.tipo ?? '';
-    filtros.anio = validacion.data.anio === undefined ? '' : String(validacion.data.anio);
+    Object.assign(filtros, convertirFiltros(validacion.data));
   }
 
   return {
@@ -64,6 +48,7 @@ export function PaginaBusqueda() {
     filtros,
     setFiltros,
     buscar,
+    buscarHastaPagina,
     buscarConFiltros,
     cargarMas,
     resultados,
@@ -85,17 +70,17 @@ export function PaginaBusqueda() {
       !hasSearched &&
       (!busquedaInicial.filtros.soloPropias || filtroPropias.resuelto)
     ) {
-      buscar(
+      buscarHastaPagina(
         {
           ...busquedaInicial.filtros,
           soloPropias: busquedaInicial.filtros.soloPropias && filtroPropias.disponible,
           firmaPlataformas: filtroPropias.firma,
         },
-        { pagina: busquedaInicial.consulta.pagina },
+        busquedaInicial.consulta.pagina,
       );
     }
   }, [
-    buscar,
+    buscarHastaPagina,
     busquedaInicial,
     hasSearched,
     filtroPropias.resuelto,
@@ -131,7 +116,7 @@ export function PaginaBusqueda() {
       q: ultimaBusqueda?.q ?? '',
     };
 
-    if (hasSearched && nombre !== 'q' && esBusquedaValida(filtrosParaValidar)) {
+    if (hasSearched && nombre !== 'q' && validarFiltros(filtrosParaValidar).success) {
       buscarConFiltros(conFiltroDisponible(nextFiltros));
     }
   }
@@ -153,7 +138,10 @@ export function PaginaBusqueda() {
     }
     const nextFiltros = { ...filtros, soloPropias: false };
     setFiltros(nextFiltros);
-    if (ultimaBusqueda?.soloPropias && esBusquedaValida({ ...nextFiltros, q: ultimaBusqueda.q })) {
+    if (
+      ultimaBusqueda?.soloPropias &&
+      validarFiltros({ ...nextFiltros, q: ultimaBusqueda.q }).success
+    ) {
       buscarConFiltros(nextFiltros);
     }
   }, [filtroPerdido, filtros, setFiltros, ultimaBusqueda, buscarConFiltros]);

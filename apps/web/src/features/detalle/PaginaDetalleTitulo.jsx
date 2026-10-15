@@ -11,6 +11,7 @@ import { useRegion } from '../../contexts/region/RegionContext.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
 import { ETIQUETAS_TIPO_TITULO_SINGULAR } from '../busqueda/busqueda.constants.js';
 import { useDetalleTitulo } from './useDetalleTitulo.js';
+import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
 import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
@@ -216,6 +217,10 @@ export function PaginaDetalleTitulo() {
                 })}
               </div>
             )}
+
+            <div className="pt-2">
+              <AttributionDisponibilidad />
+            </div>
           </div>
         </div>
       </article>

@@ -501,6 +501,26 @@ function duneEn(plataformas = [NETFLIX], tmdbId = 1) {
   return { ...respuestaConResultados.data.resultados[0], tmdbId, plataformas };
 }
 
+function configurarFetchConOpciones(respuestaBusqueda = respuestaConResultados) {
+  const fetchMock = vi.fn(async (input) => {
+    const url = new URL(input.toString());
+    let data = respuestaBusqueda.data;
+
+    if (url.pathname === '/api/busqueda/generos') {
+      data = [{ id: 18, nombre: 'Drama' }];
+    } else if (url.pathname === '/api/busqueda/personas') {
+      data =
+        url.searchParams.get('rol') === 'actor'
+          ? [{ id: 6193, nombre: 'Leonardo DiCaprio', fotoUrl: null }]
+          : [{ id: 525, nombre: 'Christopher Nolan', fotoUrl: null }];
+    }
+
+    return { ok: true, json: async () => ({ data }) };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
 function rutaPedida(indice) {
   return new URL(fetch.mock.calls[indice][0]).pathname;
 }
@@ -525,10 +545,15 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
   it('sin plataformas propias deshabilita el filtro y ofrece elegirlas', () => {
     renderConPlataformas([]);
 
+    const director = screen.getByRole('combobox', { name: 'Director' });
+    const filtroPropias = screen.getByRole('switch', { name: 'Solo mis plataformas' });
     expect(screen.getByRole('switch', { name: 'Solo mis plataformas' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
+    expect(
+      director.compareDocumentPosition(filtroPropias) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Elegí tus plataformas' })).toHaveAttribute(
       'href',
       '/mis-plataformas',
@@ -802,5 +827,310 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     expect(rutaPedida(0)).toBe('/api/busqueda');
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  });
+});
+
+describe('PaginaBusqueda: filtros de género, actor y director', () => {
+  it('limpia los filtros avanzados y conserva la consulta, el tipo y el año', async () => {
+    const fetchMock = configurarFetchConOpciones();
+    render(
+      <>
+        <PaginaBusqueda />
+        <UbicacionActual />
+      </>,
+    );
+
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Dune' } });
+    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'pelicula' } });
+    fireEvent.change(screen.getByLabelText('Año'), { target: { value: '2021' } });
+    fireEvent.focus(screen.getByLabelText('Género'));
+    await screen.findByRole('option', { name: 'Drama' });
+    fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    await screen.findByRole('heading', { level: 3, name: 'Dune' });
+
+    await waitFor(() => {
+      const solicitud = fetchMock.mock.calls
+        .map(([input]) => new URL(input.toString()))
+        .find((url) => url.pathname === '/api/busqueda' && url.searchParams.has('genero'));
+      expect(solicitud?.searchParams.get('tipo')).toBe('pelicula');
+      expect(solicitud?.searchParams.get('anio')).toBe('2021');
+      expect(solicitud?.searchParams.get('genero')).toBe('18');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Título')).toHaveValue('Dune');
+      expect(screen.getByLabelText('Tipo')).toHaveValue('pelicula');
+      expect(screen.getByLabelText('Año')).toHaveValue(2021);
+      expect(screen.getByLabelText('Género')).toHaveValue('');
+      expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
+      expect(screen.getByRole('combobox', { name: 'Director' })).toHaveValue('');
+      expect(screen.getByTestId('parametros-url').textContent).toContain(
+        '?q=Dune&tipo=pelicula&anio=2021&pagina=1',
+      );
+      expect(screen.getByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+    });
+
+    const busquedas = fetchMock.mock.calls
+      .map(([input]) => new URL(input.toString()))
+      .filter((url) => url.pathname === '/api/busqueda');
+    expect(busquedas).toHaveLength(2);
+    expect(busquedas.at(-1).searchParams.get('q')).toBe('Dune');
+    expect(busquedas.at(-1).searchParams.get('tipo')).toBe('pelicula');
+    expect(busquedas.at(-1).searchParams.get('anio')).toBe('2021');
+    expect(busquedas.at(-1).searchParams.has('genero')).toBe(false);
+  });
+
+  it('mantiene separado el filtro de plataformas propias de los filtros avanzados', async () => {
+    const fetchMock = configurarFetchConOpciones();
+    render(<PaginaBusqueda />, { sesion: CON_SESION, propias: plataformasPropias([1]) });
+
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Dune' } });
+    fireEvent.focus(screen.getByLabelText('Género'));
+    await screen.findByRole('option', { name: 'Drama' });
+    fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
+
+    const filtroPropias = screen.getByRole('switch', { name: 'Solo mis plataformas' });
+    expect(filtroPropias).toHaveAttribute('aria-disabled', 'true');
+    expect(filtroPropias).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByText('Desactivado al filtrar por género, actor o director.')).toBeVisible();
+    fireEvent.click(filtroPropias);
+    expect(filtroPropias).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    await screen.findByRole('heading', { level: 3, name: 'Dune' });
+
+    const rutas = fetchMock.mock.calls.map(([input]) => new URL(input.toString()).pathname);
+    expect(rutas).toContain('/api/busqueda');
+    expect(rutas).not.toContain('/api/busqueda/propias');
+  });
+
+  it('permite borrar una búsqueda por nombre aunque no haya otros filtros', async () => {
+    const fetchMock = configurarFetchConOpciones();
+    render(
+      <>
+        <PaginaBusqueda />
+        <UbicacionActual />
+      </>,
+    );
+    await ejecutarBusqueda();
+
+    expect(screen.getByRole('button', { name: 'Limpiar filtros' })).toBeInTheDocument();
+    const cantidadSolicitudes = fetchMock.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Título')).toHaveValue('');
+      expect(screen.getByTestId('parametros-url')).toBeEmptyDOMElement();
+      expect(screen.queryByRole('heading', { level: 3, name: 'Dune' })).not.toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(cantidadSolicitudes);
+  });
+
+  it('al limpiar una búsqueda restaurada desde la URL no la ejecuta otra vez', async () => {
+    const fetchMock = configurarFetchConOpciones();
+    render(
+      <>
+        <PaginaBusqueda />
+        <UbicacionActual />
+      </>,
+      { initialEntries: ['/?q=Dune&pagina=1'] },
+    );
+    await screen.findByRole('heading', { level: 3, name: 'Dune' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Título')).toHaveValue('');
+      expect(screen.getByTestId('parametros-url')).toBeEmptyDOMElement();
+      expect(screen.queryByRole('heading', { level: 3, name: 'Dune' })).not.toBeInTheDocument();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('combina los filtros de género, actor y director', async () => {
+    const fetchMock = configurarFetchConOpciones();
+    render(<PaginaBusqueda />);
+    await ejecutarBusqueda();
+
+    const campoGenero = screen.getByLabelText('Género');
+    fireEvent.focus(campoGenero);
+    await screen.findByRole('option', { name: 'Drama' });
+    fireEvent.change(campoGenero, { target: { value: '18' } });
+
+    const campoActor = screen.getByRole('combobox', { name: 'Actor' });
+    fireEvent.change(campoActor, { target: { value: 'Leonardo' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Leonardo DiCaprio' }));
+
+    const campoDirector = screen.getByRole('combobox', { name: 'Director' });
+    fireEvent.change(campoDirector, { target: { value: 'Christopher' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Christopher Nolan' }));
+
+    await waitFor(() => {
+      const solicitudes = fetchMock.mock.calls.filter(
+        ([url]) => new URL(url.toString()).pathname === '/api/busqueda',
+      );
+      const ultima = new URL(solicitudes.at(-1)[0].toString());
+      expect(ultima.searchParams.get('genero')).toBe('18');
+      expect(ultima.searchParams.get('actor')).toBe('6193');
+      expect(ultima.searchParams.get('director')).toBe('525');
+    });
+
+    const botonBuscar = screen.getByRole('button', { name: 'Buscar' });
+    const botonLimpiar = screen.getByRole('button', { name: 'Limpiar filtros' });
+    expect(botonBuscar.parentElement).toBe(botonLimpiar.parentElement);
+  });
+
+  it('reinicia los filtros avanzados al ejecutar otra consulta', async () => {
+    const fetchMock = configurarFetchConOpciones();
+    render(<PaginaBusqueda />);
+    await ejecutarBusqueda();
+
+    const campoGenero = screen.getByLabelText('Género');
+    fireEvent.focus(campoGenero);
+    await screen.findByRole('option', { name: 'Drama' });
+    fireEvent.change(campoGenero, { target: { value: '18' } });
+    await waitFor(() => {
+      expect(new URL(fetchMock.mock.calls.at(-1)[0].toString()).searchParams.get('genero')).toBe(
+        '18',
+      );
+    });
+
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Matrix' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    await waitFor(() => {
+      const url = new URL(fetchMock.mock.calls.at(-1)[0].toString());
+      expect(url.searchParams.get('q')).toBe('Matrix');
+      expect(url.searchParams.has('genero')).toBe(false);
+      expect(url.searchParams.has('actor')).toBe(false);
+      expect(url.searchParams.has('director')).toBe(false);
+    });
+    expect(screen.getByLabelText('Género')).toHaveValue('');
+  });
+
+  it('mantiene el género al cargar la página siguiente sin repetir títulos', async () => {
+    const matriz = {
+      ...respuestaConResultados.data.resultados[0],
+      tmdbId: 2,
+      nombre: 'Matrix',
+    };
+    const fetchMock = configurarFetchConOpciones({
+      data: {
+        resultados: [respuestaConResultados.data.resultados[0]],
+        pagina: 1,
+        totalResultados: 50,
+        totalPaginas: 2,
+      },
+    });
+    fetchMock.mockImplementation(async (input) => {
+      const url = new URL(input.toString());
+      if (url.pathname === '/api/busqueda/generos') {
+        return { ok: true, json: async () => ({ data: [{ id: 18, nombre: 'Drama' }] }) };
+      }
+      const pagina = Number(url.searchParams.get('pagina'));
+      const data = {
+        resultados: [pagina === 1 ? respuestaConResultados.data.resultados[0] : matriz],
+        pagina,
+        totalResultados: 50,
+        totalPaginas: 2,
+      };
+      return { ok: true, json: async () => ({ data }) };
+    });
+
+    render(<PaginaBusqueda />);
+    await ejecutarBusqueda();
+    fireEvent.focus(screen.getByLabelText('Género'));
+    await screen.findByRole('option', { name: 'Drama' });
+    fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
+    await screen.findByRole('button', { name: 'Cargar más' });
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Matrix' })).toBeInTheDocument();
+    const solicitudSiguiente = fetchMock.mock.calls
+      .map(([input]) => new URL(input.toString()))
+      .find((url) => url.pathname === '/api/busqueda' && url.searchParams.get('pagina') === '2');
+    expect(solicitudSiguiente.searchParams.get('genero')).toBe('18');
+    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(2);
+  });
+
+  it('informa que no hay coincidencias y permite limpiar los filtros', async () => {
+    const fetchMock = vi.fn(async (input) => {
+      const url = new URL(input.toString());
+      const data =
+        url.pathname === '/api/busqueda/generos'
+          ? [{ id: 18, nombre: 'Drama' }]
+          : url.searchParams.has('genero')
+            ? { resultados: [], pagina: 1, totalResultados: 10, totalPaginas: 1 }
+            : respuestaConResultados.data;
+      return { ok: true, json: async () => ({ data }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PaginaBusqueda />);
+    await ejecutarBusqueda();
+    const campoGenero = screen.getByLabelText('Género');
+    fireEvent.focus(campoGenero);
+    await screen.findByRole('option', { name: 'Drama' });
+    fireEvent.change(campoGenero, { target: { value: '18' } });
+
+    expect(
+      await screen.findByText('No hay resultados para esa combinación de filtros.'),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Limpiar filtros' })).toHaveLength(1);
+    const cantidadSolicitudes = fetchMock.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Título')).toHaveValue('Dune');
+      expect(screen.getByLabelText('Género')).toHaveValue('');
+      expect(
+        screen.queryByText('No hay resultados para esa combinación de filtros.'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'Limpiar filtros' })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(cantidadSolicitudes + 1);
+  });
+
+  it('permite reintentar si falla el proveedor al buscar resultados filtrados', async () => {
+    let fallarBusquedaFiltrada = true;
+    const fetchMock = vi.fn(async (input) => {
+      const url = new URL(input.toString());
+      if (url.pathname === '/api/busqueda/generos') {
+        return { ok: true, json: async () => ({ data: [{ id: 18, nombre: 'Drama' }] }) };
+      }
+      if (url.searchParams.has('genero') && fallarBusquedaFiltrada) {
+        return {
+          ok: false,
+          json: async () => ({
+            error: { code: 'EXTERNAL_SERVICE', message: 'No se pudo consultar TMDB' },
+          }),
+        };
+      }
+      return { ok: true, json: async () => respuestaConResultados };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PaginaBusqueda />);
+    await ejecutarBusqueda();
+    const campoGenero = screen.getByLabelText('Género');
+    fireEvent.focus(campoGenero);
+    await screen.findByRole('option', { name: 'Drama' });
+    fireEvent.change(campoGenero, { target: { value: '18' } });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo consultar TMDB');
+    fallarBusquedaFiltrada = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([input]) => {
+        const url = new URL(input.toString());
+        return url.pathname === '/api/busqueda' && url.searchParams.get('genero') === '18';
+      }),
+    ).toBe(true);
   });
 });

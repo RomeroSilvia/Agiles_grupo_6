@@ -50,6 +50,11 @@ describe('obtenerEstadoInicial', () => {
       q: 'Dune',
       tipo: 'pelicula',
       anio: '2021',
+      genero: '',
+      actor: '',
+      actorNombre: '',
+      director: '',
+      directorNombre: '',
       soloPropias: false,
     });
     expect(estado.resultados).toEqual([]);
@@ -81,6 +86,9 @@ describe('prepararFiltros y convertirFiltros', () => {
       q: 'Dune',
       tipo: undefined,
       anio: undefined,
+      genero: undefined,
+      actor: undefined,
+      director: undefined,
       pagina: 1,
     });
   });
@@ -90,6 +98,9 @@ describe('prepararFiltros y convertirFiltros', () => {
       q: 'Dune',
       tipo: '',
       anio: '2021',
+      genero: '',
+      actor: '',
+      director: '',
     });
   });
 
@@ -98,12 +109,51 @@ describe('prepararFiltros y convertirFiltros', () => {
       q: 'Dune',
       tipo: undefined,
       anio: undefined,
+      genero: undefined,
+      actor: undefined,
+      director: undefined,
       pagina: 2,
     });
+  });
+
+  it('valida los identificadores opcionales de filtros avanzados', () => {
+    expect(
+      validarFiltros({ q: 'Dune', genero: '18', actor: '6193', director: '525' }).data,
+    ).toEqual({
+      q: 'Dune',
+      tipo: undefined,
+      anio: undefined,
+      genero: 18,
+      actor: 6193,
+      director: 525,
+      pagina: 1,
+    });
+    expect(validarFiltros({ q: 'Dune', actor: 'invalido' }).success).toBe(false);
   });
 });
 
 describe('busquedaReducer', () => {
+  it('reinicia los filtros, los resultados y el estado de búsqueda', () => {
+    const estado = busquedaReducer(
+      {
+        ...estadoConResultados(),
+        filtros: { q: 'Dune', tipo: 'pelicula', anio: '2021', soloPropias: true },
+        isLoading: true,
+        error: 'Error anterior',
+      },
+      { type: ACCIONES_BUSQUEDA.BUSQUEDA_REINICIADA },
+    );
+
+    expect(estado.filtros).toEqual(FILTROS_INICIALES);
+    expect(estado.resultados).toEqual([]);
+    expect(estado.totalResultados).toBe(0);
+    expect(estado.totalPaginas).toBe(0);
+    expect(estado.isLoading).toBe(false);
+    expect(estado.error).toBeNull();
+    expect(estado.hasSearched).toBe(false);
+    expect(estado.ultimaBusqueda).toBeNull();
+  });
+
   it('una búsqueda nueva vacía los resultados y marca la carga', () => {
     const estado = busquedaReducer(estadoConResultados(), {
       type: ACCIONES_BUSQUEDA.BUSQUEDA_INICIADA,

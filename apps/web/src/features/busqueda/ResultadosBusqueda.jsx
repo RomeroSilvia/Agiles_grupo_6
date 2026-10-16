@@ -20,6 +20,7 @@ function obtenerVista({
   hasSearched,
   hayResultados,
   busquedaFiltrada,
+  hayFiltrosAvanzados,
 }) {
   if (isLoading && !isLoadingMore) {
     return VISTAS_RESULTADOS.CARGANDO;
@@ -32,6 +33,9 @@ function obtenerVista({
   }
   if (!hasSearched) {
     return null;
+  }
+  if (hayFiltrosAvanzados) {
+    return VISTAS_RESULTADOS.SIN_RESULTADOS;
   }
   return busquedaFiltrada
     ? VISTAS_RESULTADOS.SIN_RESULTADOS_PROPIOS
@@ -57,6 +61,7 @@ export function ResultadosBusqueda({
   error,
   hasSearched,
   busquedaFiltrada,
+  hayFiltrosAvanzados,
   tituloBuscado,
   onReintentar,
   onCargarMas,
@@ -69,6 +74,7 @@ export function ResultadosBusqueda({
     hasSearched,
     hayResultados: resultados.length > 0,
     busquedaFiltrada,
+    hayFiltrosAvanzados,
   });
   const hayMasPaginas = pagina < totalPaginas;
   const mostrarVerificacionIncompleta = busquedaFiltrada && verificacionIncompleta;
@@ -92,7 +98,7 @@ export function ResultadosBusqueda({
           className="space-y-4 rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
         >
           <p>{error}</p>
-          {busquedaFiltrada && (
+          {(busquedaFiltrada || hayFiltrosAvanzados) && (
             <button
               type="button"
               onClick={onReintentar}
@@ -116,13 +122,25 @@ export function ResultadosBusqueda({
       )}
 
       {vista === VISTAS_RESULTADOS.SIN_RESULTADOS && (
-        <p
-          role="status"
-          aria-live="polite"
-          className="rounded-2xl border border-border bg-surface p-5 text-muted"
-        >
-          No encontramos contenido disponible con esos filtros.
-        </p>
+        <div className="space-y-4 rounded-2xl border border-border bg-surface p-5 text-muted">
+          <p role="status" aria-live="polite">
+            {hayFiltrosAvanzados && hayMasPaginas
+              ? 'Todavía no encontramos coincidencias en estas páginas.'
+              : hayFiltrosAvanzados
+                ? 'No hay resultados para esa combinación de filtros.'
+                : 'No encontramos contenido disponible con esos filtros.'}
+          </p>
+          {hayFiltrosAvanzados && hayMasPaginas && (
+            <button
+              type="button"
+              onClick={onCargarMas}
+              disabled={isLoading}
+              className="rounded-xl border border-border px-5 py-3 font-semibold text-foreground transition hover:bg-background focus:ring-4 focus:ring-primary/20 focus:outline-none disabled:cursor-wait disabled:opacity-60"
+            >
+              {isLoadingMore ? 'Buscando...' : 'Seguir buscando'}
+            </button>
+          )}
+        </div>
       )}
 
       {vista === VISTAS_RESULTADOS.RESULTADOS && (
@@ -132,7 +150,9 @@ export function ResultadosBusqueda({
             <p role="status" aria-live="polite" className="text-sm text-muted">
               {busquedaFiltrada
                 ? 'Resultados encontrados para tus plataformas'
-                : `Mostrando ${resultados.length} de ${totalResultados} ${totalResultados === 1 ? 'título' : 'títulos'}`}
+                : hayFiltrosAvanzados
+                  ? `Mostrando ${resultados.length} ${resultados.length === 1 ? 'resultado' : 'resultados'}`
+                  : `Mostrando ${resultados.length} de ${totalResultados} ${totalResultados === 1 ? 'título' : 'títulos'}`}
             </p>
           </div>
           {mostrarVerificacionIncompleta && (

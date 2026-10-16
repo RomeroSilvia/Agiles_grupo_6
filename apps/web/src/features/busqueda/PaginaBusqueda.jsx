@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { APP_NAME } from '../../config/app.config.js';
 import { useBusqueda } from './useBusqueda.js';
-import { convertirFiltros, validarFiltros } from './busquedaReducer.js';
+import { convertirFiltros, tieneFiltrosAvanzados, validarFiltros } from './busquedaReducer.js';
 import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
+import { useGenerosBusqueda } from './useGenerosBusqueda.js';
 import { FormularioBusqueda } from './FormularioBusqueda.jsx';
 import { ResultadosBusqueda } from './ResultadosBusqueda.jsx';
 
@@ -12,6 +13,11 @@ function obtenerBusquedaInicial(searchParams) {
     q: searchParams.get('q') ?? '',
     tipo: searchParams.get('tipo') ?? '',
     anio: searchParams.get('anio') ?? '',
+    genero: searchParams.get('genero') ?? '',
+    actor: searchParams.get('actor') ?? '',
+    actorNombre: searchParams.get('actorNombre') ?? '',
+    director: searchParams.get('director') ?? '',
+    directorNombre: searchParams.get('directorNombre') ?? '',
     soloPropias: searchParams.get('propias') === 'true',
   };
   const validacion = validarFiltros(filtros, searchParams.get('pagina') ?? 1);
@@ -20,13 +26,20 @@ function obtenerBusquedaInicial(searchParams) {
     Object.assign(filtros, convertirFiltros(validacion.data));
   }
 
+  if (tieneFiltrosAvanzados(filtros)) {
+    filtros.soloPropias = false;
+  }
+
   return {
     filtros,
     consulta: validacion.success ? validacion.data : null,
   };
 }
 
-function crearSearchParams({ q, tipo, anio, soloPropias }, pagina) {
+function crearSearchParams(
+  { q, tipo, anio, genero, actor, actorNombre, director, directorNombre, soloPropias },
+  pagina,
+) {
   const params = new URLSearchParams();
   params.set('q', q.trim());
   if (tipo) {
@@ -34,6 +47,21 @@ function crearSearchParams({ q, tipo, anio, soloPropias }, pagina) {
   }
   if (anio) {
     params.set('anio', anio);
+  }
+  if (genero) {
+    params.set('genero', genero);
+  }
+  if (actor) {
+    params.set('actor', actor);
+    if (actorNombre) {
+      params.set('actorNombre', actorNombre);
+    }
+  }
+  if (director) {
+    params.set('director', director);
+    if (directorNombre) {
+      params.set('directorNombre', directorNombre);
+    }
   }
   if (soloPropias) {
     params.set('propias', 'true');
@@ -48,6 +76,7 @@ export function PaginaBusqueda() {
   const {
     filtros,
     setFiltros,
+    reiniciarBusqueda,
     buscar,
     buscarHastaPagina,
     buscarConFiltros,
@@ -64,22 +93,31 @@ export function PaginaBusqueda() {
     ultimaBusqueda,
   } = useBusqueda({ filtros: busquedaInicial.filtros });
   const filtroPropias = useFiltroPlataformasPropias();
+  const generosBusqueda = useGenerosBusqueda({
+    cargarInicialmente: Boolean(busquedaInicial.filtros.genero),
+  });
+  const busquedaInicialProcesadaRef = useRef(false);
+  const limpiezaUrlPendienteRef = useRef(false);
 
   useEffect(() => {
     if (
-      busquedaInicial.consulta &&
-      !hasSearched &&
-      (!busquedaInicial.filtros.soloPropias || filtroPropias.resuelto)
+      busquedaInicialProcesadaRef.current ||
+      !busquedaInicial.consulta ||
+      hasSearched ||
+      (busquedaInicial.filtros.soloPropias && !filtroPropias.resuelto)
     ) {
-      buscarHastaPagina(
-        {
-          ...busquedaInicial.filtros,
-          soloPropias: busquedaInicial.filtros.soloPropias && filtroPropias.disponible,
-          firmaPlataformas: filtroPropias.firma,
-        },
-        busquedaInicial.consulta.pagina,
-      );
+      return;
     }
+
+    busquedaInicialProcesadaRef.current = true;
+    buscarHastaPagina(
+      {
+        ...busquedaInicial.filtros,
+        soloPropias: busquedaInicial.filtros.soloPropias && filtroPropias.disponible,
+        firmaPlataformas: filtroPropias.firma,
+      },
+      busquedaInicial.consulta.pagina,
+    );
   }, [
     buscarHastaPagina,
     busquedaInicial,
@@ -90,6 +128,11 @@ export function PaginaBusqueda() {
   ]);
 
   useEffect(() => {
+    if (limpiezaUrlPendienteRef.current) {
+      limpiezaUrlPendienteRef.current = false;
+      return;
+    }
+
     if (!ultimaBusqueda || isLoading) {
       return;
     }
@@ -109,7 +152,17 @@ export function PaginaBusqueda() {
   }
 
   function actualizarFiltro(nombre, valor) {
-    const nextFiltros = { ...filtros, [nombre]: valor };
+    if (nombre === 'soloPropias' && valor && tieneFiltrosAvanzados(filtros)) {
+      return;
+    }
+
+    const desactivarPlataformasPropias =
+      ['genero', 'actor', 'director'].includes(nombre) && Boolean(valor);
+    const nextFiltros = {
+      ...filtros,
+      [nombre]: valor,
+      ...(desactivarPlataformasPropias ? { soloPropias: false } : {}),
+    };
     setFiltros(nextFiltros);
 
     const filtrosParaValidar = {
@@ -124,11 +177,75 @@ export function PaginaBusqueda() {
 
   function handleSubmit(event) {
     event.preventDefault();
+
+    if (ultimaBusqueda && filtros.q.trim() !== ultimaBusqueda.q) {
+      const nuevosFiltros = { q: filtros.q, tipo: '', anio: '', soloPropias: false };
+      const filtrosIniciales = {
+        ...filtros,
+        ...nuevosFiltros,
+        genero: '',
+        actor: '',
+        actorNombre: '',
+        director: '',
+        directorNombre: '',
+      };
+      setFiltros(filtrosIniciales);
+      buscar(conFiltroDisponible(filtrosIniciales));
+      return;
+    }
+
     buscar(conFiltroDisponible(filtros));
   }
 
   function handleChange(event) {
     actualizarFiltro(event.target.name, event.target.value);
+  }
+
+  function cambiarPersona(rol, persona, consulta = '') {
+    const nombre = rol === 'actor' ? 'actorNombre' : 'directorNombre';
+    const teniaSeleccion = Boolean(filtros[rol]);
+    const nextFiltros = {
+      ...filtros,
+      [rol]: persona ? String(persona.id) : '',
+      [nombre]: persona?.nombre ?? consulta,
+      ...(persona ? { soloPropias: false } : {}),
+    };
+    setFiltros(nextFiltros);
+
+    if (
+      hasSearched &&
+      (persona || teniaSeleccion) &&
+      validarFiltros({ ...nextFiltros, q: ultimaBusqueda?.q ?? '' }).success
+    ) {
+      buscarConFiltros(conFiltroDisponible(nextFiltros));
+    }
+  }
+
+  function limpiarFiltrosBusqueda() {
+    const hayFiltrosAvanzados =
+      tieneFiltrosAvanzados(filtros) ||
+      Boolean(filtros.actorNombre.trim() || filtros.directorNombre.trim());
+
+    if (ultimaBusqueda && hayFiltrosAvanzados) {
+      const filtrosBase = {
+        ...filtros,
+        ...convertirFiltros(ultimaBusqueda),
+        genero: '',
+        actor: '',
+        actorNombre: '',
+        director: '',
+        directorNombre: '',
+        soloPropias: false,
+      };
+      setFiltros(filtrosBase);
+      buscar(conFiltroDisponible(filtrosBase));
+      return;
+    }
+
+    busquedaInicialProcesadaRef.current = true;
+    limpiezaUrlPendienteRef.current = true;
+    reiniciarBusqueda();
+    setSearchParams({}, { replace: true, preventScrollReset: true });
   }
 
   const filtroPerdido = filtros.soloPropias && filtroPropias.resuelto && !filtroPropias.disponible;
@@ -169,7 +286,7 @@ export function PaginaBusqueda() {
           Una búsqueda. Todas tus plataformas.
         </h1>
         <p className="text-base leading-7 text-muted sm:text-lg">
-          Buscá películas y series por título, tipo o año.
+          Buscá películas y series por título, género, actor o director.
         </p>
       </header>
 
@@ -180,6 +297,15 @@ export function PaginaBusqueda() {
         onChange={handleChange}
         onSubmit={handleSubmit}
         onCambiarSoloPropias={(activo) => actualizarFiltro('soloPropias', activo)}
+        onCambiarPersona={cambiarPersona}
+        onLimpiarFiltros={limpiarFiltrosBusqueda}
+        filtroPropiasBloqueado={tieneFiltrosAvanzados(filtros)}
+        generos={generosBusqueda.generos}
+        isLoadingGeneros={generosBusqueda.isLoading}
+        errorGeneros={generosBusqueda.error}
+        generosCargados={generosBusqueda.cargado}
+        onCargarGeneros={generosBusqueda.cargar}
+        onReintentarGeneros={generosBusqueda.reintentar}
       />
 
       <ResultadosBusqueda
@@ -193,6 +319,9 @@ export function PaginaBusqueda() {
         error={error}
         hasSearched={hasSearched}
         busquedaFiltrada={Boolean(ultimaBusqueda?.soloPropias)}
+        hayFiltrosAvanzados={Boolean(
+          ultimaBusqueda?.genero || ultimaBusqueda?.actor || ultimaBusqueda?.director,
+        )}
         tituloBuscado={ultimaBusqueda?.q ?? filtros.q.trim()}
         onReintentar={() => buscar(ultimaBusqueda)}
         onCargarMas={cargarMas}

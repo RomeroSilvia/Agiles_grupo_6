@@ -4,6 +4,11 @@ export const FILTROS_INICIALES = Object.freeze({
   q: '',
   tipo: '',
   anio: '',
+  genero: '',
+  actor: '',
+  actorNombre: '',
+  director: '',
+  directorNombre: '',
   soloPropias: false,
 });
 
@@ -17,6 +22,7 @@ const RESULTADOS_VACIOS = Object.freeze({
 
 export const ACCIONES_BUSQUEDA = Object.freeze({
   FILTROS_ACTUALIZADOS: 'FILTROS_ACTUALIZADOS',
+  BUSQUEDA_REINICIADA: 'BUSQUEDA_REINICIADA',
   BUSQUEDA_INVALIDA: 'BUSQUEDA_INVALIDA',
   BUSQUEDA_INICIADA: 'BUSQUEDA_INICIADA',
   BUSQUEDA_EXITOSA: 'BUSQUEDA_EXITOSA',
@@ -35,6 +41,11 @@ export function obtenerEstadoInicial(estadoGuardado) {
       q: textoGuardado(filtrosGuardados?.q),
       tipo: textoGuardado(filtrosGuardados?.tipo),
       anio: textoGuardado(filtrosGuardados?.anio),
+      genero: textoGuardado(filtrosGuardados?.genero),
+      actor: textoGuardado(filtrosGuardados?.actor),
+      actorNombre: textoGuardado(filtrosGuardados?.actorNombre),
+      director: textoGuardado(filtrosGuardados?.director),
+      directorNombre: textoGuardado(filtrosGuardados?.directorNombre),
       soloPropias: Boolean(filtrosGuardados?.soloPropias),
     },
     ...RESULTADOS_VACIOS,
@@ -51,8 +62,15 @@ export function prepararFiltros(filtrosConsulta, pagina) {
     q: filtrosConsulta.q?.trim() ?? '',
     tipo: filtrosConsulta.tipo || undefined,
     anio: filtrosConsulta.anio || undefined,
+    genero: filtrosConsulta.genero || undefined,
+    actor: filtrosConsulta.actor || undefined,
+    director: filtrosConsulta.director || undefined,
     pagina,
   };
+}
+
+export function tieneFiltrosAvanzados(filtros = {}) {
+  return Boolean(filtros.genero || filtros.actor || filtros.director);
 }
 
 export function validarFiltros(filtrosConsulta, pagina = 1) {
@@ -64,6 +82,9 @@ export function convertirFiltros(filtrosValidos) {
     q: filtrosValidos.q,
     tipo: filtrosValidos.tipo ?? '',
     anio: filtrosValidos.anio === undefined ? '' : String(filtrosValidos.anio),
+    genero: filtrosValidos.genero === undefined ? '' : String(filtrosValidos.genero),
+    actor: filtrosValidos.actor === undefined ? '' : String(filtrosValidos.actor),
+    director: filtrosValidos.director === undefined ? '' : String(filtrosValidos.director),
   };
 }
 
@@ -75,6 +96,18 @@ export function busquedaReducer(estado, accion) {
   switch (accion.type) {
     case ACCIONES_BUSQUEDA.FILTROS_ACTUALIZADOS:
       return { ...estado, filtros: accion.filtros };
+
+    case ACCIONES_BUSQUEDA.BUSQUEDA_REINICIADA:
+      return {
+        ...estado,
+        filtros: { ...FILTROS_INICIALES },
+        ...RESULTADOS_VACIOS,
+        isLoading: false,
+        isLoadingMore: false,
+        error: null,
+        hasSearched: false,
+        ultimaBusqueda: null,
+      };
 
     case ACCIONES_BUSQUEDA.BUSQUEDA_INVALIDA:
       return {

@@ -85,6 +85,15 @@ describe('GET /api/busqueda/propias', () => {
     expect(regionService.obtenerRegion).not.toHaveBeenCalled();
   });
 
+  it('rechaza filtros avanzados que están fuera del alcance de plataformas propias', async () => {
+    const res = await buscarConSesion({ q: 'Dune', genero: '18', actor: '6193', director: '525' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
+    expect(regionService.obtenerRegion).not.toHaveBeenCalled();
+    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
+  });
+
   it('devuelve solo los títulos disponibles en las plataformas del usuario', async () => {
     tmdbIntegration.buscarPeliculas.mockResolvedValue(
       paginaDeTmdb([pelicula(1, 'Dune'), pelicula(2, 'Matrix')]),

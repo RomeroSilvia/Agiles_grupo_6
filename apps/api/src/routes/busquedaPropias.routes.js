@@ -7,10 +7,14 @@ import { validate } from '../middlewares/validate.middleware.js';
 
 export const busquedaPropiasRoutes = Router();
 
+const busquedaPropiasSchema = busquedaSchema
+  .omit({ genero: true, actor: true, director: true })
+  .strict();
+
 busquedaPropiasRoutes.get(
   '/',
   requireSession,
-  validate({ query: busquedaSchema }),
+  validate({ query: busquedaPropiasSchema }),
   detectRegion,
   busquedaPropiasController.buscar,
 );

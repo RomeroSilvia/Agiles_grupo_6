@@ -75,21 +75,31 @@ las plataformas activas por modalidad (`suscripcion`, `gratis` o `con_anuncios`)
 enlace de TMDB cuando está disponible. Las tarjetas llevan al sitio de cada plataforma; los deep
 links directos al título y la watchlist todavía no están implementados.
 
-| Método | Ruta                                    | Sesión | Descripción                                                                  |
-| ------ | --------------------------------------- | :----: | ---------------------------------------------------------------------------- |
-| GET    | `/health`                               |        | Estado de la API                                                             |
-| POST   | `/auth/sign-up`                         |        | Registro con mail y contraseña                                               |
-| POST   | `/auth/sign-in`                         |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                       |
-| POST   | `/auth/sign-out`                        |        | Cierre de sesión                                                             |
-| GET    | `/auth/session`                         |        | Usuario de la sesión actual, o `null`                                        |
-| GET    | `/region`                               |        | Región detectada del usuario                                                 |
-| GET    | `/busqueda`                             |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `pagina` |
-| GET    | `/busqueda/propias`                     |   si   | Misma búsqueda, solo con lo disponible en las plataformas del usuario        |
-| GET    | `/titulos/:tipo/:tmdbId`                |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)               |
-| GET    | `/titulos/:tipo/:tmdbId/disponibilidad` |        | Plataformas activas por modalidad y enlace de TMDB para la región indicada   |
-| GET    | `/plataformas`                          |        | Catálogo de plataformas activas                                              |
-| GET    | `/plataformas/propias`                  |   si   | Ids de las plataformas que eligió el usuario                                 |
-| PUT    | `/plataformas/propias/:plataformaId`    |   si   | Agrega una plataforma propia                                                 |
-| DELETE | `/plataformas/propias/:plataformaId`    |   si   | Quita una plataforma propia                                                  |
+| Método | Ruta                                    | Sesión | Descripción                                                                                                 |
+| ------ | --------------------------------------- | :----: | ----------------------------------------------------------------------------------------------------------- |
+| GET    | `/health`                               |        | Estado de la API                                                                                            |
+| POST   | `/auth/sign-up`                         |        | Registro con mail y contraseña                                                                              |
+| POST   | `/auth/sign-in`                         |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                                                      |
+| POST   | `/auth/sign-out`                        |        | Cierre de sesión                                                                                            |
+| GET    | `/auth/session`                         |        | Usuario de la sesión actual, o `null`                                                                       |
+| GET    | `/region`                               |        | Región detectada del usuario                                                                                |
+| GET    | `/busqueda`                             |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `genero`, `actor`, `director`, `pagina` |
+| GET    | `/busqueda/generos`                     |        | Lista géneros disponibles para filtrar películas y series                                                   |
+| GET    | `/busqueda/personas`                    |        | Busca actores o directores. Query: `q` (mínimo 2 letras), `rol`                                             |
+| GET    | `/busqueda/propias`                     |   si   | Búsqueda por texto, tipo y año, solo con títulos disponibles en plataformas del usuario                     |
+| GET    | `/titulos/:tipo/:tmdbId`                |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)                                              |
+| GET    | `/titulos/:tipo/:tmdbId/disponibilidad` |        | Plataformas activas por modalidad y enlace de TMDB para la región indicada                                  |
+| GET    | `/plataformas`                          |        | Catálogo de plataformas activas                                                                             |
+| GET    | `/plataformas/propias`                  |   si   | Ids de las plataformas que eligió el usuario                                                                |
+| PUT    | `/plataformas/propias/:plataformaId`    |   si   | Agrega una plataforma propia                                                                                |
+| DELETE | `/plataformas/propias/:plataformaId`    |   si   | Quita una plataforma propia                                                                                 |
 
 Los endpoints con sesión responden `401` (`UNAUTHENTICATED`) si no hay un usuario logueado.
+
+En `/api/busqueda`, `genero`, `actor` y `director` reciben identificadores de TMDB y se combinan
+con el texto, tipo y año de la consulta. Si no se indica tipo, los filtros se aplican a películas y
+series. La búsqueda de personas recibe `rol=actor` o `rol=director`; la web envía el identificador
+seleccionado al buscar resultados. Las páginas mantienen esos filtros. Cuando una página de texto
+no tiene coincidencias, la API revisa hasta cinco páginas consecutivas y la web permite continuar
+la búsqueda o limpiar los filtros. `/api/busqueda/propias` conserva sus filtros actuales y no acepta
+`genero`, `actor` ni `director`.

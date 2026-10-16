@@ -146,7 +146,11 @@ export function ResultadosBusqueda({
       {vista === VISTAS_RESULTADOS.RESULTADOS && (
         <>
           <div className="mb-5 flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold">Resultados para &quot;{tituloBuscado}&quot;</h2>
+            <h2 className="text-xl font-semibold">
+              {tituloBuscado
+                ? `Resultados para "${tituloBuscado}"`
+                : 'Resultados con los filtros seleccionados'}
+            </h2>
             <p role="status" aria-live="polite" className="text-sm text-muted">
               {busquedaFiltrada
                 ? 'Resultados encontrados para tus plataformas'

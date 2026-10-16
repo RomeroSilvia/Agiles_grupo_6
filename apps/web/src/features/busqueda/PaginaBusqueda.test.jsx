@@ -910,6 +910,51 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     });
   });
 
+  it('permite buscar por género sin completar el título', async () => {
+    const fetchMock = configurarFetchConOpciones();
+    render(
+      <>
+        <PaginaBusqueda />
+        <UbicacionActual />
+      </>,
+    );
+
+    const titulo = screen.getByLabelText('Título');
+    expect(titulo).toBeRequired();
+
+    fireEvent.focus(screen.getByLabelText('Género'));
+    await screen.findByRole('option', { name: 'Drama' });
+    fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
+
+    expect(titulo).not.toBeRequired();
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    await waitFor(() => {
+      const solicitud = fetchMock.mock.calls
+        .map(([input]) => new URL(input.toString()))
+        .find((url) => url.pathname === '/api/busqueda' && url.searchParams.has('genero'));
+      expect(solicitud).toBeDefined();
+      expect(solicitud.searchParams.has('q')).toBe(false);
+      expect(solicitud.searchParams.get('genero')).toBe('18');
+    });
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Resultados con los filtros seleccionados' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Género')).toHaveValue('');
+      expect(screen.getByTestId('parametros-url')).toBeEmptyDOMElement();
+      expect(
+        screen.queryByRole('heading', {
+          level: 2,
+          name: 'Resultados con los filtros seleccionados',
+        }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('permite borrar una búsqueda por nombre aunque no haya otros filtros', async () => {
     const fetchMock = configurarFetchConOpciones();
     render(

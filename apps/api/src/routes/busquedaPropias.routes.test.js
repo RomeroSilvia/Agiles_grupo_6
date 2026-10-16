@@ -77,12 +77,33 @@ describe('GET /api/busqueda/propias', () => {
     expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
   });
 
-  it('responde 400 si falta el título', async () => {
+  it('permite buscar sin texto si la ruta ya filtra por plataformas propias', async () => {
+    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([]));
+
     const res = await buscarConSesion({});
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION');
-    expect(regionService.obtenerRegion).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith(
+      expect.objectContaining({ q: '', pagina: 1 }),
+    );
+    expect(regionService.obtenerRegion).toHaveBeenCalled();
+  });
+
+  it('permite buscar solo en las plataformas propias sin otros filtros de catálogo', async () => {
+    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([]));
+    tmdbIntegration.buscarSeries.mockResolvedValue(paginaDeTmdb([]));
+
+    const res = await request(createApp())
+      .get('/api/busqueda/propias')
+      .set('Cookie', COOKIE_SESION);
+
+    expect(res.status).toBe(200);
+    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith(
+      expect.objectContaining({ q: '', pagina: 1 }),
+    );
+    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith(
+      expect.objectContaining({ q: '', pagina: 1 }),
+    );
   });
 
   it('combina filtros avanzados con la disponibilidad en plataformas propias', async () => {

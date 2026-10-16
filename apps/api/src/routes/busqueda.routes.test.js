@@ -128,6 +128,31 @@ describe('GET /api/busqueda', () => {
     expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
   });
 
+  it('permite buscar por género sin texto de título', async () => {
+    const response = await request(createApp()).get('/api/busqueda').query({ genero: '18' });
+
+    expect(response.status).toBe(200);
+    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith({
+      q: '',
+      pagina: 1,
+      genero: 18,
+    });
+    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith({
+      q: '',
+      pagina: 1,
+      genero: 18,
+    });
+  });
+
+  it('rechaza una búsqueda vacía si no se seleccionó ningún filtro', async () => {
+    const response = await request(createApp()).get('/api/busqueda');
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('VALIDATION');
+    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
+    expect(tmdbIntegration.buscarSeries).not.toHaveBeenCalled();
+  });
+
   it('combina género, actor y director con la consulta', async () => {
     const response = await request(createApp()).get('/api/busqueda').query({
       q: 'inception',
@@ -229,11 +254,12 @@ describe('GET /api/busqueda', () => {
     expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
   });
 
-  it('responde 400 cuando falta el título', async () => {
+  it('permite buscar por tipo cuando falta el título', async () => {
     const response = await request(createApp()).get('/api/busqueda').query({ tipo: 'serie' });
 
-    expect(response.status).toBe(400);
-    expect(response.body.error.code).toBe('VALIDATION');
+    expect(response.status).toBe(200);
+    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith({ q: '', pagina: 1 });
+    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
   });
 
   it('responde 502 cuando TMDB no está disponible', async () => {

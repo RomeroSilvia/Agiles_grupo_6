@@ -300,6 +300,84 @@ describe('tmdb.integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it('descubre películas por género y año sin texto de título', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        page: 1,
+        results: [
+          {
+            id: 981,
+            title: 'Drama sin título consultado',
+            genre_ids: [18],
+            release_date: '2021-03-12',
+            popularity: 40,
+          },
+        ],
+        total_results: 1,
+        total_pages: 1,
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const respuesta = await buscarPeliculas({ q: '', pagina: 1, genero: 18, anio: 2021 });
+    const [url] = fetchMock.mock.calls[0];
+
+    expect(url.pathname).toBe('/3/discover/movie');
+    expect(url.searchParams.get('with_genres')).toBe('18');
+    expect(url.searchParams.get('primary_release_year')).toBe('2021');
+    expect(url.searchParams.has('query')).toBe(false);
+    expect(respuesta.resultados.map(({ tmdbId }) => tmdbId)).toEqual([981]);
+  });
+
+  it('combina actor, director, género y año sin texto para series', async () => {
+    const fetchMock = vi.fn(async (url) => {
+      const respuestas = {
+        '/3/person/991/tv_credits': {
+          cast: [
+            {
+              id: 992,
+              name: 'Serie compatible',
+              genre_ids: [18],
+              first_air_date: '2022-01-05',
+              popularity: 30,
+            },
+            {
+              id: 993,
+              name: 'Serie de otro año',
+              genre_ids: [18],
+              first_air_date: '2020-01-05',
+              popularity: 20,
+            },
+          ],
+        },
+        '/3/person/994/tv_credits': {
+          crew: [
+            { id: 992, job: 'Director' },
+            { id: 993, job: 'Director' },
+          ],
+        },
+      };
+      return { ok: true, json: async () => respuestas[new URL(url).pathname] };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const respuesta = await buscarSeries({
+      q: '',
+      pagina: 1,
+      genero: 18,
+      anio: 2022,
+      actor: 991,
+      director: 994,
+    });
+
+    expect(respuesta.resultados.map(({ tmdbId }) => tmdbId)).toEqual([992]);
+    expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
+      '/3/person/991/tv_credits',
+      '/3/person/994/tv_credits',
+    ]);
+  });
+
   it('propaga el fallo al consultar los créditos de una persona', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const fetchMock = vi

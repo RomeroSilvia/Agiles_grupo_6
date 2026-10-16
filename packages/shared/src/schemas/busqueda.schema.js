@@ -10,8 +10,8 @@ const tmdbIdSchema = z.union([
     .pipe(z.number().int().max(2147483647)),
 ]);
 
-export const busquedaSchema = z.object({
-  q: z.string().trim().min(1, 'Ingresá un título para buscar').max(100),
+const filtrosBusquedaSchema = z.object({
+  q: z.string().trim().max(100).default(''),
   tipo: z.enum(TIPOS_TITULO).optional(),
   anio: z.coerce
     .number()
@@ -24,3 +24,14 @@ export const busquedaSchema = z.object({
   director: tmdbIdSchema.optional(),
   pagina: z.coerce.number().int().min(1).max(PAGINA_MAXIMA).default(1),
 });
+
+export const busquedaPropiasSchema = filtrosBusquedaSchema;
+
+export const busquedaSchema = filtrosBusquedaSchema.refine(
+  ({ q, tipo, anio, genero, actor, director }) =>
+    Boolean(q) || [tipo, anio, genero, actor, director].some((filtro) => filtro !== undefined),
+  {
+    message: 'Ingresá un título o seleccioná al menos un filtro',
+    path: ['q'],
+  },
+);

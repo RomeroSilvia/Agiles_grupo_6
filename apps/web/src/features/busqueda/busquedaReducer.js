@@ -1,4 +1,4 @@
-import { busquedaSchema } from '@buscador/shared/schemas';
+import { busquedaPropiasSchema, busquedaSchema } from '@buscador/shared/schemas';
 
 export const FILTROS_INICIALES = Object.freeze({
   q: '',
@@ -74,7 +74,8 @@ export function tieneFiltrosAvanzados(filtros = {}) {
 }
 
 export function validarFiltros(filtrosConsulta, pagina = 1) {
-  return busquedaSchema.safeParse(prepararFiltros(filtrosConsulta, pagina));
+  const schema = filtrosConsulta.soloPropias ? busquedaPropiasSchema : busquedaSchema;
+  return schema.safeParse(prepararFiltros(filtrosConsulta, pagina));
 }
 
 export function convertirFiltros(filtrosValidos) {

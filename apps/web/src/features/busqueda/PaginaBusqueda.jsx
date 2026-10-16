@@ -37,7 +37,9 @@ function crearSearchParams(
   pagina,
 ) {
   const params = new URLSearchParams();
-  params.set('q', q.trim());
+  if (q.trim()) {
+    params.set('q', q.trim());
+  }
   if (tipo) {
     params.set('tipo', tipo);
   }
@@ -164,7 +166,7 @@ export function PaginaBusqueda() {
   function handleSubmit(event) {
     event.preventDefault();
 
-    if (ultimaBusqueda && filtros.q.trim() !== ultimaBusqueda.q) {
+    if (ultimaBusqueda && filtros.q.trim() && filtros.q.trim() !== ultimaBusqueda.q) {
       const nuevosFiltros = { q: filtros.q, tipo: '', anio: '', soloPropias: false };
       const filtrosIniciales = {
         ...filtros,
@@ -212,6 +214,14 @@ export function PaginaBusqueda() {
       Boolean(filtros.actorNombre.trim() || filtros.directorNombre.trim());
 
     if (ultimaBusqueda && hayFiltrosAvanzados) {
+      if (!ultimaBusqueda.q) {
+        busquedaInicialProcesadaRef.current = true;
+        limpiezaUrlPendienteRef.current = true;
+        reiniciarBusqueda();
+        setSearchParams({}, { replace: true, preventScrollReset: true });
+        return;
+      }
+
       const filtrosBase = {
         ...filtros,
         ...convertirFiltros(ultimaBusqueda),

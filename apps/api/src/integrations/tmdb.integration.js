@@ -3,7 +3,7 @@ import { TMDB_CONFIG } from '../config/tmdb.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 import { createTtlCache } from '../utils/ttlCache.js';
-import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
+import { PAGINA_MAXIMA, TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
@@ -14,6 +14,7 @@ const MAX_PERSONAS_SUGERIDAS = 8;
 const MAX_PAGINAS_BUSQUEDA_PERSONAS = 5;
 const MAX_PERSONAS_SECUNDARIAS_A_VALIDAR = 8;
 const TAMANIO_LOTE_CREDITOS_PERSONAS = 4;
+const RESULTADOS_POR_PAGINA = 20;
 
 const RUTA_TMDB_POR_TIPO = Object.freeze({
   [TIPO_TITULO.PELICULA]: 'movie',
@@ -155,7 +156,7 @@ function normalizarRespuesta(response, tipo) {
   };
 }
 
-async function obtenerIdsCreditos({ personaId, rol, tipo }) {
+async function obtenerCreditosPersona({ personaId, rol, tipo }) {
   return creditosCache.getOrSet(`${personaId}:${rol}:${tipo}`, async () => {
     const ruta = RUTA_TMDB_POR_TIPO[tipo];
     const respuesta = await tmdbRequest(`/person/${personaId}/${ruta}_credits`, {
@@ -168,18 +169,19 @@ async function obtenerIdsCreditos({ personaId, rol, tipo }) {
       throw respuestaInvalida('TMDB devolvió créditos inválidos');
     }
 
-    return new Set(
-      creditos
-        .filter((credito) =>
-          rol === 'actor'
-            ? true
-            : typeof credito?.job === 'string' &&
-              credito.job.toLocaleLowerCase('en') === 'director',
-        )
-        .map((credito) => credito?.id)
-        .filter((id) => Number.isInteger(id) && id > 0),
+    return creditos.filter(
+      (credito) =>
+        Number.isInteger(credito?.id) &&
+        credito.id > 0 &&
+        (rol === 'actor' ||
+          (typeof credito?.job === 'string' && credito.job.toLocaleLowerCase('en') === 'director')),
     );
   });
+}
+
+async function obtenerIdsCreditos(filtros) {
+  const creditos = await obtenerCreditosPersona(filtros);
+  return new Set(creditos.map(({ id }) => id));
 }
 
 async function personaTieneCreditoDeRol({ personaId, rol }) {
@@ -238,6 +240,10 @@ async function normalizarRespuestaFiltrada(response, tipo, filtros) {
 }
 
 export async function buscarPeliculas({ q, anio, pagina, genero, actor, director }) {
+  if (!q?.trim()) {
+    return buscarSinTexto(TIPO_TITULO.PELICULA, { anio, pagina, genero, actor, director });
+  }
+
   const response = await tmdbRequest('/search/movie', {
     ...searchParams({ q, pagina }),
     ...(anio === undefined ? {} : { primary_release_year: anio }),
@@ -247,6 +253,10 @@ export async function buscarPeliculas({ q, anio, pagina, genero, actor, director
 }
 
 export async function buscarSeries({ q, anio, pagina, genero, actor, director }) {
+  if (!q?.trim()) {
+    return buscarSinTexto(TIPO_TITULO.SERIE, { anio, pagina, genero, actor, director });
+  }
+
   const response = await tmdbRequest('/search/tv', {
     ...searchParams({ q, pagina }),
     ...(anio === undefined ? {} : { first_air_date_year: anio }),
@@ -257,6 +267,80 @@ export async function buscarSeries({ q, anio, pagina, genero, actor, director })
     actor,
     director,
   });
+}
+
+async function buscarSinTexto(tipo, filtros) {
+  if (filtros.actor === undefined && filtros.director === undefined) {
+    const ruta = RUTA_TMDB_POR_TIPO[tipo];
+    const respuesta = await tmdbRequest(`/discover/${ruta}`, {
+      language: TMDB_LANGUAGE,
+      include_adult: false,
+      page: filtros.pagina,
+      ...(filtros.genero === undefined ? {} : { with_genres: filtros.genero }),
+      ...(filtros.anio === undefined
+        ? {}
+        : {
+            [tipo === TIPO_TITULO.PELICULA ? 'primary_release_year' : 'first_air_date_year']:
+              filtros.anio,
+          }),
+    });
+
+    if (!Array.isArray(respuesta?.results)) {
+      throw respuestaInvalida('TMDB devolvió una lista de títulos inválida');
+    }
+
+    return normalizarRespuesta(respuesta, tipo);
+  }
+
+  const personas = [
+    ...(filtros.actor === undefined ? [] : [{ personaId: filtros.actor, rol: 'actor' }]),
+    ...(filtros.director === undefined ? [] : [{ personaId: filtros.director, rol: 'director' }]),
+  ];
+  const creditosPorPersona = await Promise.all(
+    personas.map((persona) => obtenerCreditosPersona({ ...persona, tipo })),
+  );
+  const idsRequeridos = creditosPorPersona
+    .slice(1)
+    .map((creditos) => new Set(creditos.map(({ id }) => id)));
+  const fecha = tipo === TIPO_TITULO.PELICULA ? 'release_date' : 'first_air_date';
+  const titulos = new Map();
+
+  for (const credito of creditosPorPersona[0]) {
+    if (idsRequeridos.some((ids) => !ids.has(credito.id))) {
+      continue;
+    }
+    if (filtros.anio !== undefined && obtenerAnio(credito[fecha]) !== filtros.anio) {
+      continue;
+    }
+    if (filtros.genero !== undefined) {
+      if (!Array.isArray(credito.genre_ids)) {
+        throw respuestaInvalida('TMDB devolvió géneros inválidos para un crédito');
+      }
+      if (!credito.genre_ids.includes(filtros.genero)) {
+        continue;
+      }
+    }
+    titulos.set(credito.id, credito);
+  }
+
+  const resultadosOrdenados = [...titulos.values()].sort(
+    (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0),
+  );
+  const totalPaginas = Math.min(
+    PAGINA_MAXIMA,
+    Math.ceil(resultadosOrdenados.length / RESULTADOS_POR_PAGINA),
+  );
+  const inicio = (filtros.pagina - 1) * RESULTADOS_POR_PAGINA;
+
+  return normalizarRespuesta(
+    {
+      page: filtros.pagina,
+      results: resultadosOrdenados.slice(inicio, inicio + RESULTADOS_POR_PAGINA),
+      total_results: resultadosOrdenados.length,
+      total_pages: totalPaginas,
+    },
+    tipo,
+  );
 }
 
 async function consultarGeneros(ruta) {

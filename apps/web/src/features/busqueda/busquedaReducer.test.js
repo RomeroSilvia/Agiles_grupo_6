@@ -130,6 +130,12 @@ describe('prepararFiltros y convertirFiltros', () => {
     });
     expect(validarFiltros({ q: 'Dune', actor: 'invalido' }).success).toBe(false);
   });
+
+  it('permite buscar sin texto cuando hay otro filtro seleccionado', () => {
+    expect(validarFiltros({ q: '', genero: '18' }).data).toMatchObject({ q: '', genero: 18 });
+    expect(validarFiltros({ q: '', soloPropias: true }).data.q).toBe('');
+    expect(validarFiltros({ q: '' }).success).toBe(false);
+  });
 });
 
 describe('busquedaReducer', () => {

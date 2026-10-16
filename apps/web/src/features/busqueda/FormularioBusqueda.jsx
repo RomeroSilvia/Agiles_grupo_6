@@ -31,6 +31,14 @@ export function FormularioBusqueda({
     filtros.director ||
     filtros.directorNombre,
   );
+  const hayFiltrosSinTitulo = Boolean(
+    filtros.tipo ||
+    filtros.anio ||
+    filtros.soloPropias ||
+    filtros.genero ||
+    filtros.actor ||
+    filtros.director,
+  );
 
   return (
     <form
@@ -49,7 +57,7 @@ export function FormularioBusqueda({
           value={filtros.q}
           onChange={onChange}
           placeholder="Ej.: Dune, The Office..."
-          required
+          required={!hayFiltrosSinTitulo}
           className={`${CAMPO_BUSQUEDA_CLASS_NAME} placeholder:text-muted`}
         />
       </div>

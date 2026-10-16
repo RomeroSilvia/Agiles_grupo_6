@@ -6,7 +6,7 @@ import { ETIQUETA_BUSQUEDA_CLASS_NAME } from './busqueda.styles.js';
 const ID_SWITCH = 'solo-propias';
 const ETIQUETA = 'Solo mis plataformas';
 
-function TextoDelFiltro({ sinPlataformas, error, bloqueadoPorFiltrosAvanzados }) {
+function TextoDelFiltro({ sinPlataformas, error }) {
   if (sinPlataformas) {
     return (
       <Link
@@ -22,14 +22,6 @@ function TextoDelFiltro({ sinPlataformas, error, bloqueadoPorFiltrosAvanzados })
     return <span className="text-sm text-muted">No pudimos cargar tus plataformas</span>;
   }
 
-  if (bloqueadoPorFiltrosAvanzados) {
-    return (
-      <span className="text-sm text-muted">
-        Desactivado al filtrar por género, actor o director.
-      </span>
-    );
-  }
-
   return (
     <label htmlFor={ID_SWITCH} className="cursor-pointer text-foreground">
       {ETIQUETA}
@@ -37,12 +29,7 @@ function TextoDelFiltro({ sinPlataformas, error, bloqueadoPorFiltrosAvanzados })
   );
 }
 
-export function FiltroPlataformasPropias({
-  filtro,
-  activo,
-  onChange,
-  bloqueadoPorFiltrosAvanzados = false,
-}) {
+export function FiltroPlataformasPropias({ filtro, activo, onChange }) {
   if (!filtro.visible) {
     return null;
   }
@@ -51,15 +38,11 @@ export function FiltroPlataformasPropias({
     <div className="space-y-2">
       <span className={ETIQUETA_BUSQUEDA_CLASS_NAME}>Plataformas</span>
       <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background px-4 py-2.75">
-        <TextoDelFiltro
-          sinPlataformas={filtro.sinPlataformas}
-          error={filtro.error}
-          bloqueadoPorFiltrosAvanzados={bloqueadoPorFiltrosAvanzados}
-        />
+        <TextoDelFiltro sinPlataformas={filtro.sinPlataformas} error={filtro.error} />
         <Switch
           id={ID_SWITCH}
-          checked={activo && filtro.disponible && !bloqueadoPorFiltrosAvanzados}
-          disabled={!filtro.disponible || bloqueadoPorFiltrosAvanzados}
+          checked={activo && filtro.disponible}
+          disabled={!filtro.disponible}
           onChange={onChange}
           label={ETIQUETA}
         />

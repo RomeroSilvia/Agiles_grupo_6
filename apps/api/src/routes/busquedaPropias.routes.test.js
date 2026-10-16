@@ -85,13 +85,17 @@ describe('GET /api/busqueda/propias', () => {
     expect(regionService.obtenerRegion).not.toHaveBeenCalled();
   });
 
-  it('rechaza filtros avanzados que están fuera del alcance de plataformas propias', async () => {
+  it('combina filtros avanzados con la disponibilidad en plataformas propias', async () => {
+    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1, 'Dune')]));
+    ofertasPorId({ 1: EN_NETFLIX });
+
     const res = await buscarConSesion({ q: 'Dune', genero: '18', actor: '6193', director: '525' });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION');
-    expect(regionService.obtenerRegion).not.toHaveBeenCalled();
-    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(res.body.data.resultados.map(({ tmdbId }) => tmdbId)).toEqual([1]);
+    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith(
+      expect.objectContaining({ q: 'Dune', genero: 18, actor: 6193, director: 525, pagina: 1 }),
+    );
   });
 
   it('devuelve solo los títulos disponibles en las plataformas del usuario', async () => {

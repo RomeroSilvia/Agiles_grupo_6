@@ -26,10 +26,6 @@ function obtenerBusquedaInicial(searchParams) {
     Object.assign(filtros, convertirFiltros(validacion.data));
   }
 
-  if (tieneFiltrosAvanzados(filtros)) {
-    filtros.soloPropias = false;
-  }
-
   return {
     filtros,
     consulta: validacion.success ? validacion.data : null,
@@ -152,17 +148,7 @@ export function PaginaBusqueda() {
   }
 
   function actualizarFiltro(nombre, valor) {
-    if (nombre === 'soloPropias' && valor && tieneFiltrosAvanzados(filtros)) {
-      return;
-    }
-
-    const desactivarPlataformasPropias =
-      ['genero', 'actor', 'director'].includes(nombre) && Boolean(valor);
-    const nextFiltros = {
-      ...filtros,
-      [nombre]: valor,
-      ...(desactivarPlataformasPropias ? { soloPropias: false } : {}),
-    };
+    const nextFiltros = { ...filtros, [nombre]: valor };
     setFiltros(nextFiltros);
 
     const filtrosParaValidar = {
@@ -208,7 +194,6 @@ export function PaginaBusqueda() {
       ...filtros,
       [rol]: persona ? String(persona.id) : '',
       [nombre]: persona?.nombre ?? consulta,
-      ...(persona ? { soloPropias: false } : {}),
     };
     setFiltros(nextFiltros);
 
@@ -299,7 +284,6 @@ export function PaginaBusqueda() {
         onCambiarSoloPropias={(activo) => actualizarFiltro('soloPropias', activo)}
         onCambiarPersona={cambiarPersona}
         onLimpiarFiltros={limpiarFiltrosBusqueda}
-        filtroPropiasBloqueado={tieneFiltrosAvanzados(filtros)}
         generos={generosBusqueda.generos}
         isLoadingGeneros={generosBusqueda.isLoading}
         errorGeneros={generosBusqueda.error}

@@ -7,9 +7,7 @@ import { validate } from '../middlewares/validate.middleware.js';
 
 export const busquedaPropiasRoutes = Router();
 
-const busquedaPropiasSchema = busquedaSchema
-  .omit({ genero: true, actor: true, director: true })
-  .strict();
+const busquedaPropiasSchema = busquedaSchema.strict();
 
 busquedaPropiasRoutes.get(
   '/',

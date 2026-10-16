@@ -883,28 +883,31 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     expect(busquedas.at(-1).searchParams.has('genero')).toBe(false);
   });
 
-  it('mantiene separado el filtro de plataformas propias de los filtros avanzados', async () => {
+  it('combina el filtro de plataformas propias con los filtros avanzados', async () => {
     const fetchMock = configurarFetchConOpciones();
-    render(<PaginaBusqueda />, { sesion: CON_SESION, propias: plataformasPropias([1]) });
+    render(<PaginaBusqueda />, {
+      sesion: CON_SESION,
+      propias: plataformasPropias([1]),
+      initialEntries: ['/?q=Dune&propias=true'],
+    });
 
-    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Dune' } });
+    await screen.findByRole('heading', { level: 3, name: 'Dune' });
+
     fireEvent.focus(screen.getByLabelText('Género'));
     await screen.findByRole('option', { name: 'Drama' });
     fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
 
     const filtroPropias = screen.getByRole('switch', { name: 'Solo mis plataformas' });
-    expect(filtroPropias).toHaveAttribute('aria-disabled', 'true');
-    expect(filtroPropias).toHaveAttribute('aria-checked', 'false');
-    expect(screen.getByText('Desactivado al filtrar por género, actor o director.')).toBeVisible();
-    fireEvent.click(filtroPropias);
-    expect(filtroPropias).toHaveAttribute('aria-checked', 'false');
+    expect(filtroPropias).toHaveAttribute('aria-disabled', 'false');
+    expect(filtroPropias).toHaveAttribute('aria-checked', 'true');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
-    await screen.findByRole('heading', { level: 3, name: 'Dune' });
-
-    const rutas = fetchMock.mock.calls.map(([input]) => new URL(input.toString()).pathname);
-    expect(rutas).toContain('/api/busqueda');
-    expect(rutas).not.toContain('/api/busqueda/propias');
+    await waitFor(() => {
+      const solicitudes = fetchMock.mock.calls
+        .map(([input]) => new URL(input.toString()))
+        .filter((url) => ['/api/busqueda', '/api/busqueda/propias'].includes(url.pathname));
+      expect(solicitudes.at(-1).pathname).toBe('/api/busqueda/propias');
+      expect(solicitudes.at(-1).searchParams.get('genero')).toBe('18');
+    });
   });
 
   it('permite borrar una búsqueda por nombre aunque no haya otros filtros', async () => {

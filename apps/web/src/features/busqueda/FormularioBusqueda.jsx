@@ -11,7 +11,6 @@ export function FormularioBusqueda({
   onChange,
   onSubmit,
   onCambiarSoloPropias,
-  filtroPropiasBloqueado,
   onCambiarPersona,
   onLimpiarFiltros,
   generos,
@@ -155,7 +154,6 @@ export function FormularioBusqueda({
         <FiltroPlataformasPropias
           filtro={filtroPropias}
           activo={filtros.soloPropias}
-          bloqueadoPorFiltrosAvanzados={filtroPropiasBloqueado}
           onChange={onCambiarSoloPropias}
         />
       </div>

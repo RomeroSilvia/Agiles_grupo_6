@@ -1,7 +1,9 @@
 import { z } from 'zod';
-import { PAGINA_MAXIMA, TIPOS_TITULO } from '@buscador/shared/constants';
+import { TIPOS_TITULO } from '@buscador/shared/constants';
+import { WATCHLIST_PAGE_SIZE } from '../config/watchlist.config.js';
 
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
+const WATCHLIST_MAX_PAGE = Math.floor(Number.MAX_SAFE_INTEGER / WATCHLIST_PAGE_SIZE);
 const TITULO_INVALIDO = 'El título no es válido';
 const TMDB_POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
@@ -10,7 +12,7 @@ export const WATCHLIST_TITULO_COLUMNS =
 export const WATCHLIST_PRIMARY_KEY = 'usuario_id,titulo_id';
 
 export const watchlistQuerySchema = z.object({
-  pagina: z.coerce.number().int().min(1).max(PAGINA_MAXIMA).default(1),
+  pagina: z.coerce.number().int().min(1).max(WATCHLIST_MAX_PAGE).default(1),
 });
 
 export const watchlistParamsSchema = z.object({

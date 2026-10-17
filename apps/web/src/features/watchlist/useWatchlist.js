@@ -31,25 +31,8 @@ function crearEstado(usuarioId, data) {
   };
 }
 
-async function listarHastaPagina(paginaFinal) {
-  const primeraPagina = await request(rutaPagina(1));
-  const paginaFinalDisponible = Math.max(1, Math.min(paginaFinal, primeraPagina.totalPaginas));
-
-  if (paginaFinalDisponible === 1) {
-    return primeraPagina;
-  }
-
-  const paginasRestantes = await Promise.all(
-    Array.from({ length: paginaFinalDisponible - 1 }, (_, indice) =>
-      request(rutaPagina(indice + 2)),
-    ),
-  );
-
-  return {
-    ...primeraPagina,
-    resultados: [primeraPagina, ...paginasRestantes].flatMap((pagina) => pagina.resultados),
-    pagina: paginaFinalDisponible,
-  };
+async function listarPrimeraPagina() {
+  return request(rutaPagina(1));
 }
 
 export function useWatchlist() {
@@ -115,6 +98,7 @@ export function useWatchlist() {
       operacionesEnCursoRef.current.has(usuarioId) ||
       estadoActual.cargando ||
       estadoActual.cargandoMas ||
+      estadoActual.error ||
       pendientes.size > 0 ||
       estadoActual.pagina >= estadoActual.totalPaginas
     ) {
@@ -166,7 +150,6 @@ export function useWatchlist() {
       }
       const key = `${tipo}:${tmdbId}`;
 
-      const paginaCargada = estadoActual.pagina;
       operacionesEnCursoRef.current.add(usuarioId);
       setPendientes((actual) => new Set(actual).add(key));
       setEstado((actual) => ({ ...actual, error: '' }));
@@ -174,7 +157,7 @@ export function useWatchlist() {
       try {
         await request(rutaWatchlistTitulo(tipo, tmdbId), { method: 'DELETE' });
         try {
-          const data = await listarHastaPagina(paginaCargada);
+          const data = await listarPrimeraPagina();
           setEstado((actual) =>
             actual.usuarioId === usuarioId ? crearEstado(usuarioId, data) : actual,
           );
@@ -196,7 +179,7 @@ export function useWatchlist() {
       } catch (error) {
         let mensaje = error.message;
         try {
-          const data = await listarHastaPagina(paginaCargada);
+          const data = await listarPrimeraPagina();
           setEstado((actual) =>
             actual.usuarioId === usuarioId ? crearEstado(usuarioId, data) : actual,
           );
@@ -215,13 +198,7 @@ export function useWatchlist() {
         });
       }
     },
-    [
-      estadoActual.cargando,
-      estadoActual.cargandoMas,
-      estadoActual.pagina,
-      pendientes.size,
-      usuarioId,
-    ],
+    [estadoActual.cargando, estadoActual.cargandoMas, pendientes.size, usuarioId],
   );
 
   return {

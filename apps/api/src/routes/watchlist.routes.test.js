@@ -45,6 +45,22 @@ describe('rutas de watchlist', () => {
     expect(watchlistService.listarWatchlist).toHaveBeenCalledWith('usuario-7', { pagina: 2 });
   });
 
+  it('acepta páginas posteriores al límite global de búsqueda', async () => {
+    watchlistService.listarWatchlist.mockResolvedValue({
+      resultados: [],
+      pagina: 501,
+      totalResultados: 10_001,
+      totalPaginas: 501,
+    });
+
+    const respuesta = await request(createApp())
+      .get('/api/watchlist?pagina=501')
+      .set('x-usuario-id', 'usuario-7');
+
+    expect(respuesta.status).toBe(200);
+    expect(watchlistService.listarWatchlist).toHaveBeenCalledWith('usuario-7', { pagina: 501 });
+  });
+
   it('agrega un título autenticado y transforma su identificador', async () => {
     const respuesta = await request(createApp())
       .put('/api/watchlist/pelicula/42')

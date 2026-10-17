@@ -71,6 +71,21 @@ describe('listarPorUsuario', () => {
       DatabaseError,
     );
   });
+
+  it('conserva el total real de páginas cuando supera el límite de búsqueda global', async () => {
+    const builder = mockearConsulta(supabaseAdmin.from, {
+      data: [],
+      count: 10_001,
+      error: null,
+    });
+
+    await expect(watchlistRepository.listarPorUsuario(USUARIO_ID, 501)).resolves.toMatchObject({
+      pagina: 501,
+      totalResultados: 10_001,
+      totalPaginas: 501,
+    });
+    expect(builder.range).toHaveBeenCalledWith(10_000, 10_019);
+  });
 });
 
 describe('existe', () => {

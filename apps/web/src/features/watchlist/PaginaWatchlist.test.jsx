@@ -140,6 +140,56 @@ describe('PaginaWatchlist', () => {
     ).toBeInTheDocument();
   });
 
+  it('recarga solo la primera página después de quitar un título de una página posterior', async () => {
+    const primeraPaginaInicial = {
+      ...respuestaLista([DUNE]),
+      data: { ...respuestaLista([DUNE]).data, pagina: 1, totalPaginas: 2, totalResultados: 21 },
+    };
+    const primeraPaginaActualizada = {
+      ...respuestaLista([DUNE]),
+      data: { ...respuestaLista([DUNE]).data, pagina: 1, totalPaginas: 1, totalResultados: 20 },
+    };
+    const paginaDos = {
+      data: {
+        resultados: [MATRIX],
+        pagina: 2,
+        totalResultados: 21,
+        totalPaginas: 2,
+      },
+    };
+    let quitado = false;
+    const solicitudesLista = [];
+    const fetchMock = vi.fn((input, options = {}) => {
+      const url = new URL(input.toString());
+      if (url.pathname === '/api/watchlist' && options.method !== 'DELETE') {
+        const pagina = Number(url.searchParams.get('pagina'));
+        solicitudesLista.push(pagina);
+        let respuesta = paginaDos;
+        if (pagina === 1) {
+          respuesta = quitado ? primeraPaginaActualizada : primeraPaginaInicial;
+        }
+        return Promise.resolve(respuestaHttp(respuesta));
+      }
+      if (url.pathname === '/api/watchlist/pelicula/102' && options.method === 'DELETE') {
+        quitado = true;
+        return Promise.resolve(respuestaHttp(null, 204));
+      }
+      throw new Error(`Solicitud inesperada: ${options.method} ${url.pathname}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPagina();
+    await screen.findByRole('heading', { name: 'Dune' });
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitar Matrix de la watchlist' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Quitar Matrix de la watchlist' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Cargar más' })).toBeNull();
+    });
+    expect(solicitudesLista).toEqual([1, 2, 1]);
+  });
+
   it('conserva el estado persistido e informa si falla quitar un título', async () => {
     const fetchMock = vi.fn((input, options = {}) => {
       const url = new URL(input.toString());

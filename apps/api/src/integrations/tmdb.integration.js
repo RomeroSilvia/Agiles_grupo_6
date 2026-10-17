@@ -249,8 +249,15 @@ export function buscarPersonas({ q, pagina }) {
 
 export function obtenerPersona({ personaId }) {
   return personasCache.getOrSet(`id:${personaId}`, async () => {
-    const respuesta = await tmdbRequest(`/person/${personaId}`, { language: TMDB_LANGUAGE });
-    return normalizarPersona(respuesta);
+    try {
+      const respuesta = await tmdbRequest(`/person/${personaId}`, { language: TMDB_LANGUAGE });
+      return normalizarPersona(respuesta);
+    } catch (error) {
+      if (error instanceof ExternalServiceError && error.cause?.status === 404) {
+        throw new NotFoundError('No se encontró la persona solicitada');
+      }
+      throw error;
+    }
   });
 }
 

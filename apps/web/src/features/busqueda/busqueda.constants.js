@@ -13,7 +13,11 @@ export const ETIQUETAS_TIPO_TITULO_SINGULAR = Object.freeze({
 export const RUTAS_API_BUSQUEDA = Object.freeze({
   TODAS: '/busqueda',
   PROPIAS: '/busqueda/propias',
+  GENEROS: '/busqueda/generos',
+  PERSONAS: '/busqueda/personas',
 });
+
+export const DEBOUNCE_BUSQUEDA_PERSONAS_MS = 250;
 
 export const CARDS_CARGANDO = 10;
 

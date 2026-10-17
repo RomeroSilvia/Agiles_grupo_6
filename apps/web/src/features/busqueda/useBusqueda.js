@@ -51,6 +51,8 @@ export function useBusqueda(estadoGuardado) {
       const soloPropias = Boolean(filtrosConsulta.soloPropias);
       const ultimaBusqueda = {
         ...convertirFiltros(filtrosValidos),
+        actorNombre: filtrosConsulta.actorNombre ?? '',
+        directorNombre: filtrosConsulta.directorNombre ?? '',
         soloPropias,
         firmaPlataformas: soloPropias ? (filtrosConsulta.firmaPlataformas ?? null) : null,
       };
@@ -90,6 +92,13 @@ export function useBusqueda(estadoGuardado) {
     [],
   );
 
+  const reiniciarBusqueda = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    ultimaBusquedaRef.current = null;
+    dispatch({ type: ACCIONES_BUSQUEDA.BUSQUEDA_REINICIADA });
+  }, []);
+
   const buscar = useCallback(
     (filtrosConsulta, opciones) => ejecutarBusqueda(filtrosConsulta, opciones),
     [ejecutarBusqueda],
@@ -98,16 +107,25 @@ export function useBusqueda(estadoGuardado) {
   const buscarHastaPagina = useCallback(
     async (filtrosConsulta, paginaFinal) => {
       const paginaHasta = Math.min(paginaFinal, MAX_PAGINAS_RESTAURABLES);
+      let paginaConsulta = 1;
+      let paginaCargada = 0;
 
-      for (let paginaConsulta = 1; paginaConsulta <= paginaHasta; paginaConsulta += 1) {
+      while (paginaConsulta <= paginaHasta) {
         const data = await ejecutarBusqueda(filtrosConsulta, {
           pagina: paginaConsulta,
-          acumular: paginaConsulta > 1,
+          acumular: paginaCargada > 0,
         });
 
-        if (!data || paginaConsulta >= (data.totalPaginas ?? paginaConsulta)) {
+        if (
+          !data ||
+          data.pagina <= paginaCargada ||
+          data.pagina >= (data.totalPaginas ?? data.pagina)
+        ) {
           return;
         }
+
+        paginaCargada = data.pagina;
+        paginaConsulta = paginaCargada + 1;
       }
     },
     [ejecutarBusqueda],
@@ -142,6 +160,7 @@ export function useBusqueda(estadoGuardado) {
   return {
     ...estado,
     setFiltros,
+    reiniciarBusqueda,
     buscar,
     buscarHastaPagina,
     buscarConFiltros,

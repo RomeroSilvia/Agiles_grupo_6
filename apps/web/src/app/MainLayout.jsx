@@ -97,7 +97,7 @@ export function MainLayout() {
     <div className="flex min-h-dvh flex-col">
       <ScrollRestoration />
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1 gap-y-1 px-2 py-2 sm:gap-3 sm:px-4">
           <LogoInicio className={FOCUS_RING_CLASS_NAME} />
           {user && (
             <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
@@ -117,7 +117,7 @@ export function MainLayout() {
               </span>
             </Link>
           )}
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
             {!regionLoading && (
               <span
                 aria-label={`${source === REGION_SOURCE.DEFAULT ? 'Región predeterminada' : 'Región'}: ${region}`}

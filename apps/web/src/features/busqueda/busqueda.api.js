@@ -7,12 +7,19 @@ export function buscarTitulos(filtros, { soloPropias = false, signal } = {}) {
 }
 
 export function listarGenerosBusqueda({ signal } = {}) {
-  return request(`${RUTAS_API_BUSQUEDA.TODAS}/generos`, { signal });
+  return request(RUTAS_API_BUSQUEDA.GENEROS, { signal });
 }
 
 export function buscarPersonasBusqueda({ q, rol, signal }) {
-  return request(`${RUTAS_API_BUSQUEDA.TODAS}/personas`, {
+  return request(RUTAS_API_BUSQUEDA.PERSONAS, {
     params: { q, rol },
+    signal,
+  });
+}
+
+export function obtenerPersonaBusqueda({ id, rol, signal }) {
+  return request(`${RUTAS_API_BUSQUEDA.PERSONAS}/${id}`, {
+    params: { rol },
     signal,
   });
 }

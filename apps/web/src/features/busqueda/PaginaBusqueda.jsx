@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { ROL_PERSONA } from '@buscador/shared/constants';
+import { tieneFiltrosAvanzados } from '@buscador/shared/schemas';
 import { APP_NAME } from '../../config/app.config.js';
 import { useBusqueda } from './useBusqueda.js';
-import { convertirFiltros, tieneFiltrosAvanzados, validarFiltros } from './busquedaReducer.js';
+import { FILTROS_INICIALES, convertirFiltros, validarFiltros } from './busquedaReducer.js';
 import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
 import { useGenerosBusqueda } from './useGenerosBusqueda.js';
 import { FormularioBusqueda } from './FormularioBusqueda.jsx';
@@ -15,9 +17,9 @@ function obtenerBusquedaInicial(searchParams) {
     anio: searchParams.get('anio') ?? '',
     genero: searchParams.get('genero') ?? '',
     actor: searchParams.get('actor') ?? '',
-    actorNombre: searchParams.get('actorNombre') ?? '',
     director: searchParams.get('director') ?? '',
-    directorNombre: searchParams.get('directorNombre') ?? '',
+    actorNombre: '',
+    directorNombre: '',
     soloPropias: searchParams.get('propias') === 'true',
   };
   const validacion = validarFiltros(filtros, searchParams.get('pagina') ?? 1);
@@ -32,10 +34,7 @@ function obtenerBusquedaInicial(searchParams) {
   };
 }
 
-function crearSearchParams(
-  { q, tipo, anio, genero, actor, actorNombre, director, directorNombre, soloPropias },
-  pagina,
-) {
+function crearSearchParams({ q, tipo, anio, genero, actor, director, soloPropias }, pagina) {
   const params = new URLSearchParams();
   if (q.trim()) {
     params.set('q', q.trim());
@@ -51,15 +50,9 @@ function crearSearchParams(
   }
   if (actor) {
     params.set('actor', actor);
-    if (actorNombre) {
-      params.set('actorNombre', actorNombre);
-    }
   }
   if (director) {
     params.set('director', director);
-    if (directorNombre) {
-      params.set('directorNombre', directorNombre);
-    }
   }
   if (soloPropias) {
     params.set('propias', 'true');
@@ -165,23 +158,6 @@ export function PaginaBusqueda() {
 
   function handleSubmit(event) {
     event.preventDefault();
-
-    if (ultimaBusqueda && filtros.q.trim() && filtros.q.trim() !== ultimaBusqueda.q) {
-      const nuevosFiltros = { q: filtros.q, tipo: '', anio: '', soloPropias: false };
-      const filtrosIniciales = {
-        ...filtros,
-        ...nuevosFiltros,
-        genero: '',
-        actor: '',
-        actorNombre: '',
-        director: '',
-        directorNombre: '',
-      };
-      setFiltros(filtrosIniciales);
-      buscar(conFiltroDisponible(filtrosIniciales));
-      return;
-    }
-
     buscar(conFiltroDisponible(filtros));
   }
 
@@ -190,7 +166,7 @@ export function PaginaBusqueda() {
   }
 
   function cambiarPersona(rol, persona, consulta = '') {
-    const nombre = rol === 'actor' ? 'actorNombre' : 'directorNombre';
+    const nombre = rol === ROL_PERSONA.ACTOR ? 'actorNombre' : 'directorNombre';
     const teniaSeleccion = Boolean(filtros[rol]);
     const nextFiltros = {
       ...filtros,
@@ -208,39 +184,35 @@ export function PaginaBusqueda() {
     }
   }
 
+  function reiniciarBusquedaCompleta() {
+    busquedaInicialProcesadaRef.current = true;
+    limpiezaUrlPendienteRef.current = true;
+    reiniciarBusqueda();
+    setSearchParams({}, { replace: true, preventScrollReset: true });
+  }
+
   function limpiarFiltrosBusqueda() {
     const hayFiltrosAvanzados =
       tieneFiltrosAvanzados(filtros) ||
       Boolean(filtros.actorNombre.trim() || filtros.directorNombre.trim());
 
-    if (ultimaBusqueda && hayFiltrosAvanzados) {
-      if (!ultimaBusqueda.q) {
-        busquedaInicialProcesadaRef.current = true;
-        limpiezaUrlPendienteRef.current = true;
-        reiniciarBusqueda();
-        setSearchParams({}, { replace: true, preventScrollReset: true });
-        return;
-      }
-
+    if (ultimaBusqueda?.q && hayFiltrosAvanzados) {
       const filtrosBase = {
-        ...filtros,
+        ...FILTROS_INICIALES,
         ...convertirFiltros(ultimaBusqueda),
-        genero: '',
-        actor: '',
-        actorNombre: '',
-        director: '',
-        directorNombre: '',
-        soloPropias: false,
+        genero: FILTROS_INICIALES.genero,
+        actor: FILTROS_INICIALES.actor,
+        actorNombre: FILTROS_INICIALES.actorNombre,
+        director: FILTROS_INICIALES.director,
+        directorNombre: FILTROS_INICIALES.directorNombre,
+        soloPropias: FILTROS_INICIALES.soloPropias,
       };
       setFiltros(filtrosBase);
       buscar(conFiltroDisponible(filtrosBase));
       return;
     }
 
-    busquedaInicialProcesadaRef.current = true;
-    limpiezaUrlPendienteRef.current = true;
-    reiniciarBusqueda();
-    setSearchParams({}, { replace: true, preventScrollReset: true });
+    reiniciarBusquedaCompleta();
   }
 
   const filtroPerdido = filtros.soloPropias && filtroPropias.resuelto && !filtroPropias.disponible;
@@ -313,9 +285,7 @@ export function PaginaBusqueda() {
         error={error}
         hasSearched={hasSearched}
         busquedaFiltrada={Boolean(ultimaBusqueda?.soloPropias)}
-        hayFiltrosAvanzados={Boolean(
-          ultimaBusqueda?.genero || ultimaBusqueda?.actor || ultimaBusqueda?.director,
-        )}
+        hayFiltrosAvanzados={tieneFiltrosAvanzados(ultimaBusqueda ?? {})}
         tituloBuscado={ultimaBusqueda?.q ?? filtros.q.trim()}
         onReintentar={() => buscar(ultimaBusqueda)}
         onCargarMas={cargarMas}

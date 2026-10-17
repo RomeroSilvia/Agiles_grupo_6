@@ -118,12 +118,12 @@ describe('prepararFiltros y convertirFiltros', () => {
 
   it('valida los identificadores opcionales de filtros avanzados', () => {
     expect(
-      validarFiltros({ q: 'Dune', genero: '18', actor: '6193', director: '525' }).data,
+      validarFiltros({ q: 'Dune', genero: 'drama', actor: '6193', director: '525' }).data,
     ).toEqual({
       q: 'Dune',
       tipo: undefined,
       anio: undefined,
-      genero: 18,
+      genero: 'drama',
       actor: 6193,
       director: 525,
       pagina: 1,
@@ -132,7 +132,10 @@ describe('prepararFiltros y convertirFiltros', () => {
   });
 
   it('permite buscar sin texto cuando hay otro filtro seleccionado', () => {
-    expect(validarFiltros({ q: '', genero: '18' }).data).toMatchObject({ q: '', genero: 18 });
+    expect(validarFiltros({ q: '', genero: 'drama' }).data).toMatchObject({
+      q: '',
+      genero: 'drama',
+    });
     expect(validarFiltros({ q: '', soloPropias: true }).data.q).toBe('');
     expect(validarFiltros({ q: '' }).success).toBe(false);
   });

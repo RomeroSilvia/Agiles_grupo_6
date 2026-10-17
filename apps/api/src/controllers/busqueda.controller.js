@@ -14,3 +14,11 @@ export async function buscarPersonas(req, res) {
   const data = await busquedaService.buscarPersonas(req.validated.query);
   res.json({ data });
 }
+
+export async function obtenerPersona(req, res) {
+  const data = await busquedaService.obtenerPersona({
+    id: req.validated.params.id,
+    rol: req.validated.query.rol,
+  });
+  res.json({ data });
+}

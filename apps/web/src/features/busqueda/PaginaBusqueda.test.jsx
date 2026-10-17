@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+﻿import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   fireEvent,
   render as renderComponent,
@@ -148,6 +148,30 @@ describe('PaginaBusqueda', () => {
       'pelicula',
     );
     expect(new URL(fetchMock.mock.calls[0][0].toString()).searchParams.get('anio')).toBe('2021');
+  });
+
+  it('resuelve el nombre de la persona por ID y no conserva nombres editables en la URL', async () => {
+    const fetchMock = configurarFetchConOpciones();
+    render(
+      <>
+        <PaginaBusqueda />
+        <UbicacionActual />
+      </>,
+      { initialEntries: ['/?q=Dune&actor=6193&actorNombre=Nombre%20falso&pagina=1'] },
+    );
+
+    expect(await screen.findByText('Leonardo DiCaprio')).toBeInTheDocument();
+    await waitFor(() => {
+      const params = new URLSearchParams(screen.getByTestId('parametros-url').textContent);
+      expect(params.get('actor')).toBe('6193');
+      expect(params.has('actorNombre')).toBe(false);
+      expect(params.has('directorNombre')).toBe(false);
+    });
+    expect(
+      fetchMock.mock.calls.some(
+        ([input]) => new URL(input.toString()).pathname === '/api/busqueda/personas/6193',
+      ),
+    ).toBe(true);
   });
 
   it('limita las páginas restauradas aunque la URL solicite más', async () => {
@@ -507,12 +531,17 @@ function configurarFetchConOpciones(respuestaBusqueda = respuestaConResultados) 
     let data = respuestaBusqueda.data;
 
     if (url.pathname === '/api/busqueda/generos') {
-      data = [{ id: 18, nombre: 'Drama' }];
+      data = [{ id: 'drama', nombre: 'Drama' }];
     } else if (url.pathname === '/api/busqueda/personas') {
       data =
         url.searchParams.get('rol') === 'actor'
           ? [{ id: 6193, nombre: 'Leonardo DiCaprio', fotoUrl: null }]
           : [{ id: 525, nombre: 'Christopher Nolan', fotoUrl: null }];
+    } else if (url.pathname.startsWith('/api/busqueda/personas/')) {
+      data =
+        url.searchParams.get('rol') === 'actor'
+          ? { id: 6193, nombre: 'Leonardo DiCaprio', fotoUrl: null }
+          : { id: 525, nombre: 'Christopher Nolan', fotoUrl: null };
     }
 
     return { ok: true, json: async () => ({ data }) };
@@ -845,7 +874,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     fireEvent.change(screen.getByLabelText('Año'), { target: { value: '2021' } });
     fireEvent.focus(screen.getByLabelText('Género'));
     await screen.findByRole('option', { name: 'Drama' });
-    fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
+    fireEvent.change(screen.getByLabelText('Género'), { target: { value: 'drama' } });
     fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
     await screen.findByRole('heading', { level: 3, name: 'Dune' });
 
@@ -855,7 +884,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
         .find((url) => url.pathname === '/api/busqueda' && url.searchParams.has('genero'));
       expect(solicitud?.searchParams.get('tipo')).toBe('pelicula');
       expect(solicitud?.searchParams.get('anio')).toBe('2021');
-      expect(solicitud?.searchParams.get('genero')).toBe('18');
+      expect(solicitud?.searchParams.get('genero')).toBe('drama');
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
@@ -895,7 +924,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
 
     fireEvent.focus(screen.getByLabelText('Género'));
     await screen.findByRole('option', { name: 'Drama' });
-    fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
+    fireEvent.change(screen.getByLabelText('Género'), { target: { value: 'drama' } });
 
     const filtroPropias = screen.getByRole('switch', { name: 'Solo mis plataformas' });
     expect(filtroPropias).toHaveAttribute('aria-disabled', 'false');
@@ -906,7 +935,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
         .map(([input]) => new URL(input.toString()))
         .filter((url) => ['/api/busqueda', '/api/busqueda/propias'].includes(url.pathname));
       expect(solicitudes.at(-1).pathname).toBe('/api/busqueda/propias');
-      expect(solicitudes.at(-1).searchParams.get('genero')).toBe('18');
+      expect(solicitudes.at(-1).searchParams.get('genero')).toBe('drama');
     });
   });
 
@@ -924,7 +953,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
 
     fireEvent.focus(screen.getByLabelText('Género'));
     await screen.findByRole('option', { name: 'Drama' });
-    fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
+    fireEvent.change(screen.getByLabelText('Género'), { target: { value: 'drama' } });
 
     expect(titulo).not.toBeRequired();
     fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
@@ -935,7 +964,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
         .find((url) => url.pathname === '/api/busqueda' && url.searchParams.has('genero'));
       expect(solicitud).toBeDefined();
       expect(solicitud.searchParams.has('q')).toBe(false);
-      expect(solicitud.searchParams.get('genero')).toBe('18');
+      expect(solicitud.searchParams.get('genero')).toBe('drama');
     });
     expect(
       screen.getByRole('heading', { level: 2, name: 'Resultados con los filtros seleccionados' }),
@@ -1002,13 +1031,18 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
 
   it('combina los filtros de género, actor y director', async () => {
     const fetchMock = configurarFetchConOpciones();
-    render(<PaginaBusqueda />);
+    render(
+      <>
+        <PaginaBusqueda />
+        <UbicacionActual />
+      </>,
+    );
     await ejecutarBusqueda();
 
     const campoGenero = screen.getByLabelText('Género');
     fireEvent.focus(campoGenero);
     await screen.findByRole('option', { name: 'Drama' });
-    fireEvent.change(campoGenero, { target: { value: '18' } });
+    fireEvent.change(campoGenero, { target: { value: 'drama' } });
 
     const campoActor = screen.getByRole('combobox', { name: 'Actor' });
     fireEvent.change(campoActor, { target: { value: 'Leonardo' } });
@@ -1023,9 +1057,11 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
         ([url]) => new URL(url.toString()).pathname === '/api/busqueda',
       );
       const ultima = new URL(solicitudes.at(-1)[0].toString());
-      expect(ultima.searchParams.get('genero')).toBe('18');
+      expect(ultima.searchParams.get('genero')).toBe('drama');
       expect(ultima.searchParams.get('actor')).toBe('6193');
       expect(ultima.searchParams.get('director')).toBe('525');
+      expect(ultima.searchParams.has('actorNombre')).toBe(false);
+      expect(ultima.searchParams.has('directorNombre')).toBe(false);
     });
 
     const botonBuscar = screen.getByRole('button', { name: 'Buscar' });
@@ -1033,32 +1069,51 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     expect(botonBuscar.parentElement).toBe(botonLimpiar.parentElement);
   });
 
-  it('reinicia los filtros avanzados al ejecutar otra consulta', async () => {
+  it('conserva tipo, año, género, personas y plataformas al ejecutar otra consulta', async () => {
     const fetchMock = configurarFetchConOpciones();
-    render(<PaginaBusqueda />);
+    render(<PaginaBusqueda />, {
+      sesion: CON_SESION,
+      propias: plataformasPropias([1]),
+    });
     await ejecutarBusqueda();
+
+    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'pelicula' } });
+    fireEvent.change(screen.getByLabelText('Año'), { target: { value: '2021' } });
 
     const campoGenero = screen.getByLabelText('Género');
     fireEvent.focus(campoGenero);
     await screen.findByRole('option', { name: 'Drama' });
-    fireEvent.change(campoGenero, { target: { value: '18' } });
-    await waitFor(() => {
-      expect(new URL(fetchMock.mock.calls.at(-1)[0].toString()).searchParams.get('genero')).toBe(
-        '18',
-      );
-    });
+    fireEvent.change(campoGenero, { target: { value: 'drama' } });
+
+    const campoActor = screen.getByRole('combobox', { name: 'Actor' });
+    fireEvent.change(campoActor, { target: { value: 'Leonardo' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Leonardo DiCaprio' }));
+
+    const campoDirector = screen.getByRole('combobox', { name: 'Director' });
+    fireEvent.change(campoDirector, { target: { value: 'Christopher' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Christopher Nolan' }));
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Solo mis plataformas' }));
+    await screen.findByRole('button', { name: 'Buscar' });
 
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Matrix' } });
     fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
 
     await waitFor(() => {
-      const url = new URL(fetchMock.mock.calls.at(-1)[0].toString());
+      const url = fetchMock.mock.calls
+        .map(([input]) => new URL(input.toString()))
+        .filter((solicitud) => solicitud.searchParams.get('q') === 'Matrix')
+        .at(-1);
+      expect(url).toBeDefined();
+      expect(url.pathname).toBe('/api/busqueda/propias');
       expect(url.searchParams.get('q')).toBe('Matrix');
-      expect(url.searchParams.has('genero')).toBe(false);
-      expect(url.searchParams.has('actor')).toBe(false);
-      expect(url.searchParams.has('director')).toBe(false);
+      expect(url.searchParams.get('tipo')).toBe('pelicula');
+      expect(url.searchParams.get('anio')).toBe('2021');
+      expect(url.searchParams.get('genero')).toBe('drama');
+      expect(url.searchParams.get('actor')).toBe('6193');
+      expect(url.searchParams.get('director')).toBe('525');
     });
-    expect(screen.getByLabelText('Género')).toHaveValue('');
+    expect(screen.getByLabelText('Género')).toHaveValue('drama');
   });
 
   it('mantiene el género al cargar la página siguiente sin repetir títulos', async () => {
@@ -1078,7 +1133,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     fetchMock.mockImplementation(async (input) => {
       const url = new URL(input.toString());
       if (url.pathname === '/api/busqueda/generos') {
-        return { ok: true, json: async () => ({ data: [{ id: 18, nombre: 'Drama' }] }) };
+        return { ok: true, json: async () => ({ data: [{ id: 'drama', nombre: 'Drama' }] }) };
       }
       const pagina = Number(url.searchParams.get('pagina'));
       const data = {
@@ -1094,7 +1149,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     await ejecutarBusqueda();
     fireEvent.focus(screen.getByLabelText('Género'));
     await screen.findByRole('option', { name: 'Drama' });
-    fireEvent.change(screen.getByLabelText('Género'), { target: { value: '18' } });
+    fireEvent.change(screen.getByLabelText('Género'), { target: { value: 'drama' } });
     await screen.findByRole('button', { name: 'Cargar más' });
     fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
 
@@ -1102,7 +1157,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     const solicitudSiguiente = fetchMock.mock.calls
       .map(([input]) => new URL(input.toString()))
       .find((url) => url.pathname === '/api/busqueda' && url.searchParams.get('pagina') === '2');
-    expect(solicitudSiguiente.searchParams.get('genero')).toBe('18');
+    expect(solicitudSiguiente.searchParams.get('genero')).toBe('drama');
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(2);
   });
 
@@ -1111,7 +1166,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
       const url = new URL(input.toString());
       const data =
         url.pathname === '/api/busqueda/generos'
-          ? [{ id: 18, nombre: 'Drama' }]
+          ? [{ id: 'drama', nombre: 'Drama' }]
           : url.searchParams.has('genero')
             ? { resultados: [], pagina: 1, totalResultados: 10, totalPaginas: 1 }
             : respuestaConResultados.data;
@@ -1123,7 +1178,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     const campoGenero = screen.getByLabelText('Género');
     fireEvent.focus(campoGenero);
     await screen.findByRole('option', { name: 'Drama' });
-    fireEvent.change(campoGenero, { target: { value: '18' } });
+    fireEvent.change(campoGenero, { target: { value: 'drama' } });
 
     expect(
       await screen.findByText('No hay resultados para esa combinación de filtros.'),
@@ -1149,7 +1204,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     const fetchMock = vi.fn(async (input) => {
       const url = new URL(input.toString());
       if (url.pathname === '/api/busqueda/generos') {
-        return { ok: true, json: async () => ({ data: [{ id: 18, nombre: 'Drama' }] }) };
+        return { ok: true, json: async () => ({ data: [{ id: 'drama', nombre: 'Drama' }] }) };
       }
       if (url.searchParams.has('genero') && fallarBusquedaFiltrada) {
         return {
@@ -1167,7 +1222,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     const campoGenero = screen.getByLabelText('Género');
     fireEvent.focus(campoGenero);
     await screen.findByRole('option', { name: 'Drama' });
-    fireEvent.change(campoGenero, { target: { value: '18' } });
+    fireEvent.change(campoGenero, { target: { value: 'drama' } });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo consultar TMDB');
     fallarBusquedaFiltrada = false;
@@ -1177,7 +1232,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     expect(
       fetchMock.mock.calls.some(([input]) => {
         const url = new URL(input.toString());
-        return url.pathname === '/api/busqueda' && url.searchParams.get('genero') === '18';
+        return url.pathname === '/api/busqueda' && url.searchParams.get('genero') === 'drama';
       }),
     ).toBe(true);
   });

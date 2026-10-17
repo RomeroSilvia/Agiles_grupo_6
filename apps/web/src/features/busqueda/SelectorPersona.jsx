@@ -1,70 +1,13 @@
-import { useCallback, useEffect, useId, useState } from 'react';
-import { ApiError } from '../../services/api.service.js';
-import { buscarPersonasBusqueda } from './busqueda.api.js';
+import { useCallback, useId, useState } from 'react';
+import { personaBusquedaSchema, personaIdBusquedaSchema } from '@buscador/shared/schemas';
+import { Chip } from '../../components/ui/Chip.jsx';
+import { IconButton } from '../../components/ui/IconButton.jsx';
+import { useRemoteOptions } from '../../hooks/useRemoteOptions.js';
+import { obtenerPersonaBusqueda } from './busqueda.api.js';
 import { CAMPO_BUSQUEDA_CLASS_NAME, ETIQUETA_BUSQUEDA_CLASS_NAME } from './busqueda.styles.js';
+import { usePersonasBusqueda } from './usePersonasBusqueda.js';
 
-function usePersonasBusqueda({ consulta, rol, seleccionada }) {
-  const [intento, setIntento] = useState(0);
-  const [respuesta, setRespuesta] = useState({
-    consulta: '',
-    rol: '',
-    intento: -1,
-    personas: [],
-    isLoading: false,
-    error: '',
-  });
-  const q = consulta.trim();
-
-  useEffect(() => {
-    if (seleccionada || q.length < 2) {
-      return undefined;
-    }
-
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => {
-      setRespuesta({ consulta: q, rol, intento, personas: [], isLoading: true, error: '' });
-      buscarPersonasBusqueda({ q, rol, signal: controller.signal })
-        .then((data) => {
-          if (!Array.isArray(data)) {
-            throw new Error('Respuesta de personas inválida');
-          }
-          setRespuesta({ consulta: q, rol, intento, personas: data, isLoading: false, error: '' });
-        })
-        .catch((requestError) => {
-          if (!controller.signal.aborted) {
-            setRespuesta({
-              consulta: q,
-              rol,
-              intento,
-              personas: [],
-              isLoading: false,
-              error:
-                requestError instanceof ApiError
-                  ? requestError.message
-                  : 'No se pudieron buscar personas. Probá de nuevo.',
-            });
-          }
-        });
-    }, 250);
-
-    return () => {
-      window.clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [q, rol, seleccionada, intento]);
-
-  const respuestaActual =
-    respuesta.consulta === q && respuesta.rol === rol && respuesta.intento === intento;
-  const isLoading = !seleccionada && q.length >= 2 && (!respuestaActual || respuesta.isLoading);
-  const reintentar = useCallback(() => setIntento((actual) => actual + 1), []);
-
-  return {
-    personas: respuestaActual && !seleccionada ? respuesta.personas : [],
-    isLoading,
-    error: respuestaActual && !seleccionada ? respuesta.error : '',
-    reintentar,
-  };
-}
+const MENSAJE_ERROR_PERSONA = 'No se pudieron cargar los datos de la persona. Probá de nuevo.';
 
 export function SelectorPersona({
   rol,
@@ -79,15 +22,30 @@ export function SelectorPersona({
   const listId = useId();
   const [popupAbierto, setPopupAbierto] = useState(false);
   const [indiceActivo, setIndiceActivo] = useState(-1);
-  const texto = persona?.id ? persona.nombre : consulta;
+  const texto = consulta.trim();
   const { personas, isLoading, error, reintentar } = usePersonasBusqueda({
     consulta: texto,
     rol,
     seleccionada: Boolean(persona?.id),
   });
+  const seleccionValida = personaIdBusquedaSchema.safeParse({ id: persona?.id, rol });
+  const idPersona = seleccionValida.success ? seleccionValida.data.id : null;
+  const necesitaNombre = Boolean(persona?.id && !persona.nombre && seleccionValida.success);
+  const solicitarPersona = useCallback(
+    ({ signal }) => obtenerPersonaBusqueda({ id: idPersona, rol, signal }),
+    [idPersona, rol],
+  );
+  const respuestaPersona = useRemoteOptions({
+    clave: `${rol}:${persona?.id ?? ''}`,
+    habilitado: necesitaNombre,
+    solicitar: solicitarPersona,
+    mensajeError: MENSAJE_ERROR_PERSONA,
+  });
 
+  const nombreSeleccionado = persona?.nombre || respuestaPersona.datos?.nombre || '';
+  const consultaValida = personaBusquedaSchema.safeParse({ q: texto, rol });
   const mostrarOpciones =
-    popupAbierto && !persona?.id && texto.trim().length >= 2 && personas.length > 0;
+    popupAbierto && !persona?.id && consultaValida.success && personas.length > 0;
 
   function handleChange(event) {
     setPopupAbierto(true);
@@ -134,52 +92,80 @@ export function SelectorPersona({
 
   return (
     <div className="relative space-y-2" onBlur={handleBlur}>
-      <label htmlFor={inputId} className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
-        {etiqueta}
-      </label>
-      <div className="relative">
-        <input
-          id={inputId}
-          type="search"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={mostrarOpciones}
-          aria-controls={listId}
-          aria-activedescendant={
-            mostrarOpciones && indiceActivo >= 0
-              ? `${listId}-option-${personas[indiceActivo].id}`
-              : undefined
-          }
-          aria-busy={isLoading}
-          value={texto}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setPopupAbierto(true)}
-          autoComplete="off"
-          placeholder={`Buscá ${etiqueta.toLocaleLowerCase('es')}`}
-          className={`${CAMPO_BUSQUEDA_CLASS_NAME} pr-12 placeholder:text-muted`}
-        />
-        {persona?.id && (
-          <button
-            type="button"
-            aria-label={`Quitar ${etiqueta.toLocaleLowerCase('es')}`}
-            onClick={() => {
-              setPopupAbierto(false);
-              setIndiceActivo(-1);
-              onLimpiar();
-            }}
-            className="absolute inset-y-0 right-3 my-auto h-8 w-8 rounded-full text-muted transition hover:bg-background hover:text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
-          >
-            ×
+      {persona?.id ? (
+        <span id={`${inputId}-label`} className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
+          {etiqueta}
+        </span>
+      ) : (
+        <label htmlFor={inputId} className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
+          {etiqueta}
+        </label>
+      )}
+      {persona?.id ? (
+        <div
+          role="group"
+          aria-labelledby={`${inputId}-label`}
+          className="flex min-h-12 items-center"
+        >
+          <Chip className="flex max-w-full items-center gap-2">
+            <span className="truncate">{nombreSeleccionado || `Persona ${persona.id}`}</span>
+            <IconButton
+              aria-label={`Quitar ${etiqueta.toLocaleLowerCase('es')}`}
+              className="!size-7 shrink-0 text-foreground"
+              onClick={() => {
+                setPopupAbierto(false);
+                setIndiceActivo(-1);
+                onLimpiar();
+              }}
+            >
+              ×
+            </IconButton>
+          </Chip>
+        </div>
+      ) : (
+        <div className="relative">
+          <input
+            id={inputId}
+            type="text"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={mostrarOpciones}
+            aria-controls={listId}
+            aria-activedescendant={
+              mostrarOpciones && indiceActivo >= 0
+                ? `${listId}-option-${personas[indiceActivo].id}`
+                : undefined
+            }
+            aria-busy={isLoading}
+            value={consulta}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setPopupAbierto(true)}
+            autoComplete="off"
+            placeholder={`Buscá ${etiqueta.toLocaleLowerCase('es')}`}
+            className={`${CAMPO_BUSQUEDA_CLASS_NAME} placeholder:text-muted`}
+          />
+        </div>
+      )}
+      {persona?.id && respuestaPersona.isLoading && (
+        <p role="status" className="text-sm text-muted">
+          Cargando persona...
+        </p>
+      )}
+      {persona?.id && respuestaPersona.error && (
+        <div role="alert" className="space-y-2 text-sm text-danger">
+          <p>{respuestaPersona.error}</p>
+          <button type="button" onClick={respuestaPersona.reintentar} className="underline">
+            Reintentar
           </button>
-        )}
-      </div>
-      {isLoading && (
+        </div>
+      )}
+      {!persona?.id && isLoading && (
         <p role="status" className="text-sm text-muted">
           Buscando personas...
         </p>
       )}
-      {error && (
+      {!persona?.id && error && (
         <div role="alert" className="space-y-2 text-sm text-danger">
           <p>{error}</p>
           <button type="button" onClick={reintentar} className="underline">
@@ -187,15 +173,11 @@ export function SelectorPersona({
           </button>
         </div>
       )}
-      {!persona?.id &&
-        !isLoading &&
-        !error &&
-        texto.trim().length >= 2 &&
-        personas.length === 0 && (
-          <p role="status" className="text-sm text-muted">
-            No encontramos personas con ese nombre.
-          </p>
-        )}
+      {!persona?.id && !isLoading && !error && consultaValida.success && personas.length === 0 && (
+        <p role="status" className="text-sm text-muted">
+          No encontramos personas con ese nombre.
+        </p>
+      )}
       {mostrarOpciones && (
         <ul
           id={listId}
@@ -203,7 +185,7 @@ export function SelectorPersona({
           aria-label={`Opciones de ${etiqueta.toLocaleLowerCase('es')}`}
           className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-border bg-surface p-1 shadow-lg"
         >
-          {personas.slice(0, 8).map((opcion, indice) => (
+          {personas.map((opcion, indice) => (
             <li
               key={opcion.id}
               id={`${listId}-option-${opcion.id}`}

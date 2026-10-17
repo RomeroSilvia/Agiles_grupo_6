@@ -1,4 +1,6 @@
-import { ANIO_MAXIMO, ANIO_MINIMO, TIPOS_TITULO } from '@buscador/shared/constants';
+import { ANIO_MAXIMO, ANIO_MINIMO, ROL_PERSONA, TIPOS_TITULO } from '@buscador/shared/constants';
+import { tieneFiltrosAvanzados } from '@buscador/shared/schemas';
+import { Button } from '../../components/ui/Button.jsx';
 import { ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
 import { CAMPO_BUSQUEDA_CLASS_NAME, ETIQUETA_BUSQUEDA_CLASS_NAME } from './busqueda.styles.js';
 import { FiltroPlataformasPropias } from './FiltroPlataformasPropias.jsx';
@@ -20,24 +22,18 @@ export function FormularioBusqueda({
   onCargarGeneros,
   onReintentarGeneros,
 }) {
+  const hayFiltrosAvanzados = tieneFiltrosAvanzados(filtros);
   const hayFiltrosActivos = Boolean(
     filtros.q.trim() ||
     filtros.tipo ||
     filtros.anio ||
     filtros.soloPropias ||
-    filtros.genero ||
-    filtros.actor ||
-    filtros.actorNombre ||
-    filtros.director ||
-    filtros.directorNombre,
+    hayFiltrosAvanzados ||
+    filtros.actorNombre.trim() ||
+    filtros.directorNombre.trim(),
   );
   const hayFiltrosSinTitulo = Boolean(
-    filtros.tipo ||
-    filtros.anio ||
-    filtros.soloPropias ||
-    filtros.genero ||
-    filtros.actor ||
-    filtros.director,
+    filtros.tipo || filtros.anio || filtros.soloPropias || hayFiltrosAvanzados,
   );
 
   return (
@@ -62,8 +58,8 @@ export function FormularioBusqueda({
         />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="space-y-2">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.3fr)] xl:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(8rem,1fr)_auto_auto]">
+        <div className="space-y-2 lg:col-start-1">
           <label htmlFor="tipo" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
             Tipo
           </label>
@@ -83,7 +79,7 @@ export function FormularioBusqueda({
           </select>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 lg:col-start-2">
           <label htmlFor="anio" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
             Año
           </label>
@@ -100,7 +96,7 @@ export function FormularioBusqueda({
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 lg:col-start-3">
           <label htmlFor="genero" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
             Género
           </label>
@@ -137,52 +133,59 @@ export function FormularioBusqueda({
           )}
         </div>
 
-        <SelectorPersona
-          rol="actor"
-          etiqueta="Actor"
-          persona={filtros.actor ? { id: filtros.actor, nombre: filtros.actorNombre } : null}
-          consulta={filtros.actorNombre}
-          onConsultaChange={(consulta) => onCambiarPersona('actor', null, consulta)}
-          onSeleccionar={(persona) => onCambiarPersona('actor', persona)}
-          onLimpiar={() => onCambiarPersona('actor', null, '')}
-        />
+        <div className="lg:col-start-4">
+          <SelectorPersona
+            rol={ROL_PERSONA.ACTOR}
+            etiqueta="Actor"
+            persona={filtros.actor ? { id: filtros.actor, nombre: filtros.actorNombre } : null}
+            consulta={filtros.actorNombre}
+            onConsultaChange={(consulta) => onCambiarPersona(ROL_PERSONA.ACTOR, null, consulta)}
+            onSeleccionar={(persona) => onCambiarPersona(ROL_PERSONA.ACTOR, persona)}
+            onLimpiar={() => onCambiarPersona(ROL_PERSONA.ACTOR, null, '')}
+          />
+        </div>
 
-        <SelectorPersona
-          rol="director"
-          etiqueta="Director"
-          persona={
-            filtros.director ? { id: filtros.director, nombre: filtros.directorNombre } : null
-          }
-          consulta={filtros.directorNombre}
-          onConsultaChange={(consulta) => onCambiarPersona('director', null, consulta)}
-          onSeleccionar={(persona) => onCambiarPersona('director', persona)}
-          onLimpiar={() => onCambiarPersona('director', null, '')}
-        />
+        <div className="lg:col-start-5">
+          <SelectorPersona
+            rol={ROL_PERSONA.DIRECTOR}
+            etiqueta="Director"
+            persona={
+              filtros.director ? { id: filtros.director, nombre: filtros.directorNombre } : null
+            }
+            consulta={filtros.directorNombre}
+            onConsultaChange={(consulta) => onCambiarPersona(ROL_PERSONA.DIRECTOR, null, consulta)}
+            onSeleccionar={(persona) => onCambiarPersona(ROL_PERSONA.DIRECTOR, persona)}
+            onLimpiar={() => onCambiarPersona(ROL_PERSONA.DIRECTOR, null, '')}
+          />
+        </div>
 
-        <FiltroPlataformasPropias
-          filtro={filtroPropias}
-          activo={filtros.soloPropias}
-          onChange={onCambiarSoloPropias}
-        />
-      </div>
+        <div className="lg:col-span-3 lg:col-start-1 xl:col-span-1 xl:col-start-6">
+          <FiltroPlataformasPropias
+            filtro={filtroPropias}
+            activo={filtros.soloPropias}
+            onChange={onCambiarSoloPropias}
+          />
+        </div>
 
-      <div className="flex flex-wrap justify-end gap-3">
-        {hayFiltrosActivos && (
-          <button
-            type="button"
-            onClick={onLimpiarFiltros}
-            className="rounded-xl border border-border px-5 py-3 font-semibold text-foreground transition hover:bg-background focus:ring-4 focus:ring-primary/20 focus:outline-none"
+        <div className="flex flex-wrap justify-end gap-3 sm:col-span-2 lg:contents">
+          {hayFiltrosActivos && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onLimpiarFiltros}
+              className="sm:w-auto lg:col-start-4 xl:col-start-7"
+            >
+              Limpiar filtros
+            </Button>
+          )}
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="sm:w-auto lg:col-start-5 xl:col-start-8"
           >
-            Limpiar filtros
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:bg-primary-hover focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
-        >
-          {isLoading ? 'Buscando...' : 'Buscar'}
-        </button>
+            {isLoading ? 'Buscando...' : 'Buscar'}
+          </Button>
+        </div>
       </div>
     </form>
   );

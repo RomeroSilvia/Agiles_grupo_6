@@ -3,22 +3,27 @@ import { TMDB_CONFIG } from '../config/tmdb.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 import { createTtlCache } from '../utils/ttlCache.js';
-import { PAGINA_MAXIMA, TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
+import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const PROFILE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_LANGUAGE = 'es-AR';
-const MAX_PERSONAS_SUGERIDAS = 8;
-const MAX_PAGINAS_BUSQUEDA_PERSONAS = 5;
-const MAX_PERSONAS_SECUNDARIAS_A_VALIDAR = 8;
-const TAMANIO_LOTE_CREDITOS_PERSONAS = 4;
-const RESULTADOS_POR_PAGINA = 20;
 
 const RUTA_TMDB_POR_TIPO = Object.freeze({
   [TIPO_TITULO.PELICULA]: 'movie',
   [TIPO_TITULO.SERIE]: 'tv',
+});
+
+const PARAMETRO_ANIO_POR_TIPO = Object.freeze({
+  [TIPO_TITULO.PELICULA]: 'primary_release_year',
+  [TIPO_TITULO.SERIE]: 'first_air_date_year',
+});
+
+const CAMPO_FECHA_POR_TIPO = Object.freeze({
+  [TIPO_TITULO.PELICULA]: 'release_date',
+  [TIPO_TITULO.SERIE]: 'first_air_date',
 });
 
 const TIPO_OFERTA_POR_CLAVE_TMDB = Object.freeze({
@@ -31,29 +36,29 @@ const TIPO_OFERTA_POR_CLAVE_TMDB = Object.freeze({
 
 const limitarConcurrencia = createConcurrencyLimiter(TMDB_CONFIG.MAX_CONCURRENT_REQUESTS);
 
+const busquedasCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
+});
 const ofertasCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
   maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
 });
-
 const creditosCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
   maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
 });
-
 const generosCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
-  maxEntries: 2,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES_GENEROS,
 });
-
 const personasCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
-  maxEntries: 500,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES_PERSONAS,
 });
-
-const rolesPersonaCache = createTtlCache({
+const creditosCombinadosCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
-  maxEntries: 1000,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES_ROLES_PERSONA,
 });
 
 function tmdbRequest(path, params) {
@@ -96,13 +101,8 @@ async function tmdbFetch(path, params = {}) {
   }
 }
 
-function searchParams({ q, pagina }) {
-  return {
-    query: q,
-    language: TMDB_LANGUAGE,
-    include_adult: false,
-    page: pagina,
-  };
+function mapearColeccion(items, mapear) {
+  return Array.isArray(items) ? items.map(mapear) : items;
 }
 
 function obtenerAnio(fecha) {
@@ -115,7 +115,7 @@ function obtenerTexto(valor) {
 }
 
 function normalizarBase(item, tipo) {
-  const fecha = tipo === TIPO_TITULO.PELICULA ? item?.release_date : item?.first_air_date;
+  const fecha = item?.[CAMPO_FECHA_POR_TIPO[tipo]];
 
   return {
     tmdbId: item?.id,
@@ -127,351 +127,141 @@ function normalizarBase(item, tipo) {
   };
 }
 
-function normalizarDetalle(item, tipo) {
-  return {
-    ...normalizarBase(item, tipo),
-    sinopsis: obtenerTexto(item?.overview),
-  };
-}
-
 function normalizarResultado(item, tipo) {
   return {
     ...normalizarBase(item, tipo),
     relevancia: Number.isFinite(item?.popularity) ? item.popularity : 0,
+    generoIds: item?.genre_ids,
+    fecha: item?.[CAMPO_FECHA_POR_TIPO[tipo]] ?? null,
   };
 }
 
-function respuestaInvalida(mensaje) {
-  return new ExternalServiceError('TMDB', new Error(mensaje));
-}
-
-function normalizarRespuesta(response, tipo) {
-  const items = response?.results;
-
+function normalizarRespuestaBusqueda(response, tipo) {
   return {
-    resultados: Array.isArray(items) ? items.map((item) => normalizarResultado(item, tipo)) : items,
+    resultados: mapearColeccion(response?.results, (item) => normalizarResultado(item, tipo)),
     pagina: response?.page,
     totalResultados: response?.total_results,
     totalPaginas: response?.total_pages,
   };
 }
 
-async function obtenerCreditosPersona({ personaId, rol, tipo }) {
-  return creditosCache.getOrSet(`${personaId}:${rol}:${tipo}`, async () => {
+function normalizarPersona(persona) {
+  return {
+    id: persona?.id,
+    nombre: persona?.name,
+    fotoUrl: persona?.profile_path ? `${PROFILE_BASE_URL}${persona.profile_path}` : null,
+    departamentoConocido: persona?.known_for_department ?? null,
+  };
+}
+
+function normalizarCredito(credito, tipo) {
+  return {
+    ...normalizarResultado(credito, tipo),
+    puesto: credito?.job,
+  };
+}
+
+function parametrosBusqueda({ q, pagina }) {
+  return {
+    query: q,
+    language: TMDB_LANGUAGE,
+    include_adult: false,
+    page: pagina,
+  };
+}
+
+export function buscarTitulosPorTexto({ tipo, q, anio, pagina }) {
+  const ruta = RUTA_TMDB_POR_TIPO[tipo];
+  const parametros = parametrosBusqueda({ q, pagina });
+  if (anio !== undefined) {
+    parametros[PARAMETRO_ANIO_POR_TIPO[tipo]] = anio;
+  }
+
+  return busquedasCache.getOrSet(`texto:${tipo}:${q}:${anio ?? ''}:${pagina}`, async () => {
+    const respuesta = await tmdbRequest(`/search/${ruta}`, parametros);
+    return normalizarRespuestaBusqueda(respuesta, tipo);
+  });
+}
+
+export function descubrirTitulos({ tipo, anio, generoIds, pagina }) {
+  const ruta = RUTA_TMDB_POR_TIPO[tipo];
+  const parametros = {
+    language: TMDB_LANGUAGE,
+    include_adult: false,
+    page: pagina,
+    ...(anio === undefined ? {} : { [PARAMETRO_ANIO_POR_TIPO[tipo]]: anio }),
+    ...(generoIds === undefined ? {} : { with_genres: generoIds.join('|') }),
+  };
+
+  return busquedasCache.getOrSet(
+    `discover:${tipo}:${anio ?? ''}:${generoIds?.join('|') ?? ''}:${pagina}`,
+    async () =>
+      normalizarRespuestaBusqueda(await tmdbRequest(`/discover/${ruta}`, parametros), tipo),
+  );
+}
+
+export function obtenerCreditosPersona({ personaId, tipo }) {
+  return creditosCache.getOrSet(`${personaId}:${tipo}`, async () => {
     const ruta = RUTA_TMDB_POR_TIPO[tipo];
     const respuesta = await tmdbRequest(`/person/${personaId}/${ruta}_credits`, {
       language: TMDB_LANGUAGE,
     });
-    const tipoCredito = rol === 'actor' ? 'cast' : 'crew';
-    const creditos = respuesta?.[tipoCredito];
-
-    if (!Array.isArray(creditos)) {
-      throw respuestaInvalida('TMDB devolvió créditos inválidos');
-    }
-
-    return creditos.filter(
-      (credito) =>
-        Number.isInteger(credito?.id) &&
-        credito.id > 0 &&
-        (rol === 'actor' ||
-          (typeof credito?.job === 'string' && credito.job.toLocaleLowerCase('en') === 'director')),
-    );
+    return {
+      cast: mapearColeccion(respuesta?.cast, (credito) => normalizarCredito(credito, tipo)),
+      crew: mapearColeccion(respuesta?.crew, (credito) => normalizarCredito(credito, tipo)),
+    };
   });
 }
 
-async function obtenerIdsCreditos(filtros) {
-  const creditos = await obtenerCreditosPersona(filtros);
-  return new Set(creditos.map(({ id }) => id));
-}
-
-async function personaTieneCreditoDeRol({ personaId, rol }) {
-  return rolesPersonaCache.getOrSet(`${personaId}:${rol}`, async () => {
+export function obtenerCreditosCombinados({ personaId }) {
+  return creditosCombinadosCache.getOrSet(String(personaId), async () => {
     const respuesta = await tmdbRequest(`/person/${personaId}/combined_credits`, {
       language: TMDB_LANGUAGE,
     });
-    const creditos = rol === 'actor' ? respuesta?.cast : respuesta?.crew;
-
-    if (!Array.isArray(creditos)) {
-      throw respuestaInvalida('TMDB devolvió créditos combinados inválidos');
-    }
-
-    return creditos.some(
-      (credito) =>
-        Number.isInteger(credito?.id) &&
-        credito.id > 0 &&
-        (rol === 'actor' ||
-          (typeof credito?.job === 'string' && credito.job.toLocaleLowerCase('en') === 'director')),
-    );
+    return {
+      cast: mapearColeccion(respuesta?.cast, (credito) => ({ id: credito?.id })),
+      crew: mapearColeccion(respuesta?.crew, (credito) => ({
+        id: credito?.id,
+        job: credito?.job,
+      })),
+    };
   });
 }
 
-async function normalizarRespuestaFiltrada(response, tipo, filtros) {
-  const items = response?.results;
-  if (!Array.isArray(items)) {
-    return normalizarRespuesta(response, tipo);
-  }
-
-  const personas = [
-    ...(filtros.actor === undefined ? [] : [{ personaId: filtros.actor, rol: 'actor' }]),
-    ...(filtros.director === undefined ? [] : [{ personaId: filtros.director, rol: 'director' }]),
-  ];
-  const creditos = await Promise.all(
-    personas.map(({ personaId, rol }) => obtenerIdsCreditos({ personaId, rol, tipo })),
-  );
-
-  const resultados = items.filter((item) => {
-    if (filtros.genero !== undefined) {
-      if (!Array.isArray(item?.genre_ids)) {
-        throw respuestaInvalida('TMDB devolvió géneros inválidos para un título');
-      }
-      if (!item.genre_ids.includes(filtros.genero)) {
-        return false;
-      }
-    }
-
-    if (creditos.some((ids) => !ids.has(item?.id))) {
-      return false;
-    }
-
-    return true;
-  });
-
-  return normalizarRespuesta({ ...response, results: resultados }, tipo);
-}
-
-export async function buscarPeliculas({ q, anio, pagina, genero, actor, director }) {
-  if (!q?.trim()) {
-    return buscarSinTexto(TIPO_TITULO.PELICULA, { anio, pagina, genero, actor, director });
-  }
-
-  const response = await tmdbRequest('/search/movie', {
-    ...searchParams({ q, pagina }),
-    ...(anio === undefined ? {} : { primary_release_year: anio }),
-  });
-
-  return normalizarRespuestaFiltrada(response, TIPO_TITULO.PELICULA, { genero, actor, director });
-}
-
-export async function buscarSeries({ q, anio, pagina, genero, actor, director }) {
-  if (!q?.trim()) {
-    return buscarSinTexto(TIPO_TITULO.SERIE, { anio, pagina, genero, actor, director });
-  }
-
-  const response = await tmdbRequest('/search/tv', {
-    ...searchParams({ q, pagina }),
-    ...(anio === undefined ? {} : { first_air_date_year: anio }),
-  });
-
-  return normalizarRespuestaFiltrada(response, TIPO_TITULO.SERIE, {
-    genero,
-    actor,
-    director,
-  });
-}
-
-async function buscarSinTexto(tipo, filtros) {
-  if (filtros.actor === undefined && filtros.director === undefined) {
-    const ruta = RUTA_TMDB_POR_TIPO[tipo];
-    const respuesta = await tmdbRequest(`/discover/${ruta}`, {
-      language: TMDB_LANGUAGE,
-      include_adult: false,
-      page: filtros.pagina,
-      ...(filtros.genero === undefined ? {} : { with_genres: filtros.genero }),
-      ...(filtros.anio === undefined
-        ? {}
-        : {
-            [tipo === TIPO_TITULO.PELICULA ? 'primary_release_year' : 'first_air_date_year']:
-              filtros.anio,
-          }),
-    });
-
-    if (!Array.isArray(respuesta?.results)) {
-      throw respuestaInvalida('TMDB devolvió una lista de títulos inválida');
-    }
-
-    return normalizarRespuesta(respuesta, tipo);
-  }
-
-  const personas = [
-    ...(filtros.actor === undefined ? [] : [{ personaId: filtros.actor, rol: 'actor' }]),
-    ...(filtros.director === undefined ? [] : [{ personaId: filtros.director, rol: 'director' }]),
-  ];
-  const creditosPorPersona = await Promise.all(
-    personas.map((persona) => obtenerCreditosPersona({ ...persona, tipo })),
-  );
-  const idsRequeridos = creditosPorPersona
-    .slice(1)
-    .map((creditos) => new Set(creditos.map(({ id }) => id)));
-  const fecha = tipo === TIPO_TITULO.PELICULA ? 'release_date' : 'first_air_date';
-  const titulos = new Map();
-
-  for (const credito of creditosPorPersona[0]) {
-    if (idsRequeridos.some((ids) => !ids.has(credito.id))) {
-      continue;
-    }
-    if (filtros.anio !== undefined && obtenerAnio(credito[fecha]) !== filtros.anio) {
-      continue;
-    }
-    if (filtros.genero !== undefined) {
-      if (!Array.isArray(credito.genre_ids)) {
-        throw respuestaInvalida('TMDB devolvió géneros inválidos para un crédito');
-      }
-      if (!credito.genre_ids.includes(filtros.genero)) {
-        continue;
-      }
-    }
-    titulos.set(credito.id, credito);
-  }
-
-  const resultadosOrdenados = [...titulos.values()].sort(
-    (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0),
-  );
-  const totalPaginas = Math.min(
-    PAGINA_MAXIMA,
-    Math.ceil(resultadosOrdenados.length / RESULTADOS_POR_PAGINA),
-  );
-  const inicio = (filtros.pagina - 1) * RESULTADOS_POR_PAGINA;
-
-  return normalizarRespuesta(
-    {
-      page: filtros.pagina,
-      results: resultadosOrdenados.slice(inicio, inicio + RESULTADOS_POR_PAGINA),
-      total_results: resultadosOrdenados.length,
-      total_pages: totalPaginas,
-    },
-    tipo,
-  );
-}
-
-async function consultarGeneros(ruta) {
-  const respuesta = await tmdbRequest(`/genre/${ruta}/list`, { language: TMDB_LANGUAGE });
-  if (!Array.isArray(respuesta?.genres)) {
-    throw respuestaInvalida('TMDB devolvió una lista de géneros inválida');
-  }
-
-  return respuesta.genres.map((genero) => {
-    if (!Number.isInteger(genero?.id) || genero.id < 1 || typeof genero.name !== 'string') {
-      throw respuestaInvalida('TMDB devolvió un género inválido');
-    }
-    return { id: genero.id, nombre: genero.name };
-  });
-}
-
-async function cargarGeneros() {
-  const [generosPelicula, generosSerie] = await Promise.all([
-    consultarGeneros('movie'),
-    consultarGeneros('tv'),
-  ]);
-  const porId = new Map();
-
-  for (const genero of [...generosPelicula, ...generosSerie]) {
-    porId.set(genero.id, genero);
-  }
-
-  return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-}
-
-export function listarGeneros() {
-  return generosCache.getOrSet('generos', cargarGeneros);
-}
-
-export function buscarPersonas({ q, rol }) {
+export function buscarPersonas({ q, pagina }) {
   const consulta = q.trim();
-  const clave = `${rol}:${consulta.toLocaleLowerCase('es')}`;
-
-  return personasCache.getOrSet(clave, async () => {
-    const departamento = rol === 'actor' ? 'acting' : 'directing';
-    const personas = [];
-    const idsIncluidos = new Set();
-    let personasSecundariasValidadas = 0;
-    let totalPaginas = 1;
-
-    for (
-      let pagina = 1;
-      pagina <= Math.min(totalPaginas, MAX_PAGINAS_BUSQUEDA_PERSONAS) &&
-      personas.length < MAX_PERSONAS_SUGERIDAS;
-      pagina += 1
-    ) {
+  return personasCache.getOrSet(
+    `buscar:${consulta.toLocaleLowerCase('es')}:${pagina}`,
+    async () => {
       const respuesta = await tmdbRequest('/search/person', {
-        ...searchParams({ q: consulta, pagina }),
+        query: consulta,
+        language: TMDB_LANGUAGE,
+        include_adult: false,
+        page: pagina,
       });
-      if (!Array.isArray(respuesta?.results)) {
-        throw respuestaInvalida('TMDB devolvió una lista de personas inválida');
-      }
-      totalPaginas = Number.isInteger(respuesta.total_pages) ? respuesta.total_pages : pagina;
+      return {
+        resultados: mapearColeccion(respuesta?.results, normalizarPersona),
+        totalPaginas: respuesta?.total_pages,
+      };
+    },
+  );
+}
 
-      const candidatas = respuesta.results.filter(
-        (persona) =>
-          Number.isInteger(persona?.id) && persona.id > 0 && typeof persona.name === 'string',
-      );
-      const candidatasPrincipales = candidatas.filter(
-        (persona) =>
-          typeof persona.known_for_department === 'string' &&
-          persona.known_for_department.toLocaleLowerCase('en') === departamento,
-      );
-      const idsPrincipalesNuevos = new Set(
-        candidatasPrincipales.map((persona) => persona.id).filter((id) => !idsIncluidos.has(id)),
-      );
-      const candidatasSecundarias = candidatas.filter(
-        (persona) => !candidatasPrincipales.includes(persona) && !idsIncluidos.has(persona.id),
-      );
-      const cuposRestantes = Math.max(
-        0,
-        MAX_PERSONAS_SUGERIDAS - personas.length - idsPrincipalesNuevos.size,
-      );
-      const cantidadAValidar = Math.min(
-        cuposRestantes === 0 ? 0 : candidatasSecundarias.length,
-        MAX_PERSONAS_SECUNDARIAS_A_VALIDAR - personasSecundariasValidadas,
-      );
-      const validadasSecundarias = new Set();
+export function obtenerPersona({ personaId }) {
+  return personasCache.getOrSet(`id:${personaId}`, async () => {
+    const respuesta = await tmdbRequest(`/person/${personaId}`, { language: TMDB_LANGUAGE });
+    return normalizarPersona(respuesta);
+  });
+}
 
-      for (let inicio = 0; inicio < cantidadAValidar; inicio += TAMANIO_LOTE_CREDITOS_PERSONAS) {
-        const lote = candidatasSecundarias.slice(
-          inicio,
-          Math.min(inicio + TAMANIO_LOTE_CREDITOS_PERSONAS, cantidadAValidar),
-        );
-        const elegibles = await Promise.all(
-          lote.map((persona) =>
-            personaTieneCreditoDeRol({ personaId: persona.id, rol }).then((tieneRol) =>
-              tieneRol ? persona.id : null,
-            ),
-          ),
-        );
-        elegibles.filter((id) => id !== null).forEach((id) => validadasSecundarias.add(id));
-        personasSecundariasValidadas += lote.length;
-
-        if (validadasSecundarias.size >= cuposRestantes) {
-          break;
-        }
-      }
-
-      for (const persona of candidatas) {
-        const esDelRolBuscado =
-          candidatasPrincipales.includes(persona) || validadasSecundarias.has(persona.id);
-        if (
-          !esDelRolBuscado ||
-          !Number.isInteger(persona?.id) ||
-          persona.id < 1 ||
-          typeof persona.name !== 'string' ||
-          idsIncluidos.has(persona.id)
-        ) {
-          continue;
-        }
-
-        idsIncluidos.add(persona.id);
-        personas.push({
-          id: persona.id,
-          nombre: persona.name,
-          fotoUrl: persona.profile_path ? `${PROFILE_BASE_URL}${persona.profile_path}` : null,
-        });
-
-        if (personas.length >= MAX_PERSONAS_SUGERIDAS) {
-          break;
-        }
-      }
-    }
-
-    return personas;
+export function listarGenerosPorTipo(tipo) {
+  const ruta = RUTA_TMDB_POR_TIPO[tipo];
+  return generosCache.getOrSet(tipo, async () => {
+    const respuesta = await tmdbRequest(`/genre/${ruta}/list`, { language: TMDB_LANGUAGE });
+    return mapearColeccion(respuesta?.genres, (genero) => ({
+      id: genero?.id,
+      nombre: genero?.name,
+    }));
   });
 }
 
@@ -493,7 +283,10 @@ export async function obtenerDetalle(tipo, tmdbId) {
     throw error;
   }
 
-  return normalizarDetalle(response, tipo);
+  return {
+    ...normalizarBase(response, tipo),
+    sinopsis: obtenerTexto(response?.overview),
+  };
 }
 
 function normalizarOfertasDeRegion(datosRegion) {

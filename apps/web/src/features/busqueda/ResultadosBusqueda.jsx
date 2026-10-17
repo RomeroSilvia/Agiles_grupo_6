@@ -1,4 +1,5 @@
 import { CARDS_CARGANDO } from './busqueda.constants.js';
+import { Button } from '../../components/ui/Button.jsx';
 import { EstadoSinResultadosPropios } from './EstadoSinResultadosPropios.jsx';
 import { ResultadoCard } from './ResultadoCard.jsx';
 import { ResultadoCardCargando } from './ResultadoCardCargando.jsx';
@@ -131,14 +132,15 @@ export function ResultadosBusqueda({
                 : 'No encontramos contenido disponible con esos filtros.'}
           </p>
           {hayFiltrosAvanzados && hayMasPaginas && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={onCargarMas}
               disabled={isLoading}
-              className="rounded-xl border border-border px-5 py-3 font-semibold text-foreground transition hover:bg-background focus:ring-4 focus:ring-primary/20 focus:outline-none disabled:cursor-wait disabled:opacity-60"
+              className="w-auto"
             >
               {isLoadingMore ? 'Buscando...' : 'Seguir buscando'}
-            </button>
+            </Button>
           )}
         </div>
       )}

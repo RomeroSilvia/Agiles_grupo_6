@@ -1,20 +1,36 @@
 import { Router } from 'express';
-import { z } from 'zod';
-import { busquedaSchema } from '@buscador/shared/schemas';
+import {
+  busquedaSchema,
+  personaBusquedaSchema,
+  personaIdBusquedaSchema,
+  personaRolSchema,
+} from '@buscador/shared/schemas';
 import * as busquedaController from '../controllers/busqueda.controller.js';
+import { TMDB_CONFIG } from '../config/tmdb.config.js';
+import { rateLimit } from '../middlewares/rateLimit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 
 export const busquedaRoutes = Router();
 
-const personasBusquedaSchema = z.object({
-  q: z.string().trim().min(2, 'Ingresá al menos dos letras para buscar personas').max(100),
-  rol: z.enum(['actor', 'director']),
-});
+const limitarBusqueda = rateLimit(TMDB_CONFIG.RATE_LIMIT_BUSQUEDA);
+const limitarBusquedaPersonas = rateLimit(TMDB_CONFIG.RATE_LIMIT_PERSONAS);
 
 busquedaRoutes.get('/generos', busquedaController.listarGeneros);
 busquedaRoutes.get(
   '/personas',
-  validate({ query: personasBusquedaSchema }),
+  limitarBusquedaPersonas,
+  validate({ query: personaBusquedaSchema }),
   busquedaController.buscarPersonas,
 );
-busquedaRoutes.get('/', validate({ query: busquedaSchema }), busquedaController.buscar);
+busquedaRoutes.get(
+  '/personas/:id',
+  limitarBusquedaPersonas,
+  validate({ params: personaIdBusquedaSchema.pick({ id: true }), query: personaRolSchema }),
+  busquedaController.obtenerPersona,
+);
+busquedaRoutes.get(
+  '/',
+  limitarBusqueda,
+  validate({ query: busquedaSchema }),
+  busquedaController.buscar,
+);

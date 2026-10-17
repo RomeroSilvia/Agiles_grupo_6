@@ -1,66 +1,32 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '../../services/api.service.js';
+import { useCallback, useState } from 'react';
 import { listarGenerosBusqueda } from './busqueda.api.js';
+import { useRemoteOptions } from '../../hooks/useRemoteOptions.js';
+
+const MENSAJE_ERROR = 'No se pudieron cargar los géneros. Probá de nuevo más tarde.';
 
 export function useGenerosBusqueda({ cargarInicialmente = false } = {}) {
-  const [intento, setIntento] = useState(cargarInicialmente ? 1 : 0);
-  const [respuesta, setRespuesta] = useState({
-    intento: 0,
-    generos: [],
-    cargado: false,
-    error: '',
+  const [habilitado, setHabilitado] = useState(cargarInicialmente);
+  const solicitar = useCallback(async ({ signal }) => {
+    const generos = await listarGenerosBusqueda({ signal });
+    if (!Array.isArray(generos)) {
+      throw new Error('Respuesta de géneros inválida');
+    }
+    return generos;
+  }, []);
+  const respuesta = useRemoteOptions({
+    clave: 'generos',
+    habilitado,
+    solicitar,
+    mensajeError: MENSAJE_ERROR,
   });
-  const isLoading = intento > 0 && respuesta.intento !== intento;
-
-  useEffect(() => {
-    if (intento === 0) {
-      return undefined;
-    }
-
-    const controller = new AbortController();
-
-    listarGenerosBusqueda({ signal: controller.signal })
-      .then((data) => {
-        if (!Array.isArray(data)) {
-          throw new Error('Respuesta de géneros inválida');
-        }
-        setRespuesta({ intento, generos: data, cargado: true, error: '' });
-      })
-      .catch((requestError) => {
-        if (!controller.signal.aborted) {
-          setRespuesta({
-            intento,
-            generos: [],
-            cargado: false,
-            error:
-              requestError instanceof ApiError
-                ? requestError.message
-                : 'No se pudieron cargar los géneros. Probá de nuevo más tarde.',
-          });
-        }
-      });
-
-    return () => controller.abort();
-  }, [intento]);
-
-  const cargar = useCallback(() => {
-    if (!isLoading && !respuesta.cargado) {
-      setIntento((actual) => actual + 1);
-    }
-  }, [isLoading, respuesta.cargado]);
-
-  const reintentar = useCallback(() => {
-    if (!isLoading) {
-      setIntento((actual) => actual + 1);
-    }
-  }, [isLoading]);
+  const cargar = useCallback(() => setHabilitado(true), []);
 
   return {
-    generos: respuesta.generos,
-    isLoading,
+    generos: Array.isArray(respuesta.datos) ? respuesta.datos : [],
+    isLoading: respuesta.isLoading,
     error: respuesta.error,
     cargado: respuesta.cargado,
     cargar,
-    reintentar,
+    reintentar: respuesta.reintentar,
   };
 }

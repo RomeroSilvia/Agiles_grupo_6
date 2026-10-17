@@ -86,6 +86,7 @@ links directos al título y la watchlist todavía no están implementados.
 | GET    | `/busqueda`                             |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `genero`, `actor`, `director`, `pagina` |
 | GET    | `/busqueda/generos`                     |        | Lista géneros disponibles para filtrar películas y series                                                   |
 | GET    | `/busqueda/personas`                    |        | Busca actores o directores. Query: `q` (mínimo 2 letras), `rol`                                             |
+| GET    | `/busqueda/personas/:id`                |        | Resuelve una persona por su ID. Query: `rol`                                                                |
 | GET    | `/busqueda/propias`                     |   si   | Búsqueda por texto, tipo y año, solo con títulos disponibles en plataformas del usuario                     |
 | GET    | `/titulos/:tipo/:tmdbId`                |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)                                              |
 | GET    | `/titulos/:tipo/:tmdbId/disponibilidad` |        | Plataformas activas por modalidad y enlace de TMDB para la región indicada                                  |
@@ -96,10 +97,12 @@ links directos al título y la watchlist todavía no están implementados.
 
 Los endpoints con sesión responden `401` (`UNAUTHENTICATED`) si no hay un usuario logueado.
 
-En `/api/busqueda`, `genero`, `actor` y `director` reciben identificadores de TMDB y se combinan
-con el texto, tipo y año de la consulta. Si no se indica tipo, los filtros se aplican a películas y
-series. La búsqueda de personas recibe `rol=actor` o `rol=director`; la web envía el identificador
-seleccionado al buscar resultados. Las páginas mantienen esos filtros. Cuando una página de texto
-no tiene coincidencias, la API revisa hasta cinco páginas consecutivas y la web permite continuar
-la búsqueda o limpiar los filtros. `/api/busqueda/propias` conserva sus filtros actuales y no acepta
-`genero`, `actor` ni `director`.
+En `/api/busqueda`, `genero` recibe el ID unificado de `/api/busqueda/generos`; `actor` y `director`
+reciben identificadores de TMDB. Estos filtros se combinan con el texto, tipo y año de la consulta.
+Si no se indica tipo, se aplican a películas y series con el ID de género que corresponde a cada
+tipo. La búsqueda de personas recibe `rol=actor` o `rol=director`; la web conserva solo el ID en la
+URL y consulta `/api/busqueda/personas/:id` para mostrar el nombre validado por la API. Las páginas
+mantienen esos filtros. Cuando una página de texto no tiene coincidencias, la API revisa hasta tres
+páginas consecutivas y la web permite continuar la búsqueda o limpiar los filtros.
+`/api/busqueda/propias` combina esos filtros de catálogo con la disponibilidad de las plataformas
+del usuario.

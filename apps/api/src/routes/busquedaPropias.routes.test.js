@@ -4,6 +4,7 @@ import { createApp } from '../app.js';
 import * as authRepository from '../repositories/auth.repository.js';
 import * as usuarioPlataformaRepository from '../repositories/usuarioPlataforma.repository.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
+import * as busquedaService from '../services/busqueda.service.js';
 import * as regionService from '../services/region.service.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { NETFLIX, USUARIO } from '../test/fixtures.js';
@@ -12,10 +13,9 @@ vi.mock('../repositories/auth.repository.js');
 vi.mock('../repositories/usuarioPlataforma.repository.js');
 vi.mock('../services/region.service.js');
 vi.mock('../integrations/tmdb.integration.js', () => ({
-  buscarPeliculas: vi.fn(),
-  buscarSeries: vi.fn(),
   obtenerOfertas: vi.fn(),
 }));
+vi.mock('../services/busqueda.service.js', () => ({ buscarTitulos: vi.fn() }));
 
 const COOKIE_SESION = 'access_token=access-de-prueba';
 const EN_NETFLIX = {
@@ -34,7 +34,6 @@ function pelicula(tmdbId, nombre = `Película ${tmdbId}`) {
     anio: 2021,
     posterUrl: null,
     puntuacion: 7,
-    relevancia: 100 - tmdbId,
   };
 }
 
@@ -64,6 +63,7 @@ beforeEach(() => {
   authRepository.obtenerUsuarioPorToken.mockResolvedValue(USUARIO);
   usuarioPlataformaRepository.listarPlataformasActivasPorUsuario.mockResolvedValue([NETFLIX]);
   regionService.obtenerRegion.mockResolvedValue({ region: 'AR', source: 'profile' });
+  busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([]));
   ofertasPorId({});
 });
 
@@ -74,53 +74,63 @@ describe('GET /api/busqueda/propias', () => {
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('UNAUTHENTICATED');
     expect(usuarioPlataformaRepository.listarPlataformasActivasPorUsuario).not.toHaveBeenCalled();
-    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
+    expect(busquedaService.buscarTitulos).not.toHaveBeenCalled();
   });
 
   it('permite buscar sin texto si la ruta ya filtra por plataformas propias', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([]));
 
     const res = await buscarConSesion({});
 
     expect(res.status).toBe(200);
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith(
+    expect(busquedaService.buscarTitulos).toHaveBeenCalledWith(
       expect.objectContaining({ q: '', pagina: 1 }),
+      { avanzarSiVacio: false },
     );
     expect(regionService.obtenerRegion).toHaveBeenCalled();
   });
 
   it('permite buscar solo en las plataformas propias sin otros filtros de catálogo', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([]));
-    tmdbIntegration.buscarSeries.mockResolvedValue(paginaDeTmdb([]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([]));
 
     const res = await request(createApp())
       .get('/api/busqueda/propias')
       .set('Cookie', COOKIE_SESION);
 
     expect(res.status).toBe(200);
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith(
+    expect(busquedaService.buscarTitulos).toHaveBeenCalledWith(
       expect.objectContaining({ q: '', pagina: 1 }),
-    );
-    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith(
-      expect.objectContaining({ q: '', pagina: 1 }),
+      { avanzarSiVacio: false },
     );
   });
 
   it('combina filtros avanzados con la disponibilidad en plataformas propias', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1, 'Dune')]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([pelicula(1, 'Dune')]));
     ofertasPorId({ 1: EN_NETFLIX });
 
-    const res = await buscarConSesion({ q: 'Dune', genero: '18', actor: '6193', director: '525' });
+    const res = await buscarConSesion({
+      q: 'Dune',
+      genero: 'drama',
+      actor: '6193',
+      director: '525',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.data.resultados.map(({ tmdbId }) => tmdbId)).toEqual([1]);
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith(
-      expect.objectContaining({ q: 'Dune', genero: 18, actor: 6193, director: 525, pagina: 1 }),
+    expect(busquedaService.buscarTitulos).toHaveBeenCalledWith(
+      expect.objectContaining({
+        q: 'Dune',
+        genero: 'drama',
+        actor: 6193,
+        director: 525,
+        pagina: 1,
+      }),
+      { avanzarSiVacio: false },
     );
   });
 
   it('devuelve solo los títulos disponibles en las plataformas del usuario', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(
+    busquedaService.buscarTitulos.mockResolvedValue(
       paginaDeTmdb([pelicula(1, 'Dune'), pelicula(2, 'Matrix')]),
     );
     ofertasPorId({ 1: EN_NETFLIX });
@@ -157,12 +167,12 @@ describe('GET /api/busqueda/propias', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.resultados).toEqual([]);
-    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
+    expect(busquedaService.buscarTitulos).not.toHaveBeenCalled();
     expect(tmdbIntegration.obtenerOfertas).not.toHaveBeenCalled();
   });
 
   it('lee la página siguiente si faltan resultados y devuelve la última leída', async () => {
-    tmdbIntegration.buscarPeliculas.mockImplementation(async ({ pagina }) =>
+    busquedaService.buscarTitulos.mockImplementation(async ({ pagina }) =>
       paginaDeTmdb([pelicula(pagina * 10)], { pagina, totalPaginas: 5 }),
     );
     ofertasPorId({ 10: EN_NETFLIX, 20: EN_NETFLIX });
@@ -172,33 +182,31 @@ describe('GET /api/busqueda/propias', () => {
     expect(res.body.data.resultados.map(({ tmdbId }) => tmdbId)).toEqual([10, 20]);
     expect(res.body.data.pagina).toBe(2);
     expect(res.body.data.totalPaginas).toBe(5);
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledTimes(2);
+    expect(busquedaService.buscarTitulos).toHaveBeenCalledTimes(2);
   });
 
   it('continúa desde la página pedida', async () => {
-    tmdbIntegration.buscarPeliculas.mockImplementation(async ({ pagina }) =>
+    busquedaService.buscarTitulos.mockImplementation(async ({ pagina }) =>
       paginaDeTmdb([pelicula(pagina * 10)], { pagina, totalPaginas: 5 }),
     );
 
     const res = await buscarConSesion({ q: 'Dune', pagina: 3 });
 
     expect(res.body.data.pagina).toBe(4);
-    expect(tmdbIntegration.buscarPeliculas.mock.calls.map(([{ pagina }]) => pagina)).toEqual([
-      3, 4,
-    ]);
+    expect(busquedaService.buscarTitulos.mock.calls.map(([{ pagina }]) => pagina)).toEqual([3, 4]);
   });
 
   it('no lee páginas que TMDB no tiene', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1)]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([pelicula(1)]));
 
     const res = await buscarConSesion({ q: 'Dune' });
 
     expect(res.body.data.pagina).toBe(1);
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledTimes(1);
+    expect(busquedaService.buscarTitulos).toHaveBeenCalledTimes(1);
   });
 
   it('usa las ofertas de la región del usuario', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1)]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([pelicula(1)]));
     ofertasPorId({ 1: { MX: EN_NETFLIX.AR } });
 
     const res = await buscarConSesion({ q: 'Dune' });
@@ -208,7 +216,7 @@ describe('GET /api/busqueda/propias', () => {
   });
 
   it('descarta el título que no se pudo verificar y lo informa', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1), pelicula(2)]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([pelicula(1), pelicula(2)]));
     ofertasPorId({ 1: new ExternalServiceError('TMDB', new Error('caída')), 2: EN_NETFLIX });
 
     const res = await buscarConSesion({ q: 'Dune' });
@@ -219,7 +227,7 @@ describe('GET /api/busqueda/propias', () => {
   });
 
   it('informa la verificación incompleta aunque ningún título verificado coincida', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1), pelicula(2)]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([pelicula(1), pelicula(2)]));
     ofertasPorId({ 1: new ExternalServiceError('TMDB', new Error('caída')) });
 
     const res = await buscarConSesion({ q: 'Dune' });
@@ -230,7 +238,7 @@ describe('GET /api/busqueda/propias', () => {
   });
 
   it('responde 502 si no se pudo verificar ningún título', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1), pelicula(2)]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([pelicula(1), pelicula(2)]));
     tmdbIntegration.obtenerOfertas.mockRejectedValue(
       new ExternalServiceError('TMDB', new Error('caída')),
     );
@@ -242,7 +250,7 @@ describe('GET /api/busqueda/propias', () => {
   });
 
   it('responde 502 si falla la búsqueda en TMDB', async () => {
-    tmdbIntegration.buscarPeliculas.mockRejectedValue(
+    busquedaService.buscarTitulos.mockRejectedValue(
       new ExternalServiceError('TMDB', new Error('caída')),
     );
 
@@ -253,7 +261,7 @@ describe('GET /api/busqueda/propias', () => {
   });
 
   it('no responde la búsqueda sin filtrar en esta ruta', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValue(paginaDeTmdb([pelicula(1)]));
+    busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([pelicula(1)]));
 
     const res = await buscarConSesion({ q: 'Dune' });
 

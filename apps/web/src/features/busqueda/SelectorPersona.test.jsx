@@ -23,7 +23,10 @@ function SelectorPersonaPrueba({ rol, etiqueta, onChange }) {
         setPersona(seleccionada);
         onChange(seleccionada);
       }}
-      onLimpiar={() => setPersona(null)}
+      onLimpiar={() => {
+        setPersona(null);
+        setConsulta('');
+      }}
     />
   );
 }
@@ -52,7 +55,28 @@ describe('SelectorPersona', () => {
       nombre: 'Leonardo DiCaprio',
       fotoUrl: null,
     });
-    expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('Leonardo DiCaprio');
+    expect(screen.getByText('Leonardo DiCaprio')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Actor' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quitar actor' })).toBeInTheDocument();
+  });
+
+  it('usa texto para evitar el botón de borrado nativo y permite quitar la persona elegida', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [{ id: 6193, nombre: 'Leonardo DiCaprio', fotoUrl: null }] }),
+      }),
+    );
+    render(<SelectorPersonaPrueba rol="actor" etiqueta="Actor" onChange={vi.fn()} />);
+
+    const input = screen.getByRole('combobox', { name: 'Actor' });
+    expect(input).toHaveAttribute('type', 'text');
+    fireEvent.change(input, { target: { value: 'Leo' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Leonardo DiCaprio' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar actor' }));
+
+    expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
   });
 
   it('permite recorrer y seleccionar sugerencias con el teclado', async () => {
@@ -88,8 +112,8 @@ describe('SelectorPersona', () => {
       nombre: 'Leonardo DiCaprio',
       fotoUrl: null,
     });
-    expect(input).toHaveValue('Leonardo DiCaprio');
-    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText('Leonardo DiCaprio')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Actor' })).not.toBeInTheDocument();
   });
 
   it('cierra las sugerencias con Escape', async () => {

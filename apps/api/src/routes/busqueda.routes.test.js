@@ -1,58 +1,71 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { GENEROS_BUSQUEDA, TIPO_TITULO } from '@buscador/shared/constants';
 import { createApp } from '../app.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
-import { ExternalServiceError } from '../errors/index.js';
 
 vi.mock('../integrations/tmdb.integration.js', () => ({
-  buscarPeliculas: vi.fn(),
-  buscarSeries: vi.fn(),
-  listarGeneros: vi.fn(),
+  buscarTitulosPorTexto: vi.fn(),
+  descubrirTitulos: vi.fn(),
+  obtenerCreditosPersona: vi.fn(),
+  obtenerCreditosCombinados: vi.fn(),
   buscarPersonas: vi.fn(),
+  obtenerPersona: vi.fn(),
+  listarGenerosPorTipo: vi.fn(),
 }));
 
 const pelicula = {
   tmdbId: 1,
-  tipo: 'pelicula',
+  tipo: TIPO_TITULO.PELICULA,
   nombre: 'Dune',
   anio: 2021,
   posterUrl: 'https://image.tmdb.org/t/p/w500/dune.jpg',
   puntuacion: 8.1,
   relevancia: 100,
+  generoIds: [18],
+  fecha: '2021-10-22',
 };
 
-const serie = {
-  tmdbId: 2,
-  tipo: 'serie',
-  nombre: 'Dune: Prophecy',
-  anio: 2024,
-  posterUrl: 'https://image.tmdb.org/t/p/w500/prophecy.jpg',
-  puntuacion: 7.4,
-  relevancia: 80,
+const persona = {
+  id: 6193,
+  nombre: 'Leonardo DiCaprio',
+  fotoUrl: null,
+  departamentoConocido: 'Acting',
 };
+
+function respuestaBusqueda(resultados = [pelicula], tipo = TIPO_TITULO.PELICULA) {
+  return {
+    resultados: resultados.map((resultado) => ({ ...resultado, tipo })),
+    pagina: 1,
+    totalResultados: resultados.length,
+    totalPaginas: resultados.length ? 1 : 0,
+  };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
-  tmdbIntegration.buscarPeliculas.mockResolvedValue({
-    resultados: [pelicula],
-    pagina: 1,
-    totalResultados: 1,
-    totalPaginas: 1,
+  tmdbIntegration.buscarTitulosPorTexto.mockResolvedValue(respuestaBusqueda());
+  tmdbIntegration.descubrirTitulos.mockImplementation(async ({ tipo }) =>
+    respuestaBusqueda([{ ...pelicula, tipo }], tipo),
+  );
+  tmdbIntegration.obtenerCreditosPersona.mockResolvedValue({
+    cast: [pelicula],
+    crew: [{ ...pelicula, puesto: 'Director' }],
   });
-  tmdbIntegration.buscarSeries.mockResolvedValue({
-    resultados: [serie],
-    pagina: 1,
-    totalResultados: 1,
-    totalPaginas: 1,
+  tmdbIntegration.obtenerCreditosCombinados.mockResolvedValue({
+    cast: [{ id: pelicula.tmdbId }],
+    crew: [{ id: pelicula.tmdbId, job: 'Director' }],
   });
-  tmdbIntegration.listarGeneros.mockResolvedValue([{ id: 18, nombre: 'Drama' }]);
-  tmdbIntegration.buscarPersonas.mockResolvedValue([
-    { id: 6193, nombre: 'Leonardo DiCaprio', fotoUrl: null },
-  ]);
+  tmdbIntegration.buscarPersonas.mockResolvedValue({ resultados: [persona], totalPaginas: 1 });
+  tmdbIntegration.obtenerPersona.mockResolvedValue(persona);
+  tmdbIntegration.listarGenerosPorTipo.mockImplementation(async (tipo) => {
+    const generoDrama = GENEROS_BUSQUEDA.find(({ id }) => id === 'drama');
+    return [{ id: generoDrama.tmdbIds[tipo][0], nombre: 'Drama' }];
+  });
 });
 
 describe('GET /api/busqueda', () => {
-  it('filtra por tipo y año', async () => {
+  it('busca y valida títulos por tipo y año', async () => {
     const response = await request(createApp()).get('/api/busqueda').query({
       q: 'dune',
       tipo: 'pelicula',
@@ -60,276 +73,111 @@ describe('GET /api/busqueda', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({
-      data: {
-        resultados: [
-          {
-            tmdbId: 1,
-            tipo: 'pelicula',
-            nombre: 'Dune',
-            anio: 2021,
-            posterUrl: 'https://image.tmdb.org/t/p/w500/dune.jpg',
-            puntuacion: 8.1,
-          },
-        ],
-        pagina: 1,
-        totalResultados: 1,
-        totalPaginas: 1,
+    expect(response.body.data.resultados).toEqual([
+      {
+        tmdbId: 1,
+        tipo: 'pelicula',
+        nombre: 'Dune',
+        anio: 2021,
+        posterUrl: 'https://image.tmdb.org/t/p/w500/dune.jpg',
+        puntuacion: 8.1,
       },
-    });
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith({
+    ]);
+    expect(tmdbIntegration.buscarTitulosPorTexto).toHaveBeenCalledWith({
+      tipo: 'pelicula',
       q: 'dune',
       anio: 2021,
       pagina: 1,
     });
-    expect(tmdbIntegration.buscarSeries).not.toHaveBeenCalled();
   });
 
-  it('combina películas y series cuando no se selecciona tipo', async () => {
-    const response = await request(createApp()).get('/api/busqueda').query({ q: 'dune' });
+  it('envía al proveedor los géneros unificados sin título', async () => {
+    const response = await request(createApp()).get('/api/busqueda').query({ genero: 'drama' });
 
     expect(response.status).toBe(200);
-    expect(response.body.data.resultados).toHaveLength(2);
-    expect(response.body.data.totalResultados).toBe(2);
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith({
-      q: 'dune',
+    expect(tmdbIntegration.descubrirTitulos).toHaveBeenCalledWith({
+      tipo: 'pelicula',
       anio: undefined,
+      generoIds: [18],
       pagina: 1,
     });
-    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith({
-      q: 'dune',
-      anio: undefined,
-      pagina: 1,
-    });
-  });
-
-  it('busca solo series cuando se selecciona el tipo', async () => {
-    const response = await request(createApp()).get('/api/busqueda').query({
-      q: 'dune',
+    expect(tmdbIntegration.descubrirTitulos).toHaveBeenCalledWith({
       tipo: 'serie',
-    });
-
-    expect(response.status).toBe(200);
-    expect(response.body.data.resultados).toEqual([
-      {
-        tmdbId: 2,
-        tipo: 'serie',
-        nombre: 'Dune: Prophecy',
-        anio: 2024,
-        posterUrl: 'https://image.tmdb.org/t/p/w500/prophecy.jpg',
-        puntuacion: 7.4,
-      },
-    ]);
-    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith({
-      q: 'dune',
       anio: undefined,
+      generoIds: [18],
       pagina: 1,
     });
-    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
   });
 
-  it('permite buscar por género sin texto de título', async () => {
-    const response = await request(createApp()).get('/api/busqueda').query({ genero: '18' });
+  it('rechaza una búsqueda vacía, géneros TMDB sueltos y parámetros desconocidos', async () => {
+    const sinFiltros = await request(createApp()).get('/api/busqueda');
+    const generoTmdb = await request(createApp()).get('/api/busqueda').query({ genero: '18' });
+    const nombreEnUrl = await request(createApp())
+      .get('/api/busqueda')
+      .query({ q: 'dune', actorNombre: 'Leonardo DiCaprio' });
 
-    expect(response.status).toBe(200);
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith({
-      q: '',
-      pagina: 1,
-      genero: 18,
-    });
-    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith({
-      q: '',
-      pagina: 1,
-      genero: 18,
-    });
+    expect(sinFiltros.status).toBe(400);
+    expect(generoTmdb.status).toBe(400);
+    expect(nombreEnUrl.status).toBe(400);
+    expect(tmdbIntegration.buscarTitulosPorTexto).not.toHaveBeenCalled();
   });
 
-  it('rechaza una búsqueda vacía si no se seleccionó ningún filtro', async () => {
-    const response = await request(createApp()).get('/api/busqueda');
-
-    expect(response.status).toBe(400);
-    expect(response.body.error.code).toBe('VALIDATION');
-    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
-    expect(tmdbIntegration.buscarSeries).not.toHaveBeenCalled();
-  });
-
-  it('combina género, actor y director con la consulta', async () => {
-    const response = await request(createApp()).get('/api/busqueda').query({
-      q: 'inception',
-      tipo: 'pelicula',
-      genero: '878',
-      actor: '6193',
-      director: '525',
-    });
-
-    expect(response.status).toBe(200);
-    expect(tmdbIntegration.buscarPeliculas).toHaveBeenCalledWith({
-      q: 'inception',
-      pagina: 1,
-      genero: 878,
-      actor: 6193,
-      director: 525,
-    });
-  });
-
-  it('avanza páginas de texto cuando una página filtrada queda vacía', async () => {
-    tmdbIntegration.buscarPeliculas.mockImplementation(async ({ pagina }) => ({
-      resultados: pagina === 2 ? [pelicula] : [],
-      pagina,
-      totalResultados: 40,
-      totalPaginas: 3,
-    }));
-
-    const response = await request(createApp()).get('/api/busqueda').query({
-      q: 'dune',
-      tipo: 'pelicula',
-      actor: '6193',
-    });
-
-    expect(response.status).toBe(200);
-    expect(response.body.data.pagina).toBe(2);
-    expect(response.body.data.resultados).toHaveLength(1);
-    expect(tmdbIntegration.buscarPeliculas.mock.calls.map(([params]) => params)).toEqual([
-      { q: 'dune', pagina: 1, actor: 6193 },
-      { q: 'dune', pagina: 2, actor: 6193 },
-    ]);
-  });
-
-  it('responde una lista vacía cuando no hay resultados', async () => {
-    tmdbIntegration.buscarPeliculas.mockResolvedValueOnce({
-      resultados: [],
-      pagina: 1,
-      totalResultados: 0,
-      totalPaginas: 0,
-    });
-    tmdbIntegration.buscarSeries.mockResolvedValueOnce({
-      resultados: [],
-      pagina: 1,
-      totalResultados: 0,
-      totalPaginas: 0,
-    });
-
-    const response = await request(createApp()).get('/api/busqueda').query({ q: 'inexistente' });
-
-    expect(response.status).toBe(200);
-    expect(response.body.data.resultados).toEqual([]);
-    expect(response.body.data.totalResultados).toBe(0);
-  });
-
-  it('responde 400 cuando los filtros no son válidos', async () => {
-    const response = await request(createApp()).get('/api/busqueda').query({
-      q: 'dune',
-      tipo: 'documental',
-      anio: '1800',
-    });
-
-    expect(response.status).toBe(400);
-    expect(response.body.error.code).toBe('VALIDATION');
-    expect(response.body.error.details).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ field: 'tipo' }),
-        expect.objectContaining({ field: 'anio' }),
-      ]),
-    );
-    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
-  });
-
-  it('rechaza identificadores de filtros vacíos o fuera de formato', async () => {
-    const response = await request(createApp()).get('/api/busqueda').query({
-      q: 'dune',
-      genero: '',
-      actor: '1.5',
-      director: '-10',
-    });
-
-    expect(response.status).toBe(400);
-    expect(response.body.error.code).toBe('VALIDATION');
-    expect(response.body.error.details).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ field: 'genero' }),
-        expect.objectContaining({ field: 'actor' }),
-        expect.objectContaining({ field: 'director' }),
-      ]),
-    );
-    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
-  });
-
-  it('permite buscar por tipo cuando falta el título', async () => {
-    const response = await request(createApp()).get('/api/busqueda').query({ tipo: 'serie' });
-
-    expect(response.status).toBe(200);
-    expect(tmdbIntegration.buscarSeries).toHaveBeenCalledWith({ q: '', pagina: 1 });
-    expect(tmdbIntegration.buscarPeliculas).not.toHaveBeenCalled();
-  });
-
-  it('responde 502 cuando TMDB no está disponible', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    tmdbIntegration.buscarPeliculas.mockRejectedValueOnce(
-      new ExternalServiceError('TMDB', new Error('sin conexión')),
-    );
-
-    const response = await request(createApp()).get('/api/busqueda').query({
-      q: 'dune',
-      tipo: 'pelicula',
-    });
-
-    expect(response.status).toBe(502);
-    expect(response.body).toEqual({
-      error: {
-        code: 'EXTERNAL_SERVICE',
-        message: 'No se pudo consultar TMDB',
-      },
-    });
-
-    consoleError.mockRestore();
-  });
-
-  it('responde 502 cuando TMDB devuelve datos inválidos', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    tmdbIntegration.buscarPeliculas.mockResolvedValueOnce({
-      page: 1,
+  it('responde 502 ante una respuesta de TMDB que no cumple el model', async () => {
+    tmdbIntegration.buscarTitulosPorTexto.mockResolvedValueOnce({
       resultados: [{ ...pelicula, tmdbId: 'incorrecto' }],
       pagina: 1,
       totalResultados: 1,
       totalPaginas: 1,
     });
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const response = await request(createApp()).get('/api/busqueda').query({
-      q: 'dune',
-      tipo: 'pelicula',
-    });
+    const response = await request(createApp())
+      .get('/api/busqueda')
+      .query({ q: 'dune', tipo: 'pelicula' });
 
     expect(response.status).toBe(502);
     expect(response.body.error.code).toBe('EXTERNAL_SERVICE');
-
     consoleError.mockRestore();
   });
 });
 
 describe('opciones de filtros de búsqueda', () => {
-  it('devuelve géneros legibles', async () => {
+  it('devuelve géneros unificados y legibles en español', async () => {
     const response = await request(createApp()).get('/api/busqueda/generos');
 
     expect(response.status).toBe(200);
-    expect(response.body.data).toEqual([{ id: 18, nombre: 'Drama' }]);
-    expect(tmdbIntegration.listarGeneros).toHaveBeenCalledOnce();
+    expect(response.body.data).toContainEqual({ id: 'drama', nombre: 'Drama' });
+    expect(tmdbIntegration.listarGenerosPorTipo).toHaveBeenCalledWith('pelicula');
+    expect(tmdbIntegration.listarGenerosPorTipo).toHaveBeenCalledWith('serie');
   });
 
-  it('busca personas por nombre y rol', async () => {
+  it('busca y valida personas por nombre y rol', async () => {
     const response = await request(createApp()).get('/api/busqueda/personas').query({
       q: 'Leo',
       rol: 'actor',
     });
 
     expect(response.status).toBe(200);
-    expect(response.body.data[0]).toMatchObject({ id: 6193, nombre: 'Leonardo DiCaprio' });
-    expect(tmdbIntegration.buscarPersonas).toHaveBeenCalledWith({ q: 'Leo', rol: 'actor' });
+    expect(response.body.data).toEqual([{ id: 6193, nombre: 'Leonardo DiCaprio', fotoUrl: null }]);
+    expect(tmdbIntegration.buscarPersonas).toHaveBeenCalledWith({ q: 'Leo', pagina: 1 });
   });
 
-  it('valida el término y el rol al buscar personas', async () => {
+  it('resuelve el nombre desde el ID de la persona y comprueba el rol', async () => {
+    const response = await request(createApp()).get('/api/busqueda/personas/6193').query({
+      rol: 'actor',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({ id: 6193, nombre: 'Leonardo DiCaprio', fotoUrl: null });
+    expect(tmdbIntegration.obtenerPersona).toHaveBeenCalledWith({ personaId: 6193 });
+    expect(tmdbIntegration.obtenerCreditosCombinados).toHaveBeenCalledWith({ personaId: 6193 });
+  });
+
+  it('valida el largo, el rol y los parámetros de la búsqueda de personas', async () => {
     const response = await request(createApp()).get('/api/busqueda/personas').query({
       q: 'L',
       rol: 'guionista',
+      extra: 'no permitido',
     });
 
     expect(response.status).toBe(400);

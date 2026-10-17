@@ -69,9 +69,7 @@ export function prepararFiltros(filtrosConsulta, pagina) {
   };
 }
 
-export function tieneFiltrosAvanzados(filtros = {}) {
-  return Boolean(filtros.genero || filtros.actor || filtros.director);
-}
+export { tieneFiltrosAvanzados } from '@buscador/shared/schemas';
 
 export function validarFiltros(filtrosConsulta, pagina = 1) {
   const schema = filtrosConsulta.soloPropias ? busquedaPropiasSchema : busquedaSchema;

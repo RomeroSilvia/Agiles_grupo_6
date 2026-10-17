@@ -61,6 +61,18 @@ function crearSearchParams({ q, tipo, anio, genero, actor, director, soloPropias
   return params;
 }
 
+function sinCriteriosBusqueda(filtros) {
+  return !(
+    filtros.q.trim() ||
+    filtros.tipo ||
+    filtros.anio ||
+    filtros.genero ||
+    filtros.actor ||
+    filtros.director ||
+    filtros.soloPropias
+  );
+}
+
 export function PaginaBusqueda() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [busquedaInicial] = useState(() => obtenerBusquedaInicial(searchParams));
@@ -151,8 +163,12 @@ export function PaginaBusqueda() {
       q: ultimaBusqueda?.q ?? '',
     };
 
-    if (hasSearched && nombre !== 'q' && validarFiltros(filtrosParaValidar).success) {
-      buscarConFiltros(conFiltroDisponible(nextFiltros));
+    if (hasSearched && nombre !== 'q') {
+      if (validarFiltros(filtrosParaValidar).success) {
+        buscarConFiltros(conFiltroDisponible(nextFiltros));
+      } else if (sinCriteriosBusqueda(filtrosParaValidar)) {
+        reiniciarBusquedaCompleta();
+      }
     }
   }
 
@@ -175,12 +191,13 @@ export function PaginaBusqueda() {
     };
     setFiltros(nextFiltros);
 
-    if (
-      hasSearched &&
-      (persona || teniaSeleccion) &&
-      validarFiltros({ ...nextFiltros, q: ultimaBusqueda?.q ?? '' }).success
-    ) {
-      buscarConFiltros(conFiltroDisponible(nextFiltros));
+    if (hasSearched && (persona || teniaSeleccion)) {
+      const filtrosParaValidar = { ...nextFiltros, q: ultimaBusqueda?.q ?? '' };
+      if (validarFiltros(filtrosParaValidar).success) {
+        buscarConFiltros(conFiltroDisponible(nextFiltros));
+      } else if (sinCriteriosBusqueda(filtrosParaValidar)) {
+        reiniciarBusquedaCompleta();
+      }
     }
   }
 

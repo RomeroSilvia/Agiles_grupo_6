@@ -14,5 +14,5 @@ export const TMDB_CONFIG = Object.freeze({
   TAMANIO_LOTE_CREDITOS_PERSONAS: 2,
   RESULTADOS_POR_PAGINA: 20,
   RATE_LIMIT_BUSQUEDA: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
-  RATE_LIMIT_PERSONAS: Object.freeze({ maxRequests: 10, windowMs: 60_000 }),
+  RATE_LIMIT_PERSONAS: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
 });

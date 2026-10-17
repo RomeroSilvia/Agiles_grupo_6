@@ -58,82 +58,84 @@ export function FormularioBusqueda({
         />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.3fr)] xl:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(8rem,1fr)_auto_auto]">
-        <div className="space-y-2 lg:col-start-1">
-          <label htmlFor="tipo" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
-            Tipo
-          </label>
-          <select
-            id="tipo"
-            name="tipo"
-            value={filtros.tipo}
-            onChange={onChange}
-            className={CAMPO_BUSQUEDA_CLASS_NAME}
-          >
-            <option value="">Todos</option>
-            {TIPOS_TITULO.map((tipo) => (
-              <option key={tipo} value={tipo}>
-                {ETIQUETAS_TIPO_TITULO[tipo]}
+      <div className="space-y-6">
+        <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(7rem,0.65fr)_minmax(0,1.25fr)] lg:gap-x-6">
+          <div className="space-y-2">
+            <label htmlFor="tipo" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
+              Tipo
+            </label>
+            <select
+              id="tipo"
+              name="tipo"
+              value={filtros.tipo}
+              onChange={onChange}
+              className={CAMPO_BUSQUEDA_CLASS_NAME}
+            >
+              <option value="">Todos</option>
+              {TIPOS_TITULO.map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {ETIQUETAS_TIPO_TITULO[tipo]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="anio" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
+              Año
+            </label>
+            <input
+              id="anio"
+              name="anio"
+              type="number"
+              min={ANIO_MINIMO}
+              max={ANIO_MAXIMO}
+              value={filtros.anio}
+              onChange={onChange}
+              placeholder="Cualquier año"
+              className={`${CAMPO_BUSQUEDA_CLASS_NAME} placeholder:text-muted`}
+            />
+          </div>
+
+          <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+            <label htmlFor="genero" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
+              Género
+            </label>
+            <select
+              id="genero"
+              name="genero"
+              value={filtros.genero}
+              onChange={onChange}
+              onFocus={onCargarGeneros}
+              aria-busy={isLoadingGeneros}
+              disabled={Boolean(errorGeneros)}
+              className={CAMPO_BUSQUEDA_CLASS_NAME}
+            >
+              <option value="">
+                {isLoadingGeneros
+                  ? 'Cargando géneros...'
+                  : generosCargados
+                    ? 'Todos los géneros'
+                    : 'Seleccioná para cargar géneros'}
               </option>
-            ))}
-          </select>
+              {generos.map((genero) => (
+                <option key={genero.id} value={genero.id}>
+                  {genero.nombre}
+                </option>
+              ))}
+            </select>
+            {errorGeneros && (
+              <div role="alert" className="space-y-2 text-sm text-danger">
+                <p>{errorGeneros}</p>
+                <button type="button" onClick={onReintentarGeneros} className="underline">
+                  Reintentar
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-2 lg:col-start-2">
-          <label htmlFor="anio" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
-            Año
-          </label>
-          <input
-            id="anio"
-            name="anio"
-            type="number"
-            min={ANIO_MINIMO}
-            max={ANIO_MAXIMO}
-            value={filtros.anio}
-            onChange={onChange}
-            placeholder="Cualquier año"
-            className={`${CAMPO_BUSQUEDA_CLASS_NAME} placeholder:text-muted`}
-          />
-        </div>
-
-        <div className="space-y-2 lg:col-start-3">
-          <label htmlFor="genero" className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
-            Género
-          </label>
-          <select
-            id="genero"
-            name="genero"
-            value={filtros.genero}
-            onChange={onChange}
-            onFocus={onCargarGeneros}
-            aria-busy={isLoadingGeneros}
-            disabled={Boolean(errorGeneros)}
-            className={CAMPO_BUSQUEDA_CLASS_NAME}
-          >
-            <option value="">
-              {isLoadingGeneros
-                ? 'Cargando géneros...'
-                : generosCargados
-                  ? 'Todos los géneros'
-                  : 'Seleccioná para cargar géneros'}
-            </option>
-            {generos.map((genero) => (
-              <option key={genero.id} value={genero.id}>
-                {genero.nombre}
-              </option>
-            ))}
-          </select>
-          {errorGeneros && (
-            <div role="alert" className="space-y-2 text-sm text-danger">
-              <p>{errorGeneros}</p>
-              <button type="button" onClick={onReintentarGeneros} className="underline">
-                Reintentar
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="lg:col-start-4">
+        <div className="grid gap-x-5 gap-y-5 md:grid-cols-2 lg:gap-x-6">
           <SelectorPersona
             rol={ROL_PERSONA.ACTOR}
             etiqueta="Actor"
@@ -143,9 +145,7 @@ export function FormularioBusqueda({
             onSeleccionar={(persona) => onCambiarPersona(ROL_PERSONA.ACTOR, persona)}
             onLimpiar={() => onCambiarPersona(ROL_PERSONA.ACTOR, null, '')}
           />
-        </div>
 
-        <div className="lg:col-start-5">
           <SelectorPersona
             rol={ROL_PERSONA.DIRECTOR}
             etiqueta="Director"
@@ -159,32 +159,32 @@ export function FormularioBusqueda({
           />
         </div>
 
-        <div className="lg:col-span-3 lg:col-start-1 xl:col-span-1 xl:col-start-6">
+        <div
+          className={`flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between ${
+            filtroPropias.visible ? 'border-t border-border pt-5' : ''
+          }`}
+        >
           <FiltroPlataformasPropias
             filtro={filtroPropias}
             activo={filtros.soloPropias}
             onChange={onCambiarSoloPropias}
           />
-        </div>
 
-        <div className="flex flex-wrap justify-end gap-3 sm:col-span-2 lg:contents">
-          {hayFiltrosActivos && (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onLimpiarFiltros}
-              className="sm:w-auto lg:col-start-4 xl:col-start-7"
-            >
-              Limpiar filtros
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            {hayFiltrosActivos && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onLimpiarFiltros}
+                className="sm:w-auto"
+              >
+                Limpiar filtros
+              </Button>
+            )}
+            <Button type="submit" disabled={isLoading} className="sm:w-auto">
+              {isLoading ? 'Buscando...' : 'Buscar'}
             </Button>
-          )}
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="sm:w-auto lg:col-start-5 xl:col-start-8"
-          >
-            {isLoading ? 'Buscando...' : 'Buscar'}
-          </Button>
+          </div>
         </div>
       </div>
     </form>

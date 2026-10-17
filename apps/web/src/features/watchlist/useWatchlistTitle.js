@@ -21,7 +21,6 @@ export function useWatchlistTitle({ tipo, tmdbId } = {}) {
     }
 
     const controller = new AbortController();
-    setEstado({ key, cargando: true, cargado: false, agregado: false, error: '' });
 
     request(ruta, { signal: controller.signal })
       .then((data) => {
@@ -44,7 +43,10 @@ export function useWatchlistTitle({ tipo, tmdbId } = {}) {
     return () => controller.abort();
   }, [cargandoSesion, intento, key, ruta, usuarioId]);
 
-  const reintentar = useCallback(() => setIntento((actual) => actual + 1), []);
+  const reintentar = useCallback(() => {
+    setEstado(ESTADO_VACIO);
+    setIntento((actual) => actual + 1);
+  }, []);
 
   const alternar = useCallback(async () => {
     const estadoActual = estado.key === key ? estado : ESTADO_VACIO;

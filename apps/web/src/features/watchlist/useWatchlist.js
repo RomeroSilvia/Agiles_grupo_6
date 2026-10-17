@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { request } from '../../services/api.service.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
 import { rutaWatchlistTitulo } from '../../app/rutas.js';
@@ -58,6 +58,7 @@ export function useWatchlist() {
   const [estado, setEstado] = useState(ESTADO_VACIO);
   const [pendientes, setPendientes] = useState(new Set());
   const [intento, setIntento] = useState(0);
+  const operacionesEnCursoRef = useRef(new Set());
 
   useEffect(() => {
     if (cargandoSesion) {
@@ -111,14 +112,17 @@ export function useWatchlist() {
   const cargarMas = useCallback(async () => {
     if (
       !usuarioId ||
+      operacionesEnCursoRef.current.has(usuarioId) ||
       estadoActual.cargando ||
       estadoActual.cargandoMas ||
+      pendientes.size > 0 ||
       estadoActual.pagina >= estadoActual.totalPaginas
     ) {
       return;
     }
 
     const pagina = estadoActual.pagina + 1;
+    operacionesEnCursoRef.current.add(usuarioId);
     setEstado((actual) =>
       actual.usuarioId === usuarioId ? { ...actual, cargandoMas: true, error: '' } : actual,
     );
@@ -144,20 +148,26 @@ export function useWatchlist() {
           ? { ...actual, cargandoMas: false, error: error.message }
           : actual,
       );
+    } finally {
+      operacionesEnCursoRef.current.delete(usuarioId);
     }
-  }, [estadoActual, usuarioId]);
+  }, [estadoActual, pendientes.size, usuarioId]);
 
   const quitar = useCallback(
     async ({ tipo, tmdbId }) => {
-      if (!usuarioId) {
+      if (
+        !usuarioId ||
+        operacionesEnCursoRef.current.has(usuarioId) ||
+        estadoActual.cargando ||
+        estadoActual.cargandoMas ||
+        pendientes.size > 0
+      ) {
         return;
       }
       const key = `${tipo}:${tmdbId}`;
-      if (pendientes.has(key)) {
-        return;
-      }
 
       const paginaCargada = estadoActual.pagina;
+      operacionesEnCursoRef.current.add(usuarioId);
       setPendientes((actual) => new Set(actual).add(key));
       setEstado((actual) => ({ ...actual, error: '' }));
 
@@ -197,6 +207,7 @@ export function useWatchlist() {
           actual.usuarioId === usuarioId ? { ...actual, error: mensaje } : actual,
         );
       } finally {
+        operacionesEnCursoRef.current.delete(usuarioId);
         setPendientes((actual) => {
           const nuevas = new Set(actual);
           nuevas.delete(key);
@@ -204,7 +215,13 @@ export function useWatchlist() {
         });
       }
     },
-    [estadoActual.pagina, pendientes, usuarioId],
+    [
+      estadoActual.cargando,
+      estadoActual.cargandoMas,
+      estadoActual.pagina,
+      pendientes.size,
+      usuarioId,
+    ],
   );
 
   return {

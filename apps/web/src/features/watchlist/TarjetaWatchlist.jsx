@@ -7,7 +7,7 @@ import { rutaDetalle } from '../../app/rutas.js';
 import { formatearPuntuacion } from '../../utils/formatearPuntuacion.js';
 import { ETIQUETAS_TIPO_TITULO } from '../busqueda/busqueda.constants.js';
 
-export function TarjetaWatchlist({ item, quitando, onQuitar }) {
+export function TarjetaWatchlist({ item, quitando, deshabilitado = false, onQuitar }) {
   const { titulo } = item;
   const nombre = titulo.nombre ?? 'Título no disponible';
   const puntuacion = formatearPuntuacion(titulo.puntuacion);
@@ -34,6 +34,7 @@ export function TarjetaWatchlist({ item, quitando, onQuitar }) {
           variant="accent"
           loading={quitando}
           loadingText="Quitando…"
+          disabled={deshabilitado}
           onClick={() => onQuitar({ tipo: titulo.tipo, tmdbId: titulo.tmdbId })}
           aria-label={`Quitar ${nombre} de la watchlist`}
         >

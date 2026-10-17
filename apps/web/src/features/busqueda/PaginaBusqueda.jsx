@@ -176,7 +176,7 @@ export function PaginaBusqueda() {
     event.preventDefault();
 
     const titulo = filtros.q.trim();
-    if (titulo && titulo !== (ultimaBusqueda?.q ?? '')) {
+    if (ultimaBusqueda && titulo && titulo !== ultimaBusqueda.q) {
       const filtrosReiniciados = { ...FILTROS_INICIALES, q: titulo };
       setFiltros(filtrosReiniciados);
       buscar(conFiltroDisponible(filtrosReiniciados));

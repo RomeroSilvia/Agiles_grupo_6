@@ -1114,7 +1114,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
       expect(url.searchParams.has('director')).toBe(false);
     });
     expect(screen.getByLabelText('Tipo')).toHaveValue('');
-    expect(screen.getByLabelText('Año')).toHaveValue('');
+    expect(screen.getByLabelText('Año')).toHaveValue(null);
     expect(screen.getByLabelText('Género')).toHaveValue('');
     expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
     expect(screen.getByRole('combobox', { name: 'Director' })).toHaveValue('');

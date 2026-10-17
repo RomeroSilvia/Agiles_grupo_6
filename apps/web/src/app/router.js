@@ -8,6 +8,7 @@ import { PaginaInicioSesion } from '../features/auth/PaginaInicioSesion.jsx';
 import { PaginaRegistro } from '../features/auth/PaginaRegistro.jsx';
 import { SoloConSesion } from '../features/auth/SoloConSesion.jsx';
 import { PaginaMisPlataformas } from '../features/plataformas/PaginaMisPlataformas.jsx';
+import { PaginaWatchlist } from '../features/watchlist/PaginaWatchlist.jsx';
 import { RUTAS } from './rutas.js';
 
 export const routes = [
@@ -17,6 +18,7 @@ export const routes = [
     children: [
       { index: true, Component: PaginaBusqueda },
       { path: RUTAS.DETALLE_TITULO, Component: PaginaDetalleTitulo },
+      { path: RUTAS.WATCHLIST, Component: PaginaWatchlist },
       {
         Component: SoloConSesion,
         children: [{ path: RUTAS.MIS_PLATAFORMAS, Component: PaginaMisPlataformas }],

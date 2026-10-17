@@ -32,7 +32,7 @@ npm run dev     # API en :3000 y web en :5173
 npm run check   # lint + formato + tests
 ```
 
-Copiar `apps/api/.env.example` como `apps/api/.env` y completar las claves de Supabase (las pasa quien administra el proyecto) y `TMDB_API_KEY`.
+Copiar `apps/api/.env.example` como `apps/api/.env` y completar las claves de Supabase (las pasa quien administra el proyecto) y `TMDB_API_KEY`. Para habilitar la sincronización diaria de la watchlist, también completar `STREAMING_AVAILABILITY_API_KEY`.
 
 ## Estructura
 

@@ -1,7 +1,7 @@
 import * as watchlistService from '../services/watchlist.service.js';
 
 export async function listar(req, res) {
-  const data = await watchlistService.listarWatchlist(req.user.id);
+  const data = await watchlistService.listarWatchlist(req.user.id, req.validated.query);
   res.json({ data });
 }
 

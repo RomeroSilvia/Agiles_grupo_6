@@ -8,7 +8,19 @@ import { useWatchlist } from './useWatchlist.js';
 
 export function PaginaWatchlist() {
   const { user, loading: cargandoSesion } = useSession();
-  const { titulos, cargando, error, pendientes, reintentar, quitar } = useWatchlist();
+  const {
+    titulos,
+    pagina,
+    totalResultados,
+    totalPaginas,
+    cargando,
+    cargandoMas,
+    error,
+    pendientes,
+    reintentar,
+    cargarMas,
+    quitar,
+  } = useWatchlist();
 
   if (cargandoSesion) {
     return (
@@ -84,19 +96,35 @@ export function PaginaWatchlist() {
       )}
 
       {titulos.length > 0 && (
-        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {titulos.map((item) => {
-            const key = `${item.titulo.tipo}:${item.titulo.tmdbId}`;
-            return (
-              <TarjetaWatchlist
-                key={item.id}
-                item={item}
-                quitando={pendientes.has(key)}
-                onQuitar={quitar}
-              />
-            );
-          })}
-        </ul>
+        <>
+          <p role="status" aria-live="polite" className="text-sm text-muted">
+            Mostrando {titulos.length} de {totalResultados}{' '}
+            {totalResultados === 1 ? 'título' : 'títulos'}
+          </p>
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {titulos.map((item) => {
+              const key = `${item.titulo.tipo}:${item.titulo.tmdbId}`;
+              return (
+                <TarjetaWatchlist
+                  key={item.id}
+                  item={item}
+                  quitando={pendientes.has(key)}
+                  onQuitar={quitar}
+                />
+              );
+            })}
+          </ul>
+          {pagina < totalPaginas && (
+            <button
+              type="button"
+              onClick={cargarMas}
+              disabled={cargando || cargandoMas}
+              className="mx-auto block rounded-xl border border-primary px-6 py-3 font-semibold text-primary transition hover:bg-primary/10 focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
+            >
+              {cargandoMas ? 'Cargando...' : 'Cargar más'}
+            </button>
+          )}
+        </>
       )}
     </section>
   );

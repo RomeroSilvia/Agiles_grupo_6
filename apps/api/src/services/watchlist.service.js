@@ -3,8 +3,8 @@ import * as tituloRepository from '../repositories/titulo.repository.js';
 import * as watchlistRepository from '../repositories/watchlist.repository.js';
 import * as tituloService from './titulo.service.js';
 
-export function listarWatchlist(usuarioId) {
-  return watchlistRepository.listarPorUsuario(usuarioId);
+export function listarWatchlist(usuarioId, { pagina }) {
+  return watchlistRepository.listarPorUsuario(usuarioId, pagina);
 }
 
 export async function obtenerEstadoWatchlist(usuarioId, { tipo, tmdbId }) {

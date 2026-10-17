@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { ConflictError, DatabaseError } from '../errors/index.js';
+import { WATCHLIST_PAGE_SIZE } from '../config/watchlist.config.js';
 import {
   fromWatchlistRow,
   WATCHLIST_PRIMARY_KEY,
@@ -13,17 +14,27 @@ function lanzarError(error) {
   throw new DatabaseError(error);
 }
 
-export async function listarPorUsuario(usuarioId) {
-  const { data, error } = await supabaseAdmin
+export async function listarPorUsuario(usuarioId, pagina) {
+  const desde = (pagina - 1) * WATCHLIST_PAGE_SIZE;
+  const hasta = desde + WATCHLIST_PAGE_SIZE - 1;
+  const { data, count, error } = await supabaseAdmin
     .from('watchlist_item')
-    .select(WATCHLIST_TITULO_COLUMNS)
+    .select(WATCHLIST_TITULO_COLUMNS, { count: 'exact' })
     .eq('usuario_id', usuarioId)
-    .order('agregado_en', { ascending: false });
+    .order('agregado_en', { ascending: false })
+    .order('id', { ascending: false })
+    .range(desde, hasta);
 
   if (error) {
     lanzarError(error);
   }
-  return data.map(fromWatchlistRow);
+  const totalResultados = count ?? 0;
+  return {
+    resultados: data.map(fromWatchlistRow),
+    pagina,
+    totalResultados,
+    totalPaginas: Math.ceil(totalResultados / WATCHLIST_PAGE_SIZE),
+  };
 }
 
 export async function existe(usuarioId, tituloId) {

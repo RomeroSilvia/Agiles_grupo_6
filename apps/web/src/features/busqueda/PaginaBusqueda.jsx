@@ -174,6 +174,15 @@ export function PaginaBusqueda() {
 
   function handleSubmit(event) {
     event.preventDefault();
+
+    const titulo = filtros.q.trim();
+    if (titulo && titulo !== (ultimaBusqueda?.q ?? '')) {
+      const filtrosReiniciados = { ...FILTROS_INICIALES, q: titulo };
+      setFiltros(filtrosReiniciados);
+      buscar(conFiltroDisponible(filtrosReiniciados));
+      return;
+    }
+
     buscar(conFiltroDisponible(filtros));
   }
 

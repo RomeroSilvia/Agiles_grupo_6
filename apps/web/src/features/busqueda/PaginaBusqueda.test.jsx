@@ -1069,7 +1069,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     expect(botonBuscar.parentElement).toBe(botonLimpiar.parentElement);
   });
 
-  it('conserva tipo, año, género, personas y plataformas al ejecutar otra consulta', async () => {
+  it('reinicia los filtros al ejecutar otra consulta con un título distinto', async () => {
     const fetchMock = configurarFetchConOpciones();
     render(<PaginaBusqueda />, {
       sesion: CON_SESION,
@@ -1105,15 +1105,23 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
         .filter((solicitud) => solicitud.searchParams.get('q') === 'Matrix')
         .at(-1);
       expect(url).toBeDefined();
-      expect(url.pathname).toBe('/api/busqueda/propias');
+      expect(url.pathname).toBe('/api/busqueda');
       expect(url.searchParams.get('q')).toBe('Matrix');
-      expect(url.searchParams.get('tipo')).toBe('pelicula');
-      expect(url.searchParams.get('anio')).toBe('2021');
-      expect(url.searchParams.get('genero')).toBe('drama');
-      expect(url.searchParams.get('actor')).toBe('6193');
-      expect(url.searchParams.get('director')).toBe('525');
+      expect(url.searchParams.has('tipo')).toBe(false);
+      expect(url.searchParams.has('anio')).toBe(false);
+      expect(url.searchParams.has('genero')).toBe(false);
+      expect(url.searchParams.has('actor')).toBe(false);
+      expect(url.searchParams.has('director')).toBe(false);
     });
-    expect(screen.getByLabelText('Género')).toHaveValue('drama');
+    expect(screen.getByLabelText('Tipo')).toHaveValue('');
+    expect(screen.getByLabelText('Año')).toHaveValue('');
+    expect(screen.getByLabelText('Género')).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'Director' })).toHaveValue('');
+    expect(screen.getByRole('switch', { name: 'Solo mis plataformas' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
   });
 
   it('mantiene el género al cargar la página siguiente sin repetir títulos', async () => {

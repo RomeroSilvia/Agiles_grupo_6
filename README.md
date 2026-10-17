@@ -75,30 +75,33 @@ las plataformas activas por modalidad (`suscripcion`, `gratis` o `con_anuncios`)
 enlace de TMDB cuando está disponible. Las tarjetas llevan al sitio de cada plataforma; los deep
 links directos al título y la watchlist todavía no están implementados.
 
-| Método | Ruta                                    | Sesión | Descripción                                                                                                 |
-| ------ | --------------------------------------- | :----: | ----------------------------------------------------------------------------------------------------------- |
-| GET    | `/health`                               |        | Estado de la API                                                                                            |
-| POST   | `/auth/sign-up`                         |        | Registro con mail y contraseña                                                                              |
-| POST   | `/auth/sign-in`                         |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                                                      |
-| POST   | `/auth/sign-out`                        |        | Cierre de sesión                                                                                            |
-| GET    | `/auth/session`                         |        | Usuario de la sesión actual, o `null`                                                                       |
-| GET    | `/region`                               |        | Región detectada del usuario                                                                                |
-| GET    | `/busqueda`                             |        | Busca películas y series. Query: `q` (obligatorio), `tipo`, `anio`, `genero`, `actor`, `director`, `pagina` |
-| GET    | `/busqueda/generos`                     |        | Lista géneros disponibles para filtrar películas y series                                                   |
-| GET    | `/busqueda/personas`                    |        | Busca actores o directores. Query: `q` (mínimo 2 letras), `rol`                                             |
-| GET    | `/busqueda/personas/:id`                |        | Resuelve una persona por su ID. Query: `rol`                                                                |
-| GET    | `/busqueda/propias`                     |   si   | Búsqueda por texto, tipo y año, solo con títulos disponibles en plataformas del usuario                     |
-| GET    | `/titulos/:tipo/:tmdbId`                |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)                                              |
-| GET    | `/titulos/:tipo/:tmdbId/disponibilidad` |        | Plataformas activas por modalidad y enlace de TMDB para la región indicada                                  |
-| GET    | `/plataformas`                          |        | Catálogo de plataformas activas                                                                             |
-| GET    | `/plataformas/propias`                  |   si   | Ids de las plataformas que eligió el usuario                                                                |
-| PUT    | `/plataformas/propias/:plataformaId`    |   si   | Agrega una plataforma propia                                                                                |
-| DELETE | `/plataformas/propias/:plataformaId`    |   si   | Quita una plataforma propia                                                                                 |
+| Método | Ruta                                    | Sesión | Descripción                                                                |
+| ------ | --------------------------------------- | :----: | -------------------------------------------------------------------------- |
+| GET    | `/health`                               |        | Estado de la API                                                           |
+| POST   | `/auth/sign-up`                         |        | Registro con mail y contraseña                                             |
+| POST   | `/auth/sign-in`                         |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                     |
+| POST   | `/auth/sign-out`                        |        | Cierre de sesión                                                           |
+| GET    | `/auth/session`                         |        | Usuario de la sesión actual, o `null`                                      |
+| GET    | `/region`                               |        | Región detectada del usuario                                               |
+| GET    | `/busqueda`                             |        | Busca películas y series con texto o filtros de catálogo                   |
+| GET    | `/busqueda/generos`                     |        | Lista géneros disponibles para filtrar películas y series                  |
+| GET    | `/busqueda/personas`                    |        | Busca actores o directores. Query: `q` (mínimo 2 letras), `rol`            |
+| GET    | `/busqueda/personas/:id`                |        | Resuelve una persona por su ID. Query: `rol`                               |
+| GET    | `/busqueda/propias`                     |   si   | Búsqueda de títulos disponibles en las plataformas del usuario             |
+| GET    | `/titulos/:tipo/:tmdbId`                |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)             |
+| GET    | `/titulos/:tipo/:tmdbId/disponibilidad` |        | Plataformas activas por modalidad y enlace de TMDB para la región indicada |
+| GET    | `/plataformas`                          |        | Catálogo de plataformas activas                                            |
+| GET    | `/plataformas/propias`                  |   si   | Ids de las plataformas que eligió el usuario                               |
+| PUT    | `/plataformas/propias/:plataformaId`    |   si   | Agrega una plataforma propia                                               |
+| DELETE | `/plataformas/propias/:plataformaId`    |   si   | Quita una plataforma propia                                                |
 
 Los endpoints con sesión responden `401` (`UNAUTHENTICATED`) si no hay un usuario logueado.
 
-En `/api/busqueda`, `genero` recibe el ID unificado de `/api/busqueda/generos`; `actor` y `director`
-reciben identificadores de TMDB. Estos filtros se combinan con el texto, tipo y año de la consulta.
+En `/api/busqueda`, `q` se puede omitir cuando se indica `tipo`, `anio`, `genero`, `actor` o
+`director`. En `/api/busqueda/propias`, la disponibilidad en las plataformas del usuario también
+actúa como filtro y permite buscar sin texto. `genero` recibe el ID unificado de
+`/api/busqueda/generos`; `actor` y `director` reciben identificadores de TMDB. Estos filtros se
+combinan entre sí y con el texto, tipo y año de la consulta.
 Si no se indica tipo, se aplican a películas y series con el ID de género que corresponde a cada
 tipo. La búsqueda de personas recibe `rol=actor` o `rol=director`; la web conserva solo el ID en la
 URL y consulta `/api/busqueda/personas/:id` para mostrar el nombre validado por la API. Las páginas

@@ -2,7 +2,8 @@ import { Link } from 'react-router';
 import { Chip } from '../../components/ui/Chip.jsx';
 import { ChevronRightIcon } from '../../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
-import { ACCIONES_CUENTA, TARJETA_PERFIL_CLASS_NAME } from './perfil.constants.js';
+import { CARD_CLASS_NAME, HOVER_SURFACE_CLASS_NAME } from '../../components/ui/surface.js';
+import { ACCIONES_CUENTA } from './perfil.constants.js';
 
 const filaClassName = 'flex min-h-16 items-center gap-3 px-4 py-3';
 
@@ -27,18 +28,18 @@ function ContenidoAccion({ accion, disponible }) {
 
 export function AccionesCuenta() {
   return (
-    <ul className={`divide-y divide-border overflow-hidden ${TARJETA_PERFIL_CLASS_NAME}`}>
+    <ul className={`divide-y divide-border overflow-hidden ${CARD_CLASS_NAME}`}>
       {ACCIONES_CUENTA.map((accion) => (
         <li key={accion.id}>
           {accion.to ? (
             <Link
               to={accion.to}
-              className={`${filaClassName} transition-colors duration-150 hover:bg-border/60 ${FOCUS_RING_CLASS_NAME}`}
+              className={`${filaClassName} ${HOVER_SURFACE_CLASS_NAME} ${FOCUS_RING_CLASS_NAME}`}
             >
               <ContenidoAccion accion={accion} disponible />
             </Link>
           ) : (
-            <div aria-disabled="true" className={`${filaClassName} opacity-70`}>
+            <div className={`${filaClassName} opacity-70`}>
               <ContenidoAccion accion={accion} disponible={false} />
             </div>
           )}

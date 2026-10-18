@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useDismiss } from '../../hooks/useDismiss.js';
 import { FOCUS_RING_CLASS_NAME } from './focusRing.js';
+import { CARD_CLASS_NAME } from './surface.js';
 
 function menuItems(menu) {
   return menu ? [...menu.querySelectorAll('[role="menuitem"]')] : [];
@@ -51,7 +52,7 @@ export function DropdownMenu({ label, trigger, children }) {
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((actual) => !actual)}
-        className={`inline-flex cursor-pointer rounded-full ${FOCUS_RING_CLASS_NAME}`}
+        className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full ${FOCUS_RING_CLASS_NAME}`}
       >
         {trigger}
       </button>
@@ -63,7 +64,7 @@ export function DropdownMenu({ label, trigger, children }) {
           aria-label={label}
           onKeyDown={handleKeyDown}
           onClick={() => close()}
-          className="absolute right-0 z-20 mt-2 min-w-48 rounded-xl border border-border bg-surface p-1.5 shadow-lg"
+          className={`absolute right-0 z-20 mt-2 min-w-48 p-1.5 shadow-lg ${CARD_CLASS_NAME}`}
         >
           {children}
         </div>

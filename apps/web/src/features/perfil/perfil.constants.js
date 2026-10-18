@@ -1,7 +1,5 @@
 import { KeyIcon, MailIcon, TrashIcon } from '../../components/ui/icons.jsx';
 
-export const TARJETA_PERFIL_CLASS_NAME = 'rounded-xl border border-border bg-surface';
-
 export const ACCIONES_CUENTA = Object.freeze([
   {
     id: 'cambiar-mail',

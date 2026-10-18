@@ -58,8 +58,8 @@ supabase/
 | ------------------------ | :----: | ------------------------------------------------------------------------------ |
 | `/`                      |        | Búsqueda de películas y series                                                 |
 | `/titulos/:tipo/:tmdbId` |        | Detalle de un título con su disponibilidad en la región                        |
-| `/mis-plataformas`       |   si   | Elegir las plataformas contratadas                                             |
-| `/perfil`                |   si   | Mail y región de la cuenta, plataformas propias y accesos a acciones de cuenta |
+| `/mis-plataformas`       |   sí   | Elegir las plataformas contratadas                                             |
+| `/perfil`                |   sí   | Mail y región de la cuenta, plataformas propias y accesos a acciones de cuenta |
 | `/iniciar-sesion`        |        | Inicio de sesión (solo sin sesión)                                             |
 | `/registro`              |        | Registro (solo sin sesión)                                                     |
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TIPO_OFERTA } from '@buscador/shared/constants';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiError, request } from '../../services/api.service.js';
@@ -15,14 +16,41 @@ const PLATAFORMAS = [
   { id: 2, tmdbProviderId: 337, nombre: 'Disney Plus', logoPath: null, urlHome: null },
 ];
 const MENU_CUENTA = `Menú de la cuenta de ${USUARIO.email}`;
+const DETALLE = {
+  tmdbId: 1,
+  tipo: 'pelicula',
+  nombre: 'Dune',
+  sinopsis: 'En un futuro lejano...',
+  posterUrl: null,
+  anio: 2021,
+  puntuacion: 8.1,
+};
+const DISPONIBILIDAD = {
+  region: 'AR',
+  ofertas: [
+    {
+      tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+      plataformas: [
+        { ...PLATAFORMAS[0], urlHome: 'https://www.netflix.com' },
+        { ...PLATAFORMAS[1], urlHome: 'https://www.disneyplus.com' },
+      ],
+    },
+  ],
+  enlaceTmdb: null,
+};
 
-function mockApi({ session = { user: USUARIO }, guardar = async () => undefined } = {}) {
+function mockApi({
+  session = { user: USUARIO },
+  region = { region: 'AR', source: 'ip' },
+  propias = [1],
+  guardar = async () => undefined,
+} = {}) {
   request.mockImplementation(async (path, options) => {
     if (path === '/auth/session') {
       return session;
     }
     if (path === '/region') {
-      return { region: 'AR', source: 'ip' };
+      return region;
     }
     if (path === '/auth/sign-out') {
       return undefined;
@@ -31,10 +59,16 @@ function mockApi({ session = { user: USUARIO }, guardar = async () => undefined 
       return PLATAFORMAS;
     }
     if (path === '/plataformas/propias') {
-      return [1];
+      return propias;
     }
     if (path.startsWith('/plataformas/propias/')) {
       return guardar(path, options);
+    }
+    if (path === '/titulos/pelicula/1') {
+      return DETALLE;
+    }
+    if (path.startsWith('/titulos/pelicula/1/disponibilidad')) {
+      return DISPONIBILIDAD;
     }
     throw new Error(`Ruta no esperada en el test: ${path}`);
   });
@@ -62,6 +96,15 @@ describe('Perfil', () => {
     expect(await switchDe('Disney Plus')).toHaveAttribute('aria-checked', 'false');
   });
 
+  it('si la región es la predeterminada, lo aclara', async () => {
+    mockApi({ region: { region: 'AR', source: 'default' } });
+    renderRoute('/perfil');
+
+    const datos = await screen.findByRole('region', { name: 'Datos de la cuenta' });
+    expect(await within(datos).findByText('Región predeterminada')).toBeInTheDocument();
+    expect(within(datos).queryByText('Región detectada')).not.toBeInTheDocument();
+  });
+
   it('sin sesión lleva a iniciar sesión y no muestra datos privados', async () => {
     mockApi({ session: null });
     renderRoute('/perfil');
@@ -83,6 +126,36 @@ describe('Perfil', () => {
     expect(await screen.findByRole('heading', { name: 'Mis plataformas' })).toBeInTheDocument();
     expect(await switchDe('Disney Plus')).toHaveAttribute('aria-checked', 'true');
     expect(request.mock.calls.filter(([path]) => path === '/plataformas/propias')).toHaveLength(1);
+  });
+
+  it('la plataforma activada en el perfil habilita el filtro de la búsqueda', async () => {
+    mockApi({ propias: [] });
+    const user = userEvent.setup();
+    const router = renderRoute('/perfil');
+
+    await user.click(await switchDe('Netflix'));
+    expect(request).toHaveBeenCalledWith('/plataformas/propias/1', { method: 'PUT' });
+
+    await act(() => router.navigate('/'));
+
+    expect(await switchDe('Solo mis plataformas')).toBeEnabled();
+    expect(screen.queryByRole('link', { name: 'Elegí tus plataformas' })).not.toBeInTheDocument();
+  });
+
+  it('la plataforma activada en el perfil se puede usar en el detalle de un título', async () => {
+    const user = userEvent.setup();
+    const router = renderRoute('/perfil');
+
+    await user.click(await switchDe('Disney Plus'));
+    await act(() => router.navigate('/titulos/pelicula/1'));
+
+    expect(await screen.findByRole('link', { name: /Disney Plus/ })).toHaveAttribute(
+      'href',
+      'https://www.disneyplus.com',
+    );
+    expect(
+      screen.queryByRole('group', { name: 'Disney Plus (no está en tus plataformas)' }),
+    ).not.toBeInTheDocument();
   });
 
   it('si no se puede guardar, vuelve el switch atrás y muestra el error', async () => {
@@ -118,14 +191,16 @@ describe('Perfil', () => {
     const user = userEvent.setup();
     renderRoute('/perfil');
 
-    const seccion = await screen.findByRole('button', { name: /Mis plataformas/ });
-    expect(seccion).toHaveAttribute('aria-expanded', 'false');
+    for (const titulo of ['Mis plataformas', 'Cuenta']) {
+      const seccion = await screen.findByRole('button', { name: new RegExp(`^${titulo}`) });
+      expect(seccion).toHaveAttribute('aria-expanded', 'false');
 
-    await user.click(seccion);
-    expect(seccion).toHaveAttribute('aria-expanded', 'true');
+      await user.click(seccion);
+      expect(seccion).toHaveAttribute('aria-expanded', 'true');
 
-    await user.click(seccion);
-    expect(seccion).toHaveAttribute('aria-expanded', 'false');
+      await user.click(seccion);
+      expect(seccion).toHaveAttribute('aria-expanded', 'false');
+    }
   });
 });
 

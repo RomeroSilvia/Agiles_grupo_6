@@ -51,6 +51,14 @@ export function CheckIcon(props) {
   );
 }
 
+export function BookmarkIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-4-6 4z" />
+    </Icon>
+  );
+}
+
 export function CircleIcon(props) {
   return (
     <Icon {...props}>

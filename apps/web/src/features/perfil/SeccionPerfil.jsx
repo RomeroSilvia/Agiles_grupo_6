@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { ChevronDownIcon } from '../../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
-import { TARJETA_PERFIL_CLASS_NAME } from './perfil.constants.js';
+import { CARD_CLASS_NAME } from '../../components/ui/surface.js';
 
 export function SeccionPerfil({ titulo, resumen, descripcion, className = '', children }) {
   const [abierta, setAbierta] = useState(false);
@@ -15,7 +15,7 @@ export function SeccionPerfil({ titulo, resumen, descripcion, className = '', ch
           aria-expanded={abierta}
           aria-controls={contenidoId}
           onClick={() => setAbierta((actual) => !actual)}
-          className={`flex w-full cursor-pointer items-center gap-3 px-4.5 py-4 text-left ${TARJETA_PERFIL_CLASS_NAME} ${FOCUS_RING_CLASS_NAME}`}
+          className={`flex w-full cursor-pointer items-center gap-3 px-4.5 py-4 text-left ${CARD_CLASS_NAME} ${FOCUS_RING_CLASS_NAME}`}
         >
           <span className="flex-1">
             <span className="block text-xl font-bold">{titulo}</span>

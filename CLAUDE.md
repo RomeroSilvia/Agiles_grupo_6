@@ -19,6 +19,10 @@ Las convenciones, el stack y las reglas de capas están en `AGENTS.md` (importad
 - **Sesión**: `loadSession` deja `req.user` (`{ id, email }` o `null`) sin cortar el request y, si el access token venció, lo renueva con el refresh token y reescribe las cookies. Para exigir sesión, montar `requireSession` después de `loadSession` en la ruta.
 - **Región**: `detectRegion` se monta solo en las rutas que la necesitan (`/api/region` y la búsqueda en plataformas propias), después de `loadSession`. `regionService.obtenerRegion` usa la región del perfil si hay sesión; si no, la detecta por IP con `geoip.integration.js` (y la guarda en el perfil si estaba vacía); si eso falla, usa `env.DEFAULT_REGION`. Deja `req.region` y `req.regionSource`.
 - **Providers del front**: `Theme → Session → Region → PlataformasPropias → Router`, en ese orden en `main.jsx`. Un provider nuevo se agrega también en `apps/web/src/test/renderRoute.jsx`.
+- **Rutas del front**: los paths salen de `RUTAS` en `apps/web/src/app/rutas.js`. Las pantallas que exigen sesión van como hijas del `SoloConSesion` de `app/router.js`, como `/mis-plataformas` y `/perfil`.
+- **Header**: el avatar (`app/MenuUsuario.jsx`, armado con `DropdownMenu` y `DropdownMenuItem` de `components/ui/`) es el único lugar con «Cerrar sesión». Los links de la nav y del menú hamburguesa salen de `ENLACES` en `MainLayout.jsx`. En los tests, la sesión iniciada se reconoce por el botón «Menú de la cuenta de {mail}».
+- **Plataformas propias**: el listado editable es `features/plataformas/ListaPlataformas.jsx` y lo usan `/mis-plataformas` y el perfil. No duplicarlo: el estado vive en `PlataformasPropiasProvider` y los cambios se ven en todas las pantallas.
+- **Perfil**: no tiene endpoint propio. El mail sale de `useSession()` y la región de `useRegion()`. Las acciones de cuenta están en `ACCIONES_CUENTA` de `features/perfil/perfil.constants.js`, con `to: null` (se muestran como «Próximamente»); cuando se implementen los flujos de #50, se completa ahí la ruta.
 
 ## Marca y assets del front
 

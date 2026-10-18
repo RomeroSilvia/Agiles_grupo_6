@@ -1,8 +1,9 @@
-import { REGION_SOURCE } from '@buscador/shared/constants';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
 import { useSession } from '../contexts/session/SessionContext.js';
 import { useRegion } from '../contexts/region/RegionContext.js';
+import { getRegionLabel } from '../contexts/region/regionLabel.js';
+import { Chip } from '../components/ui/Chip.jsx';
 import { LogoInicio } from '../components/ui/LogoInicio.jsx';
 import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
@@ -84,10 +85,10 @@ export function MainLayout() {
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             {!regionLoading && (
               <span
-                aria-label={`${source === REGION_SOURCE.DEFAULT ? 'Región predeterminada' : 'Región'}: ${region}`}
-                className="hidden rounded-full bg-chip px-3 py-1 font-mono text-xs font-medium text-chip-foreground sm:inline-flex"
+                aria-label={`${getRegionLabel(source)}: ${region}`}
+                className="hidden sm:inline-flex"
               >
-                {region}
+                <Chip>{region}</Chip>
               </span>
             )}
             <ThemeToggle />

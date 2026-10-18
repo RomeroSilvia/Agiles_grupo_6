@@ -4,6 +4,7 @@ import * as plataformaRepository from '../repositories/plataforma.repository.js'
 import { disponibilidadSchema } from '../models/disponibilidad.model.js';
 import { tituloSchema } from '../models/titulo.model.js';
 import { validateExternalResponse } from '../utils/validateExternalResponse.js';
+import * as deepLinkService from './deepLink.service.js';
 import * as plataformaService from './plataforma.service.js';
 
 export async function obtenerDetalleTitulo({ tipo, tmdbId }) {
@@ -19,13 +20,19 @@ export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REG
   ]);
 
   const ofertasDeRegion = ofertas[codigoRegion] ?? { enlaceTmdb: null, ofertas: [] };
-
-  return validateExternalResponse(disponibilidadSchema, {
+  const ofertasConDeepLinks = await deepLinkService.agregarDeepLinks({
+    tipo,
+    tmdbId,
     region: codigoRegion,
     ofertas: plataformaService.agruparPlataformasPorTipoOferta(
       ofertasDeRegion.ofertas,
       plataformasActivas,
     ),
+  });
+
+  return validateExternalResponse(disponibilidadSchema, {
+    region: codigoRegion,
+    ofertas: ofertasConDeepLinks,
     enlaceTmdb: ofertasDeRegion.enlaceTmdb,
   });
 }

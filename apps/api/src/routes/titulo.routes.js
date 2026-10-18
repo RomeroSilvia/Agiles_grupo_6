@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { Router } from 'express';
 import { REGION_PATTERN, TIPOS_TITULO } from '@buscador/shared/constants';
+import { STREAMING_AVAILABILITY_CONFIG } from '../config/streamingAvailability.config.js';
 import * as tituloController from '../controllers/titulo.controller.js';
+import { rateLimit } from '../middlewares/rateLimit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 
 const tituloParamsSchema = z.object({
@@ -15,8 +17,11 @@ const tituloQuerySchema = z.object({
 
 export const tituloRoutes = Router();
 
+const limitarDisponibilidad = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_DISPONIBILIDAD);
+
 tituloRoutes.get(
   '/:tipo/:tmdbId/disponibilidad',
+  limitarDisponibilidad,
   validate({ params: tituloParamsSchema, query: tituloQuerySchema }),
   tituloController.obtenerDisponibilidad,
 );

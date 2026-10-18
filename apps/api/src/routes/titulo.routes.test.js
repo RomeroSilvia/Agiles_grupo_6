@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
+import * as streamingAvailabilityIntegration from '../integrations/streamingAvailability.integration.js';
+import * as disponibilidadRepository from '../repositories/disponibilidad.repository.js';
+import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
+import * as tituloRepository from '../repositories/titulo.repository.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 
 vi.mock('../integrations/tmdb.integration.js', () => ({
@@ -14,6 +18,24 @@ vi.mock('../integrations/tmdb.integration.js', () => ({
 
 vi.mock('../repositories/plataforma.repository.js', () => ({
   listarActivas: vi.fn(),
+}));
+
+vi.mock('../integrations/streamingAvailability.integration.js', () => ({
+  obtenerDeepLinks: vi.fn(),
+}));
+
+vi.mock('../repositories/titulo.repository.js', () => ({
+  obtenerPorTmdbIdYTipo: vi.fn(),
+  guardarDesdeTmdb: vi.fn(),
+}));
+
+vi.mock('../repositories/disponibilidad.repository.js', () => ({
+  listarPorTituloYRegion: vi.fn(),
+  guardarDeepLinks: vi.fn(),
+}));
+
+vi.mock('../repositories/fuenteDatos.repository.js', () => ({
+  obtenerIdPorNombre: vi.fn(),
 }));
 
 const detallePelicula = {
@@ -82,6 +104,12 @@ beforeEach(() => {
   );
   tmdbIntegration.obtenerOfertas.mockResolvedValue(ofertasTmdb);
   plataformaRepository.listarActivas.mockResolvedValue(plataformasActivas);
+  streamingAvailabilityIntegration.obtenerDeepLinks.mockResolvedValue([]);
+  tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue(null);
+  tituloRepository.guardarDesdeTmdb.mockResolvedValue({ id: 10 });
+  disponibilidadRepository.listarPorTituloYRegion.mockResolvedValue([]);
+  disponibilidadRepository.guardarDeepLinks.mockResolvedValue();
+  fuenteDatosRepository.obtenerIdPorNombre.mockResolvedValue(2);
 });
 
 describe('GET /api/titulos/:tipo/:tmdbId', () => {
@@ -194,6 +222,7 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
                 nombre: 'Netflix',
                 logoPath: '/netflix.jpg',
                 urlHome: 'https://www.netflix.com',
+                deepLink: null,
               },
               {
                 id: 2,
@@ -201,6 +230,7 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
                 nombre: 'Amazon Prime Video',
                 logoPath: '/prime.jpg',
                 urlHome: 'https://www.primevideo.com',
+                deepLink: null,
               },
             ],
           },
@@ -230,6 +260,7 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
                 nombre: 'Disney Plus',
                 logoPath: '/disney.jpg',
                 urlHome: 'https://www.disneyplus.com',
+                deepLink: null,
               },
             ],
           },
@@ -308,6 +339,43 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     ]);
   });
 
+  it('incluye el deep link de cada plataforma en su oferta', async () => {
+    const enlaceNetflix = 'https://www.netflix.com/title/50';
+    streamingAvailabilityIntegration.obtenerDeepLinks.mockResolvedValueOnce([
+      { servicio: 'netflix', tipoOferta: 'suscripcion', deepLink: enlaceNetflix },
+    ]);
+
+    const response = await request(createApp()).get('/api/titulos/pelicula/50/disponibilidad');
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.ofertas[0].plataformas).toEqual([
+      expect.objectContaining({ nombre: 'Netflix', deepLink: enlaceNetflix }),
+      expect.objectContaining({ nombre: 'Amazon Prime Video', deepLink: null }),
+    ]);
+    expect(streamingAvailabilityIntegration.obtenerDeepLinks).toHaveBeenCalledWith({
+      tipo: 'pelicula',
+      tmdbId: 50,
+      region: 'AR',
+    });
+  });
+
+  it('sigue mostrando la disponibilidad sin deep links si Streaming Availability falla', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    streamingAvailabilityIntegration.obtenerDeepLinks.mockRejectedValueOnce(
+      new ExternalServiceError('Streaming Availability', new Error('HTTP 429')),
+    );
+
+    const response = await request(createApp()).get('/api/titulos/pelicula/51/disponibilidad');
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.ofertas[0].plataformas).toEqual([
+      expect.objectContaining({ nombre: 'Netflix', deepLink: null }),
+      expect.objectContaining({ nombre: 'Amazon Prime Video', deepLink: null }),
+    ]);
+
+    consoleError.mockRestore();
+  });
+
   it('responde 502 cuando la integración con TMDB falla', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     tmdbIntegration.obtenerOfertas.mockRejectedValueOnce(
@@ -320,5 +388,20 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     expect(response.body.error.code).toBe('EXTERNAL_SERVICE');
 
     consoleError.mockRestore();
+  });
+
+  it('responde 429 cuando una IP supera el límite de consultas de disponibilidad', async () => {
+    const app = createApp();
+    let response;
+    for (let intento = 0; intento <= 30; intento += 1) {
+      response = await request(app).get('/api/titulos/pelicula/1/disponibilidad');
+      if (response.status === 429) {
+        break;
+      }
+    }
+
+    expect(response.status).toBe(429);
+    expect(response.body.error.code).toBe('RATE_LIMITED');
+    expect(response.headers['retry-after']).toBeDefined();
   });
 });

@@ -210,6 +210,15 @@ export function PaginaBusqueda() {
     }
   }
 
+  function actualizarNombrePersona(rol, id, nombre) {
+    const nombreCampo = `${rol}Nombre`;
+    if (filtros[rol] !== String(id) || filtros[nombreCampo] === nombre) {
+      return;
+    }
+
+    setFiltros({ ...filtros, [nombreCampo]: nombre });
+  }
+
   function reiniciarBusquedaCompleta() {
     busquedaInicialProcesadaRef.current = true;
     limpiezaUrlPendienteRef.current = true;
@@ -218,27 +227,15 @@ export function PaginaBusqueda() {
   }
 
   function limpiarFiltrosBusqueda() {
-    const hayFiltrosAvanzados =
-      tieneFiltrosAvanzados(filtros) ||
-      Boolean(filtros.actorNombre.trim() || filtros.directorNombre.trim());
-
-    if (ultimaBusqueda?.q && hayFiltrosAvanzados) {
-      const filtrosBase = {
-        ...FILTROS_INICIALES,
-        ...convertirFiltros(ultimaBusqueda),
-        genero: FILTROS_INICIALES.genero,
-        actor: FILTROS_INICIALES.actor,
-        actorNombre: FILTROS_INICIALES.actorNombre,
-        director: FILTROS_INICIALES.director,
-        directorNombre: FILTROS_INICIALES.directorNombre,
-        soloPropias: FILTROS_INICIALES.soloPropias,
-      };
-      setFiltros(filtrosBase);
-      buscar(conFiltroDisponible(filtrosBase));
+    const consulta = ultimaBusqueda?.q ?? filtros.q.trim();
+    if (!consulta) {
+      reiniciarBusquedaCompleta();
       return;
     }
 
-    reiniciarBusquedaCompleta();
+    const filtrosBase = { ...FILTROS_INICIALES, q: consulta };
+    setFiltros(filtrosBase);
+    buscar(conFiltroDisponible(filtrosBase));
   }
 
   const filtroPerdido = filtros.soloPropias && filtroPropias.resuelto && !filtroPropias.disponible;
@@ -291,7 +288,9 @@ export function PaginaBusqueda() {
         onSubmit={handleSubmit}
         onCambiarSoloPropias={(activo) => actualizarFiltro('soloPropias', activo)}
         onCambiarPersona={cambiarPersona}
+        onCambiarNombrePersona={actualizarNombrePersona}
         onLimpiarFiltros={limpiarFiltrosBusqueda}
+        onQuitarFiltro={(nombre) => actualizarFiltro(nombre, '')}
         generos={generosBusqueda.generos}
         isLoadingGeneros={generosBusqueda.isLoading}
         errorGeneros={generosBusqueda.error}

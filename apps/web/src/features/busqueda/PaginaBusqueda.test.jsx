@@ -160,7 +160,8 @@ describe('PaginaBusqueda', () => {
       { initialEntries: ['/?q=Dune&actor=6193&actorNombre=Nombre%20falso&pagina=1'] },
     );
 
-    expect(await screen.findByText('Leonardo DiCaprio')).toBeInTheDocument();
+    expect(await screen.findByText('Actor: Leonardo DiCaprio')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
     await waitFor(() => {
       const params = new URLSearchParams(screen.getByTestId('parametros-url').textContent);
       expect(params.get('actor')).toBe('6193');
@@ -860,7 +861,7 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
 });
 
 describe('PaginaBusqueda: filtros de género, actor y director', () => {
-  it('limpia los filtros avanzados y conserva la consulta, el tipo y el año', async () => {
+  it('limpia todos los filtros y conserva la consulta', async () => {
     const fetchMock = configurarFetchConOpciones();
     render(
       <>
@@ -891,14 +892,12 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText('Título')).toHaveValue('Dune');
-      expect(screen.getByLabelText('Tipo')).toHaveValue('pelicula');
-      expect(screen.getByLabelText('Año')).toHaveValue(2021);
+      expect(screen.getByLabelText('Tipo')).toHaveValue('');
+      expect(screen.getByLabelText('Año')).toHaveValue(null);
       expect(screen.getByLabelText('Género')).toHaveValue('');
       expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
       expect(screen.getByRole('combobox', { name: 'Director' })).toHaveValue('');
-      expect(screen.getByTestId('parametros-url').textContent).toContain(
-        '?q=Dune&tipo=pelicula&anio=2021&pagina=1',
-      );
+      expect(screen.getByTestId('parametros-url').textContent).toContain('?q=Dune&pagina=1');
       expect(screen.getByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
     });
 
@@ -907,8 +906,8 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
       .filter((url) => url.pathname === '/api/busqueda');
     expect(busquedas).toHaveLength(2);
     expect(busquedas.at(-1).searchParams.get('q')).toBe('Dune');
-    expect(busquedas.at(-1).searchParams.get('tipo')).toBe('pelicula');
-    expect(busquedas.at(-1).searchParams.get('anio')).toBe('2021');
+    expect(busquedas.at(-1).searchParams.has('tipo')).toBe(false);
+    expect(busquedas.at(-1).searchParams.has('anio')).toBe(false);
     expect(busquedas.at(-1).searchParams.has('genero')).toBe(false);
   });
 
@@ -984,8 +983,8 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     });
   });
 
-  it('permite borrar una búsqueda por nombre aunque no haya otros filtros', async () => {
-    const fetchMock = configurarFetchConOpciones();
+  it('no muestra la acción de limpiar cuando solo hay una consulta', async () => {
+    configurarFetchConOpciones();
     render(
       <>
         <PaginaBusqueda />
@@ -994,20 +993,11 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     );
     await ejecutarBusqueda();
 
-    expect(screen.getByRole('button', { name: 'Limpiar filtros' })).toBeInTheDocument();
-    const cantidadSolicitudes = fetchMock.mock.calls.length;
-    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('Título')).toHaveValue('');
-      expect(screen.getByTestId('parametros-url')).toBeEmptyDOMElement();
-      expect(screen.queryByRole('heading', { level: 3, name: 'Dune' })).not.toBeInTheDocument();
-    });
     expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(cantidadSolicitudes);
+    expect(screen.getByLabelText('Título')).toHaveValue('Dune');
   });
 
-  it('al limpiar una búsqueda restaurada desde la URL no la ejecuta otra vez', async () => {
+  it('no muestra la acción de limpiar en una búsqueda restaurada sin filtros', async () => {
     const fetchMock = configurarFetchConOpciones();
     render(
       <>
@@ -1018,14 +1008,8 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     );
     await screen.findByRole('heading', { level: 3, name: 'Dune' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('Título')).toHaveValue('');
-      expect(screen.getByTestId('parametros-url')).toBeEmptyDOMElement();
-      expect(screen.queryByRole('heading', { level: 3, name: 'Dune' })).not.toBeInTheDocument();
-    });
+    expect(screen.getByLabelText('Título')).toHaveValue('Dune');
+    expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -1038,6 +1022,9 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
       </>,
     );
     await ejecutarBusqueda();
+
+    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'pelicula' } });
+    fireEvent.change(screen.getByLabelText('Año'), { target: { value: '2021' } });
 
     const campoGenero = screen.getByLabelText('Género');
     fireEvent.focus(campoGenero);
@@ -1057,6 +1044,8 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
         ([url]) => new URL(url.toString()).pathname === '/api/busqueda',
       );
       const ultima = new URL(solicitudes.at(-1)[0].toString());
+      expect(ultima.searchParams.get('tipo')).toBe('pelicula');
+      expect(ultima.searchParams.get('anio')).toBe('2021');
       expect(ultima.searchParams.get('genero')).toBe('drama');
       expect(ultima.searchParams.get('actor')).toBe('6193');
       expect(ultima.searchParams.get('director')).toBe('525');
@@ -1064,9 +1053,30 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
       expect(ultima.searchParams.has('directorNombre')).toBe(false);
     });
 
-    const botonBuscar = screen.getByRole('button', { name: 'Buscar' });
-    const botonLimpiar = screen.getByRole('button', { name: 'Limpiar filtros' });
-    expect(botonBuscar.parentElement).toBe(botonLimpiar.parentElement);
+    const filtrosActivos = screen.getByRole('group', { name: 'Filtros activos' });
+    expect(filtrosActivos).toHaveTextContent('Películas');
+    expect(filtrosActivos).toHaveTextContent('2021');
+    expect(filtrosActivos).toHaveTextContent('Género: Drama');
+    expect(filtrosActivos).toHaveTextContent('Actor: Leonardo DiCaprio');
+    expect(filtrosActivos).toHaveTextContent('Director: Christopher Nolan');
+    expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'Director' })).toHaveValue('');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar Género: Drama' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Género')).toHaveValue('');
+      expect(screen.getByRole('group', { name: 'Filtros activos' })).toHaveTextContent(
+        'Actor: Leonardo DiCaprio',
+      );
+      const solicitudes = fetchMock.mock.calls.filter(
+        ([url]) => new URL(url.toString()).pathname === '/api/busqueda',
+      );
+      const ultima = new URL(solicitudes.at(-1)[0].toString());
+      expect(ultima.searchParams.has('genero')).toBe(false);
+      expect(ultima.searchParams.get('actor')).toBe('6193');
+      expect(ultima.searchParams.get('director')).toBe('525');
+    });
   });
 
   it('reinicia los filtros al ejecutar otra consulta con un título distinto', async () => {
@@ -1203,7 +1213,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
       ).not.toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: 'Limpiar filtros' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(cantidadSolicitudes + 1);
   });
 

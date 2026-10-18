@@ -23,10 +23,6 @@ function SelectorPersonaPrueba({ rol, etiqueta, onChange }) {
         setPersona(seleccionada);
         onChange(seleccionada);
       }}
-      onLimpiar={() => {
-        setPersona(null);
-        setConsulta('');
-      }}
     />
   );
 }
@@ -55,12 +51,11 @@ describe('SelectorPersona', () => {
       nombre: 'Leonardo DiCaprio',
       fotoUrl: null,
     });
-    expect(screen.getByText('Leonardo DiCaprio')).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Actor' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Quitar actor' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Quitar actor' })).not.toBeInTheDocument();
   });
 
-  it('usa texto para evitar el botón de borrado nativo y permite quitar la persona elegida', async () => {
+  it('usa texto para evitar el botón de borrado nativo y deja vacío el campo al elegir', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -74,9 +69,8 @@ describe('SelectorPersona', () => {
     expect(input).toHaveAttribute('type', 'text');
     fireEvent.change(input, { target: { value: 'Leo' } });
     fireEvent.click(await screen.findByRole('option', { name: 'Leonardo DiCaprio' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Quitar actor' }));
 
-    expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
+    expect(input).toHaveValue('');
   });
 
   it('permite recorrer y seleccionar sugerencias con el teclado', async () => {
@@ -112,8 +106,7 @@ describe('SelectorPersona', () => {
       nombre: 'Leonardo DiCaprio',
       fotoUrl: null,
     });
-    expect(screen.getByText('Leonardo DiCaprio')).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Actor' })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
   });
 
   it('cierra las sugerencias con Escape', async () => {

@@ -1,7 +1,5 @@
-import { useCallback, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { personaBusquedaSchema, personaIdBusquedaSchema } from '@buscador/shared/schemas';
-import { Chip } from '../../components/ui/Chip.jsx';
-import { IconButton } from '../../components/ui/IconButton.jsx';
 import { useRemoteOptions } from '../../hooks/useRemoteOptions.js';
 import { obtenerPersonaBusqueda } from './busqueda.api.js';
 import { CAMPO_BUSQUEDA_CLASS_NAME, ETIQUETA_BUSQUEDA_CLASS_NAME } from './busqueda.styles.js';
@@ -16,7 +14,7 @@ export function SelectorPersona({
   consulta,
   onConsultaChange,
   onSeleccionar,
-  onLimpiar,
+  onNombreCargado,
 }) {
   const inputId = useId();
   const listId = useId();
@@ -42,7 +40,12 @@ export function SelectorPersona({
     mensajeError: MENSAJE_ERROR_PERSONA,
   });
 
-  const nombreSeleccionado = persona?.nombre || respuestaPersona.datos?.nombre || '';
+  useEffect(() => {
+    if (persona?.id && !persona.nombre && respuestaPersona.datos?.nombre) {
+      onNombreCargado?.(persona.id, respuestaPersona.datos.nombre);
+    }
+  }, [onNombreCargado, persona?.id, persona?.nombre, respuestaPersona.datos?.nombre]);
+
   const consultaValida = personaBusquedaSchema.safeParse({ q: texto, rol });
   const mostrarOpciones =
     popupAbierto && !persona?.id && consultaValida.success && personas.length > 0;
@@ -92,61 +95,32 @@ export function SelectorPersona({
 
   return (
     <div className="relative space-y-2" onBlur={handleBlur}>
-      {persona?.id ? (
-        <span id={`${inputId}-label`} className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
-          {etiqueta}
-        </span>
-      ) : (
-        <label htmlFor={inputId} className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
-          {etiqueta}
-        </label>
-      )}
-      {persona?.id ? (
-        <div
-          role="group"
-          aria-labelledby={`${inputId}-label`}
-          className="flex min-h-12 items-center"
-        >
-          <Chip className="flex max-w-full items-center gap-2">
-            <span className="truncate">{nombreSeleccionado || `Persona ${persona.id}`}</span>
-            <IconButton
-              aria-label={`Quitar ${etiqueta.toLocaleLowerCase('es')}`}
-              className="!size-7 shrink-0 text-foreground"
-              onClick={() => {
-                setPopupAbierto(false);
-                setIndiceActivo(-1);
-                onLimpiar();
-              }}
-            >
-              ×
-            </IconButton>
-          </Chip>
-        </div>
-      ) : (
-        <div className="relative">
-          <input
-            id={inputId}
-            type="text"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded={mostrarOpciones}
-            aria-controls={listId}
-            aria-activedescendant={
-              mostrarOpciones && indiceActivo >= 0
-                ? `${listId}-option-${personas[indiceActivo].id}`
-                : undefined
-            }
-            aria-busy={isLoading}
-            value={consulta}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setPopupAbierto(true)}
-            autoComplete="off"
-            placeholder={`Buscá ${etiqueta.toLocaleLowerCase('es')}`}
-            className={`${CAMPO_BUSQUEDA_CLASS_NAME} placeholder:text-muted`}
-          />
-        </div>
-      )}
+      <label htmlFor={inputId} className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
+        {etiqueta}
+      </label>
+      <div className="relative">
+        <input
+          id={inputId}
+          type="text"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={mostrarOpciones}
+          aria-controls={listId}
+          aria-activedescendant={
+            mostrarOpciones && indiceActivo >= 0
+              ? `${listId}-option-${personas[indiceActivo].id}`
+              : undefined
+          }
+          aria-busy={isLoading}
+          value={persona?.id ? '' : consulta}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setPopupAbierto(true)}
+          autoComplete="off"
+          placeholder={`Buscá ${etiqueta.toLocaleLowerCase('es')}`}
+          className={`${CAMPO_BUSQUEDA_CLASS_NAME} placeholder:text-muted`}
+        />
+      </div>
       {persona?.id && respuestaPersona.isLoading && (
         <p role="status" className="text-sm text-muted">
           Cargando persona...

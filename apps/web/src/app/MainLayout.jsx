@@ -7,13 +7,16 @@ import { LogoInicio } from '../components/ui/LogoInicio.jsx';
 import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
 import { IconButton } from '../components/ui/IconButton.jsx';
-import { MenuIcon, XIcon } from '../components/ui/icons.jsx';
+import { BookmarkIcon, MenuIcon, XIcon } from '../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../components/ui/focusRing.js';
 import { RUTAS } from './rutas.js';
 
 const cerrarSesionClassName = `cursor-pointer items-center text-sm font-semibold text-muted transition-colors duration-150 hover:text-foreground ${FOCUS_RING_CLASS_NAME}`;
 
-const ENLACES = [{ to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' }];
+const ENLACES = [
+  { to: RUTAS.WATCHLIST, label: 'Mi watchlist' },
+  { to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' },
+];
 
 function Enlaces({ onNavigate }) {
   return ENLACES.map(({ to, label }) => (
@@ -94,14 +97,27 @@ export function MainLayout() {
     <div className="flex min-h-dvh flex-col">
       <ScrollRestoration />
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1 gap-y-1 px-2 py-2 sm:gap-3 sm:px-4">
           <LogoInicio className={FOCUS_RING_CLASS_NAME} />
           {user && (
             <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
               <Enlaces />
             </nav>
           )}
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          {!user && (
+            <Link
+              to={RUTAS.WATCHLIST}
+              aria-label="Mi watchlist"
+              title="Mi watchlist"
+              className={`ml-1 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-border/60 hover:text-foreground sm:ml-2 sm:w-auto sm:px-3 ${FOCUS_RING_CLASS_NAME}`}
+            >
+              <BookmarkIcon className="size-5 sm:hidden" />
+              <span className="hidden text-sm font-semibold whitespace-nowrap sm:inline">
+                Mi watchlist
+              </span>
+            </Link>
+          )}
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
             {!regionLoading && (
               <span
                 aria-label={`${source === REGION_SOURCE.DEFAULT ? 'Región predeterminada' : 'Región'}: ${region}`}

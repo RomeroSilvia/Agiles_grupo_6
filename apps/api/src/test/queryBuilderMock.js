@@ -5,6 +5,7 @@ const METODOS = [
   'eq',
   'is',
   'order',
+  'range',
   'upsert',
   'update',
   'delete',

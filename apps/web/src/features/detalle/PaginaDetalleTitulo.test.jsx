@@ -60,6 +60,12 @@ function configurarFetch(
 ) {
   const fetchMock = vi.fn().mockImplementation((url) => {
     const urlStr = url.toString();
+    if (urlStr.includes('/api/watchlist/')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: { agregado: false } }),
+      });
+    }
     if (urlStr.includes('/disponibilidad')) {
       return Promise.resolve({
         ok: true,
@@ -81,11 +87,97 @@ function configurarFetch(
   return fetchMock;
 }
 
+function respuestaHttp(data, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => data,
+  };
+}
+
+function configurarFetchWatchlist({ fallarAlta = false } = {}) {
+  let agregado = false;
+  const fetchMock = vi.fn((input, options = {}) => {
+    const url = new URL(input.toString());
+    const method = options.method ?? 'GET';
+
+    if (url.pathname === '/api/watchlist/pelicula/1') {
+      if (method === 'GET') {
+        return Promise.resolve(respuestaHttp({ data: { agregado } }));
+      }
+      if (method === 'PUT') {
+        agregado = true;
+        if (fallarAlta) {
+          return Promise.resolve(
+            respuestaHttp(
+              { error: { code: 'DATABASE', message: 'No se pudo agregar el título' } },
+              500,
+            ),
+          );
+        }
+        return Promise.resolve(respuestaHttp(null, 204));
+      }
+      if (method === 'DELETE') {
+        agregado = false;
+        return Promise.resolve(respuestaHttp(null, 204));
+      }
+    }
+
+    if (url.pathname === '/api/region') {
+      return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'ip' } }));
+    }
+    if (url.pathname === '/api/titulos/pelicula/1/disponibilidad') {
+      return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad() }));
+    }
+    if (url.pathname === '/api/titulos/pelicula/1') {
+      return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+    }
+
+    throw new Error(`Solicitud inesperada: ${method} ${url.pathname}`);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe('PaginaDetalleTitulo', () => {
+  it('agrega y quita el título de la watchlist desde el detalle', async () => {
+    const fetchMock = configurarFetchWatchlist();
+
+    renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Agregar a mi watchlist' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitar de mi watchlist' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Agregar a mi watchlist' }),
+    ).toBeInTheDocument();
+    const solicitudesWatchlist = fetchMock.mock.calls
+      .filter(([input]) => new URL(input.toString()).pathname === '/api/watchlist/pelicula/1')
+      .map(([, options]) => options.method ?? 'GET');
+    expect(solicitudesWatchlist).toEqual(['GET', 'PUT', 'DELETE']);
+  });
+
+  it('muestra el estado persistido si falla el alta pero la API confirma que se guardó', async () => {
+    const fetchMock = configurarFetchWatchlist({ fallarAlta: true });
+
+    renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+    fireEvent.click(await screen.findByRole('button', { name: 'Agregar a mi watchlist' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo agregar el título');
+    expect(screen.getByRole('alert')).toHaveTextContent('Estado guardado: está en tu watchlist.');
+    expect(screen.getByRole('button', { name: 'Quitar de mi watchlist' })).toBeInTheDocument();
+    const solicitudesDeEstado = fetchMock.mock.calls.filter(
+      ([input, options]) =>
+        new URL(input.toString()).pathname === '/api/watchlist/pelicula/1' &&
+        (options.method ?? 'GET') === 'GET',
+    );
+    expect(solicitudesDeEstado).toHaveLength(2);
+  });
+
   it('muestra la información principal del título', async () => {
     const fetchMock = configurarFetch();
 

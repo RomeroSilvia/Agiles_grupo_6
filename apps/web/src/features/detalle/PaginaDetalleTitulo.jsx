@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { REGION_SOURCE, TIPO_OFERTA } from '@buscador/shared/constants';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { NotFoundPage } from '../../app/NotFoundPage.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
+import { Button } from '../../components/ui/Button.jsx';
 import { Poster } from '../../components/ui/Poster.jsx';
 import { FOCUS_RING_CLASS_NAME, LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { formatearPuntuacion } from '../../utils/formatearPuntuacion.js';
@@ -15,6 +16,8 @@ import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
 import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
+import { RUTAS } from '../../app/rutas.js';
+import { useWatchlistTitle } from '../watchlist/useWatchlistTitle.js';
 
 const ETIQUETAS_OFERTA = Object.freeze({
   [TIPO_OFERTA.SUSCRIPCION]: 'Suscripción',
@@ -36,6 +39,15 @@ export function PaginaDetalleTitulo() {
     reintentar: reintentarDisponibilidad,
   } = useDisponibilidad({ tipo, tmdbId, region, regionLoading });
   const { user, loading: cargandoSesion } = useSession();
+  const {
+    agregado,
+    estadoCargado: estadoWatchlistCargado,
+    cargando: cargandoWatchlist,
+    actualizando: actualizandoWatchlist,
+    error: errorWatchlist,
+    alternar: alternarWatchlist,
+    reintentar: reintentarWatchlist,
+  } = useWatchlistTitle({ tipo, tmdbId });
   const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
   const distinguirPropias = Boolean(user) && !cargandoSesion && !cargandoPropias;
 
@@ -106,6 +118,60 @@ export function PaginaDetalleTitulo() {
           <div className="space-y-3">
             <Chip>{ETIQUETAS_TIPO_TITULO_SINGULAR[titulo.tipo] ?? 'Título'}</Chip>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">{nombre}</h1>
+          </div>
+
+          <div className="space-y-2">
+            {cargandoSesion && (
+              <p role="status" className="text-sm text-muted">
+                Cargando el estado de tu watchlist…
+              </p>
+            )}
+            {!cargandoSesion && !user && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted">Iniciá sesión para guardar este título.</span>
+                <Link
+                  to={RUTAS.INICIAR_SESION}
+                  className={`${LINK_CLASS_NAME} rounded-sm font-semibold text-link underline underline-offset-4`}
+                >
+                  Iniciar sesión
+                </Link>
+              </div>
+            )}
+            {user && cargandoWatchlist && (
+              <p role="status" className="text-sm text-muted">
+                Consultando tu watchlist…
+              </p>
+            )}
+            {user && estadoWatchlistCargado && (
+              <Button
+                onClick={alternarWatchlist}
+                loading={actualizandoWatchlist}
+                loadingText="Guardando…"
+                variant={agregado ? 'accent' : 'primary'}
+                className="sm:w-auto"
+              >
+                {agregado ? 'Quitar de mi watchlist' : 'Agregar a mi watchlist'}
+              </Button>
+            )}
+            {user && errorWatchlist && (
+              <div
+                role="alert"
+                className="flex flex-col gap-2 rounded-xl border border-danger/30 bg-danger-surface p-3 text-sm text-danger sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span>
+                  {errorWatchlist}
+                  {estadoWatchlistCargado &&
+                    ` Estado guardado: ${agregado ? 'está en tu watchlist.' : 'no está en tu watchlist.'}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={reintentarWatchlist}
+                  className={`cursor-pointer font-semibold underline underline-offset-4 hover:opacity-80 ${FOCUS_RING_CLASS_NAME}`}
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
           </div>
 
           <dl className="grid grid-cols-2 gap-4 sm:max-w-md">

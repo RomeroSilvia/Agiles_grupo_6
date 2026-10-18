@@ -9,9 +9,8 @@ import * as authService from '../services/auth.service.js';
 /**
  * Deja en `req.user` el usuario de la sesión (`{ id, email }`) o `null` si no hay sesión.
  * No corta el request: para exigir sesión usar `requireSession` después de este middleware.
- * Si el access token venció, lo renueva con el refresh token y actualiza las cookies.
- * TODO (optimización): verificar el JWT localmente con las claves públicas (JWKS)
- * del proyecto en lugar de consultar a Supabase en cada request.
+ * El access token se verifica localmente con las claves públicas (JWKS) del proyecto, sin
+ * consultar a Supabase. Si venció, lo renueva con el refresh token y actualiza las cookies.
  */
 export async function loadSession(req, res, next) {
   const accessToken = req.cookies?.[ACCESS_TOKEN_COOKIE];

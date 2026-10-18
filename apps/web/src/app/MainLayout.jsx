@@ -9,11 +9,13 @@ import { Attribution } from '../components/ui/Attribution.jsx';
 import { IconButton } from '../components/ui/IconButton.jsx';
 import { MenuIcon, XIcon } from '../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../components/ui/focusRing.js';
+import { MenuUsuario } from './MenuUsuario.jsx';
 import { RUTAS } from './rutas.js';
 
-const cerrarSesionClassName = `cursor-pointer items-center text-sm font-semibold text-muted transition-colors duration-150 hover:text-foreground ${FOCUS_RING_CLASS_NAME}`;
-
-const ENLACES = [{ to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' }];
+const ENLACES = [
+  { to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' },
+  { to: RUTAS.PERFIL, label: 'Perfil' },
+];
 
 function Enlaces({ onNavigate }) {
   return ENLACES.map(({ to, label }) => (
@@ -31,31 +33,14 @@ function Enlaces({ onNavigate }) {
 }
 
 function AccionesDeSesion() {
-  const { user, loading, signOut } = useSession();
+  const { user, loading } = useSession();
 
   if (loading) {
     return null;
   }
 
   if (user) {
-    return (
-      <div className="flex items-center gap-2">
-        <span
-          title={user.email}
-          aria-label={`Sesión iniciada como ${user.email}`}
-          className="inline-flex size-9 items-center justify-center rounded-full bg-panel text-sm font-bold text-panel-foreground uppercase"
-        >
-          {user.email[0]}
-        </span>
-        <button
-          type="button"
-          onClick={signOut}
-          className={`hidden min-h-11 rounded-full px-3 md:inline-flex ${cerrarSesionClassName}`}
-        >
-          Cerrar sesión
-        </button>
-      </div>
-    );
+    return <MenuUsuario />;
   }
 
   return (
@@ -80,15 +65,10 @@ function AccionesDeSesion() {
 
 export function MainLayout() {
   const { region, source, loading: regionLoading } = useRegion();
-  const { user, signOut } = useSession();
+  const { user } = useSession();
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const cerrarMenu = () => setMenuAbierto(false);
-
-  function cerrarSesionDesdeMenu() {
-    cerrarMenu();
-    signOut();
-  }
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -133,13 +113,6 @@ export function MainLayout() {
             className="flex flex-col border-t border-border px-4 py-2 md:hidden"
           >
             <Enlaces onNavigate={cerrarMenu} />
-            <button
-              type="button"
-              onClick={cerrarSesionDesdeMenu}
-              className={`inline-flex min-h-11 rounded-sm ${cerrarSesionClassName}`}
-            >
-              Cerrar sesión
-            </button>
           </nav>
         )}
       </header>

@@ -8,6 +8,7 @@ import { PaginaInicioSesion } from '../features/auth/PaginaInicioSesion.jsx';
 import { PaginaRegistro } from '../features/auth/PaginaRegistro.jsx';
 import { SoloConSesion } from '../features/auth/SoloConSesion.jsx';
 import { PaginaMisPlataformas } from '../features/plataformas/PaginaMisPlataformas.jsx';
+import { PaginaPerfil } from '../features/perfil/PaginaPerfil.jsx';
 import { RUTAS } from './rutas.js';
 
 export const routes = [
@@ -19,7 +20,10 @@ export const routes = [
       { path: RUTAS.DETALLE_TITULO, Component: PaginaDetalleTitulo },
       {
         Component: SoloConSesion,
-        children: [{ path: RUTAS.MIS_PLATAFORMAS, Component: PaginaMisPlataformas }],
+        children: [
+          { path: RUTAS.MIS_PLATAFORMAS, Component: PaginaMisPlataformas },
+          { path: RUTAS.PERFIL, Component: PaginaPerfil },
+        ],
       },
       { path: '*', Component: NotFoundPage },
     ],

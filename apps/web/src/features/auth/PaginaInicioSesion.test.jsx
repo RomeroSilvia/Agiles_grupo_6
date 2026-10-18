@@ -47,7 +47,9 @@ describe('Inicio de sesión (E4HU2)', () => {
     expect(
       await screen.findByRole('heading', { name: 'Una búsqueda. Todas tus plataformas.' }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('Sesión iniciada como ana@mail.com')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Menú de la cuenta de ana@mail.com' }),
+    ).toBeInTheDocument();
   }, 10_000);
 
   it('muestra un mensaje genérico si las credenciales no son correctas', async () => {

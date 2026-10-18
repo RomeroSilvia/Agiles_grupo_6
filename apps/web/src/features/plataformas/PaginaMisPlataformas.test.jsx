@@ -347,7 +347,7 @@ describe('Link "Mis plataformas" del header', () => {
 });
 
 describe('Menú hamburguesa', () => {
-  it('se abre con el link a Mis plataformas y la opción de cerrar sesión', async () => {
+  it('se abre con los links a Mis plataformas y Perfil, sin cerrar sesión', async () => {
     const user = userEvent.setup();
     renderRoute('/');
 
@@ -358,7 +358,8 @@ describe('Menú hamburguesa', () => {
 
     const menu = screen.getByRole('navigation', { name: 'Menú' });
     expect(within(menu).getByRole('link', { name: 'Mis plataformas' })).toBeInTheDocument();
-    expect(within(menu).getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
+    expect(within(menu).getByRole('link', { name: 'Perfil' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cerrar menú' })).toHaveAttribute(
       'aria-expanded',
       'true',
@@ -374,19 +375,6 @@ describe('Menú hamburguesa', () => {
     await user.click(within(menu).getByRole('link', { name: 'Mis plataformas' }));
 
     expect(await screen.findByRole('heading', { name: 'Mis plataformas' })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: 'Menú' })).not.toBeInTheDocument();
-  });
-
-  it('cierra la sesión desde el menú', async () => {
-    const user = userEvent.setup();
-    renderRoute('/');
-
-    await user.click(await screen.findByRole('button', { name: 'Abrir menú' }));
-    const menu = screen.getByRole('navigation', { name: 'Menú' });
-    await user.click(within(menu).getByRole('button', { name: 'Cerrar sesión' }));
-
-    expect(request).toHaveBeenCalledWith('/auth/sign-out', { method: 'POST' });
-    expect(await screen.findByRole('link', { name: 'Crear cuenta' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Menú' })).not.toBeInTheDocument();
   });
 });

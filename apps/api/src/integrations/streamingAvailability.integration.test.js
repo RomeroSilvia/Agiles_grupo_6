@@ -62,11 +62,14 @@ describe('obtenerDeepLinks', () => {
     ]);
   });
 
-  it('trata un addon (canal dentro de otra plataforma) como suscripción', async () => {
+  it('descarta los add-ons y conserva la suscripción del mismo servicio', async () => {
     vi.stubGlobal(
       'fetch',
       responder({
-        ar: [{ service: { id: 'prime' }, type: 'addon', link: 'https://www.primevideo.com/1' }],
+        ar: [
+          { service: { id: 'prime' }, type: 'addon', link: 'https://www.primevideo.com/addon' },
+          { service: { id: 'prime' }, type: 'subscription', link: 'https://www.primevideo.com/1' },
+        ],
       }),
     );
 

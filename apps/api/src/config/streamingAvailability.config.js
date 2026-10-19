@@ -30,9 +30,9 @@ export const SERVICIO_POR_TMDB_PROVIDER_ID = Object.freeze({
   11: { servicio: 'mubi', dominios: ['mubi.com'] },
 });
 
+// Los add-ons se descartan: requieren un pago extra que la oferta de JustWatch no indica.
 export const TIPO_OFERTA_POR_TIPO_STREAMING_AVAILABILITY = Object.freeze({
   subscription: TIPO_OFERTA.SUSCRIPCION,
-  addon: TIPO_OFERTA.SUSCRIPCION,
   free: TIPO_OFERTA.GRATIS,
   rent: TIPO_OFERTA.ALQUILER,
   buy: TIPO_OFERTA.COMPRA,

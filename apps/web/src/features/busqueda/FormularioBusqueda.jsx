@@ -1,4 +1,5 @@
 import { ANIO_MAXIMO, ANIO_MINIMO, TIPOS_TITULO } from '@buscador/shared/constants';
+import { Button } from '../../components/ui/Button.jsx';
 import { ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
 import { FiltroPlataformasPropias } from './FiltroPlataformasPropias.jsx';
 
@@ -83,13 +84,9 @@ export function FormularioBusqueda({
           onChange={onCambiarSoloPropias}
         />
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:bg-primary-hover focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
-        >
-          {isLoading ? 'Buscando...' : 'Buscar'}
-        </button>
+        <Button type="submit" size="compact" loading={isLoading} loadingText="Buscando…">
+          Buscar
+        </Button>
       </div>
     </form>
   );

@@ -116,14 +116,19 @@ export function PaginaWatchlist() {
             })}
           </ul>
           {pagina < totalPaginas && (
-            <button
-              type="button"
-              onClick={cargarMas}
-              disabled={cargando || cargandoMas || Boolean(error) || pendientes.size > 0}
-              className="mx-auto block rounded-xl border border-primary px-6 py-3 font-semibold text-primary transition hover:bg-primary/10 focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
-            >
-              {cargandoMas ? 'Cargando...' : 'Cargar más'}
-            </button>
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="compact"
+                fullWidth={false}
+                onClick={cargarMas}
+                disabled={cargando || Boolean(error) || pendientes.size > 0}
+                loading={cargandoMas}
+                loadingText="Cargando…"
+              >
+                Cargar más
+              </Button>
+            </div>
           )}
         </>
       )}

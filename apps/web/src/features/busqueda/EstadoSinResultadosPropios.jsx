@@ -1,5 +1,4 @@
-const botonSecundarioClassName =
-  'rounded-xl border border-primary px-5 py-3 font-semibold text-primary transition hover:bg-primary/10 focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60';
+import { Button } from '../../components/ui/Button.jsx';
 
 export function EstadoSinResultadosPropios({
   verificacionIncompleta,
@@ -21,32 +20,31 @@ export function EstadoSinResultadosPropios({
           : 'Ninguno de los títulos encontrados está disponible en tus plataformas.'}
       </p>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={onVerTodos}
-          className="rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:bg-primary-hover focus:ring-4 focus:ring-primary/30 focus:outline-none"
-        >
+        <Button size="compact" fullWidth={false} onClick={onVerTodos}>
           Ver todos los resultados
-        </button>
+        </Button>
         {verificacionIncompleta && (
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="compact"
+            fullWidth={false}
             onClick={onReintentar}
             disabled={buscando}
-            className={botonSecundarioClassName}
           >
             Reintentar
-          </button>
+          </Button>
         )}
         {puedeSeguirBuscando && (
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="compact"
+            fullWidth={false}
             onClick={onSeguirBuscando}
-            disabled={buscando}
-            className={botonSecundarioClassName}
+            loading={buscando}
+            loadingText="Buscando…"
           >
-            {buscando ? 'Buscando...' : 'Seguir buscando'}
-          </button>
+            Seguir buscando
+          </Button>
         )}
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { Button } from '../../components/ui/Button.jsx';
 import { CARDS_CARGANDO } from './busqueda.constants.js';
 import { EstadoSinResultadosPropios } from './EstadoSinResultadosPropios.jsx';
 import { ResultadoCard } from './ResultadoCard.jsx';
@@ -93,13 +94,9 @@ export function ResultadosBusqueda({
         >
           <p>{error}</p>
           {busquedaFiltrada && (
-            <button
-              type="button"
-              onClick={onReintentar}
-              className="rounded-xl border border-danger px-5 py-3 font-semibold transition hover:bg-danger/10 focus:ring-4 focus:ring-danger/30 focus:outline-none"
-            >
+            <Button variant="outlineDanger" size="compact" fullWidth={false} onClick={onReintentar}>
               Reintentar
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -146,14 +143,16 @@ export function ResultadosBusqueda({
                 No pudimos verificar todos los títulos. Puede haber más disponibles en tus
                 plataformas.
               </p>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
+                fullWidth={false}
                 onClick={onReintentar}
                 disabled={isLoading}
-                className="shrink-0 rounded-xl border border-primary px-4 py-2 font-semibold text-primary transition hover:bg-primary/10 focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
+                className="shrink-0"
               >
                 Reintentar
-              </button>
+              </Button>
             </div>
           )}
           <GrillaResultados>
@@ -164,14 +163,19 @@ export function ResultadosBusqueda({
           </GrillaResultados>
           {hayMasPaginas && (
             <>
-              <button
-                type="button"
-                onClick={onCargarMas}
-                disabled={isLoading}
-                className="mx-auto mt-8 block rounded-xl border border-primary px-6 py-3 font-semibold text-primary transition hover:bg-primary/10 focus:ring-4 focus:ring-primary/30 focus:outline-none disabled:cursor-wait disabled:opacity-60"
-              >
-                {isLoadingMore ? 'Cargando...' : 'Cargar más'}
-              </button>
+              <div className="mt-8 flex justify-center">
+                <Button
+                  variant="outline"
+                  size="compact"
+                  fullWidth={false}
+                  onClick={onCargarMas}
+                  disabled={isLoading}
+                  loading={isLoadingMore}
+                  loadingText="Cargando…"
+                >
+                  Cargar más
+                </Button>
+              </div>
               {error && (
                 <p
                   role="alert"

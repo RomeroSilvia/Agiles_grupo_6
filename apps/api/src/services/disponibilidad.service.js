@@ -1,4 +1,3 @@
-import { DEFAULT_REGION } from '@buscador/shared/constants';
 import { env } from '../config/env.config.js';
 import { STREAMING_AVAILABILITY_CONFIG } from '../config/streamingAvailability.config.js';
 import * as streamingAvailabilityIntegration from '../integrations/streamingAvailability.integration.js';
@@ -171,7 +170,7 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
   const errores = [];
 
   try {
-    const watchlist = await watchlistRepository.listarTitulosConAvisosActivos(DEFAULT_REGION);
+    const watchlist = await watchlistRepository.listarTitulosConAvisosActivos(env.DEFAULT_REGION);
     const combinaciones = deduplicarCombinaciones(watchlist);
 
     if (combinaciones.length === 0) {

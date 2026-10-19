@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const envMock = vi.hoisted(() => ({ env: { STREAMING_AVAILABILITY_API_KEY: 'clave-prueba' } }));
+const envMock = vi.hoisted(() => ({
+  env: { DEFAULT_REGION: 'AR', STREAMING_AVAILABILITY_API_KEY: 'clave-prueba' },
+}));
 
 vi.mock('../config/env.config.js', () => envMock);
 vi.mock('../integrations/streamingAvailability.integration.js', () => ({
@@ -45,6 +47,7 @@ const PLATAFORMAS = [
 
 beforeEach(() => {
   vi.resetAllMocks();
+  envMock.env.DEFAULT_REGION = 'AR';
   envMock.env.STREAMING_AVAILABILITY_API_KEY = 'clave-prueba';
   sincronizacionRepository.iniciar.mockResolvedValue({ id: 1 });
   sincronizacionRepository.contarTitulosProcesadosEntre.mockResolvedValue(0);
@@ -147,6 +150,31 @@ describe('sincronizarDisponibilidad', () => {
       expect.objectContaining({ plataformaId: 11, vigente: true }),
       { verificadaEn: AHORA.toISOString(), vigente: false },
     );
+  });
+
+  it('usa la región configurada y procesa por separado un título seguido en varias regiones', async () => {
+    envMock.env.DEFAULT_REGION = 'MX';
+    watchlistRepository.listarTitulosConAvisosActivos.mockResolvedValue([
+      { ...COMBINACION, region: 'AR' },
+      { ...COMBINACION, region: 'AR' },
+      { ...COMBINACION, region: 'MX' },
+    ]);
+
+    const resultado = await sincronizarDisponibilidad({ ahora: AHORA });
+
+    expect(watchlistRepository.listarTitulosConAvisosActivos).toHaveBeenCalledWith('MX');
+    expect(streamingAvailabilityIntegration.obtenerOfertas).toHaveBeenCalledTimes(2);
+    expect(streamingAvailabilityIntegration.obtenerOfertas).toHaveBeenCalledWith({
+      tipo: 'pelicula',
+      tmdbId: 1,
+      region: 'AR',
+    });
+    expect(streamingAvailabilityIntegration.obtenerOfertas).toHaveBeenCalledWith({
+      tipo: 'pelicula',
+      tmdbId: 1,
+      region: 'MX',
+    });
+    expect(resultado.combinacionesProcesadas).toBe(2);
   });
 
   it('mantiene sin disponibilidad las ofertas históricas que siguen ausentes', async () => {

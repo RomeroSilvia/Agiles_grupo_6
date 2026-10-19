@@ -17,17 +17,31 @@ function lanzarError(error) {
 }
 
 export async function listarTitulosConAvisosActivos(regionPredeterminada) {
-  const { data, error } = await supabaseAdmin
-    .from('watchlist_item')
-    .select(TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS)
-    .eq('aviso_activo', true)
-    .order('titulo_id');
+  const resultados = [];
+  let desde = 0;
 
-  if (error) {
-    throw new DatabaseError(error);
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from('watchlist_item')
+      .select(TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS)
+      .eq('aviso_activo', true)
+      .order('titulo_id')
+      .order('id')
+      .range(desde, desde + WATCHLIST_PAGE_SIZE - 1);
+
+    if (error) {
+      throw new DatabaseError(error);
+    }
+
+    const pagina = data ?? [];
+    resultados.push(...pagina.map((row) => fromActiveWatchlistRow(row, regionPredeterminada)));
+
+    if (pagina.length < WATCHLIST_PAGE_SIZE) {
+      return resultados;
+    }
+
+    desde += WATCHLIST_PAGE_SIZE;
   }
-
-  return data.map((row) => fromActiveWatchlistRow(row, regionPredeterminada));
 }
 
 export async function listarPorUsuario(usuarioId, pagina) {

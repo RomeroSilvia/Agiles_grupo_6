@@ -49,7 +49,52 @@ describe('listarTitulosConAvisosActivos', () => {
     expect(supabaseAdmin.from).toHaveBeenCalledWith('watchlist_item');
     expect(builder.select).toHaveBeenCalledWith(TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS);
     expect(builder.eq).toHaveBeenCalledWith('aviso_activo', true);
-    expect(builder.order).toHaveBeenCalledWith('titulo_id');
+    expect(builder.order).toHaveBeenNthCalledWith(1, 'titulo_id');
+    expect(builder.order).toHaveBeenNthCalledWith(2, 'id');
+    expect(builder.range).toHaveBeenCalledWith(0, 19);
+  });
+
+  it('recorre todas las páginas cuando hay más de mil títulos con avisos activos', async () => {
+    const filas = Array.from({ length: 1001 }, (_, index) => ({
+      titulo: { id: index + 1, tmdb_id: index + 1, tipo: 'pelicula' },
+      perfil: { region: 'AR' },
+    }));
+    const builders = [];
+
+    supabaseAdmin.from.mockImplementation(() => {
+      let desde = 0;
+      let hasta = 0;
+      const builder = {
+        select: vi.fn(() => builder),
+        eq: vi.fn(() => builder),
+        order: vi.fn(() => builder),
+        range: vi.fn((inicio, fin) => {
+          desde = inicio;
+          hasta = fin;
+          return builder;
+        }),
+        then: (resolve, reject) =>
+          Promise.resolve({ data: filas.slice(desde, hasta + 1), error: null }).then(
+            resolve,
+            reject,
+          ),
+      };
+      builders.push(builder);
+      return builder;
+    });
+
+    const resultados = await watchlistRepository.listarTitulosConAvisosActivos('AR');
+
+    expect(resultados).toHaveLength(1001);
+    expect(resultados.at(-1)).toEqual({
+      tituloId: 1001,
+      tmdbId: 1001,
+      tipo: 'pelicula',
+      region: 'AR',
+    });
+    expect(builders).toHaveLength(51);
+    expect(builders[0].range).toHaveBeenCalledWith(0, 19);
+    expect(builders.at(-1).range).toHaveBeenCalledWith(1000, 1019);
   });
 
   it('lanza DatabaseError si falla la consulta', async () => {

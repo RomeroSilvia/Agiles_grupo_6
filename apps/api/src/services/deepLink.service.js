@@ -3,7 +3,7 @@ import {
   SERVICIO_POR_TMDB_PROVIDER_ID,
   STREAMING_AVAILABILITY_CONFIG,
 } from '../config/streamingAvailability.config.js';
-import { ExternalServiceError } from '../errors/index.js';
+import { DatabaseError, ExternalServiceError } from '../errors/index.js';
 import * as streamingAvailabilityIntegration from '../integrations/streamingAvailability.integration.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as disponibilidadRepository from '../repositories/disponibilidad.repository.js';
@@ -40,13 +40,16 @@ function esDeepLinkDePlataforma(enlace, plataforma) {
   return dominios.some((dominio) => hostname === dominio || hostname.endsWith(`.${dominio}`));
 }
 
-// Prefiere el enlace del mismo tipo de oferta; si no hay, cualquiera del mismo servicio.
+// Solo acepta el enlace del mismo tipo de oferta: el de otro tipo abriría una oferta
+// distinta a la que se muestra (por ejemplo, el alquiler en lugar de la suscripción).
 function elegirDeepLink({ plataforma, tipoOferta }, opciones) {
   const { servicio } = SERVICIO_POR_TMDB_PROVIDER_ID[plataforma.tmdbProviderId];
-  const delServicio = opciones.filter(
-    (opcion) => opcion.servicio === servicio && esDeepLinkDePlataforma(opcion.deepLink, plataforma),
+  const elegida = opciones.find(
+    (opcion) =>
+      opcion.servicio === servicio &&
+      opcion.tipoOferta === tipoOferta &&
+      esDeepLinkDePlataforma(opcion.deepLink, plataforma),
   );
-  const elegida = delServicio.find((opcion) => opcion.tipoOferta === tipoOferta) ?? delServicio[0];
   return elegida?.deepLink ?? null;
 }
 
@@ -84,7 +87,7 @@ async function guardar({ tipo, tmdbId, region, enlazables, deepLinks }) {
     fuenteDatosRepository.obtenerIdPorNombre(STREAMING_AVAILABILITY_CONFIG.FUENTE_DISPONIBILIDAD),
   ]);
   if (!fuenteId) {
-    throw new Error('Falta la fuente de datos de la disponibilidad');
+    throw new DatabaseError(new Error('Falta la fuente de datos de la disponibilidad'));
   }
 
   const { id: tituloId } = await tituloRepository.guardarDesdeTmdb(titulo);

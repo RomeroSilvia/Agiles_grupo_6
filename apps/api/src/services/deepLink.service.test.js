@@ -171,7 +171,7 @@ describe('agregarDeepLinks', () => {
     expect(streamingAvailabilityIntegration.obtenerDeepLinks).toHaveBeenCalledTimes(1);
   });
 
-  it('prefiere el enlace del mismo tipo de oferta y si no hay usa otro del mismo servicio', async () => {
+  it('usa solo el enlace del mismo tipo de oferta y no el de otro tipo del mismo servicio', async () => {
     const enlaceAlquiler = 'https://www.netflix.com/title/alquiler';
     streamingAvailabilityIntegration.obtenerDeepLinks.mockResolvedValue([
       { servicio: 'netflix', tipoOferta: 'alquiler', deepLink: enlaceAlquiler },
@@ -183,8 +183,22 @@ describe('agregarDeepLinks', () => {
 
     expect(deepLinksDe(resultado)).toEqual({
       'Netflix:suscripcion': ENLACE_NETFLIX,
-      'Amazon Prime Video:suscripcion': ENLACE_PRIME,
+      'Amazon Prime Video:suscripcion': null,
     });
+  });
+
+  it('asigna a una oferta de alquiler el enlace de alquiler del servicio', async () => {
+    const enlaceAlquiler = 'https://www.primevideo.com/detail/alquiler';
+    streamingAvailabilityIntegration.obtenerDeepLinks.mockResolvedValue([
+      { servicio: 'prime', tipoOferta: 'suscripcion', deepLink: ENLACE_PRIME },
+      { servicio: 'prime', tipoOferta: 'alquiler', deepLink: enlaceAlquiler },
+    ]);
+
+    const resultado = await agregarDeepLinks(
+      consulta([{ tipoOferta: 'alquiler', plataformas: [PRIME] }]),
+    );
+
+    expect(deepLinksDe(resultado)).toEqual({ 'Amazon Prime Video:alquiler': enlaceAlquiler });
   });
 
   it('descarta un deep link que no pertenece al dominio de la plataforma', async () => {
@@ -229,6 +243,7 @@ describe('agregarDeepLinks', () => {
     const resultado = await agregarDeepLinks(consulta());
 
     expect(disponibilidadRepository.guardarDeepLinks).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith(expect.any(String), expect.any(DatabaseError));
     expect(deepLinksDe(resultado)['Netflix:suscripcion']).toBe(ENLACE_NETFLIX);
   });
 

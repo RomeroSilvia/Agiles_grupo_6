@@ -34,6 +34,7 @@ import * as plataformaRepository from '../repositories/plataforma.repository.js'
 import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
 import * as watchlistRepository from '../repositories/watchlist.repository.js';
 import { STREAMING_AVAILABILITY_CONFIG } from '../config/streamingAvailability.config.js';
+import { DatabaseError } from '../errors/index.js';
 import { sincronizarDisponibilidad } from './disponibilidad.service.js';
 
 const AHORA = new Date('2026-10-17T06:00:00.000Z');
@@ -246,6 +247,50 @@ describe('sincronizarDisponibilidad', () => {
       }),
     );
   });
+
+  it.each([
+    [
+      'la lectura de disponibilidad',
+      (error) => disponibilidadRepository.listarPorTituloYRegion.mockRejectedValueOnce(error),
+    ],
+    [
+      'el guardado de ofertas',
+      (error) => {
+        disponibilidadRepository.listarPorTituloYRegion.mockResolvedValueOnce([
+          {
+            tituloId: 1,
+            plataformaId: 10,
+            region: 'AR',
+            tipoOferta: 'suscripcion',
+            deepLink: 'https://www.netflix.com/title/1',
+            fuenteId: 3,
+            detectadaEn: '2026-10-01T00:00:00.000Z',
+            verificadaEn: '2026-10-16T00:00:00.000Z',
+            vigente: true,
+          },
+        ]);
+        disponibilidadRepository.guardarOfertas.mockRejectedValueOnce(error);
+      },
+    ],
+  ])(
+    'propaga el error de base de datos durante %s y detiene el lote',
+    async (_operacion, configurarFallo) => {
+      const error = new DatabaseError(new Error('Base de datos no disponible'));
+      configurarFallo(error);
+      watchlistRepository.listarTitulosConAvisosActivos.mockResolvedValue(
+        Array.from({ length: 10 }, (_, index) => ({
+          tituloId: index + 1,
+          tmdbId: index + 1,
+          tipo: 'pelicula',
+          region: 'AR',
+        })),
+      );
+
+      await expect(sincronizarDisponibilidad({ ahora: AHORA })).rejects.toBe(error);
+
+      expect(streamingAvailabilityIntegration.obtenerOfertas.mock.calls.length).toBeLessThan(10);
+    },
+  );
 
   it('respeta el tope diario y deja pendiente el resto para ejecuciones siguientes', async () => {
     let activas = 0;

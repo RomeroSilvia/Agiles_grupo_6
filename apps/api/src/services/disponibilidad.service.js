@@ -115,39 +115,14 @@ async function procesarCombinacion({
   ahora,
   errores,
 }) {
+  let ofertasExternas;
+
   try {
-    const ofertasExternas = await streamingAvailabilityIntegration.obtenerOfertas({
+    ofertasExternas = await streamingAvailabilityIntegration.obtenerOfertas({
       tipo: combinacion.tipo,
       tmdbId: combinacion.tmdbId,
       region: combinacion.region,
     });
-    const existentes = await disponibilidadRepository.listarPorTituloYRegion(
-      combinacion.tituloId,
-      combinacion.region,
-    );
-    const ofertasNuevas = mapearOfertas({
-      ofertas: ofertasExternas,
-      combinacion,
-      plataformasPorProvider,
-      fuenteId,
-      existentes,
-      ahora: ahora.toISOString(),
-    });
-    const clavesNuevas = new Set(ofertasNuevas.map(claveOferta));
-    const ofertasSincronizadas = [
-      ...ofertasNuevas,
-      ...existentes
-        .filter((existente) => !clavesNuevas.has(claveOferta(existente)))
-        .map((existente) => ({
-          ...existente,
-          verificadaEn: ahora.toISOString(),
-          vigente: false,
-        })),
-    ];
-
-    if (ofertasSincronizadas.length > 0) {
-      await disponibilidadRepository.guardarOfertas(ofertasSincronizadas);
-    }
   } catch (error) {
     const detalle =
       error instanceof Error ? error.message : 'Error desconocido al consultar la disponibilidad';
@@ -159,6 +134,35 @@ async function procesarCombinacion({
       region: combinacion.region,
       error: detalle,
     });
+    return;
+  }
+
+  const existentes = await disponibilidadRepository.listarPorTituloYRegion(
+    combinacion.tituloId,
+    combinacion.region,
+  );
+  const ofertasNuevas = mapearOfertas({
+    ofertas: ofertasExternas,
+    combinacion,
+    plataformasPorProvider,
+    fuenteId,
+    existentes,
+    ahora: ahora.toISOString(),
+  });
+  const clavesNuevas = new Set(ofertasNuevas.map(claveOferta));
+  const ofertasSincronizadas = [
+    ...ofertasNuevas,
+    ...existentes
+      .filter((existente) => !clavesNuevas.has(claveOferta(existente)))
+      .map((existente) => ({
+        ...existente,
+        verificadaEn: ahora.toISOString(),
+        vigente: false,
+      })),
+  ];
+
+  if (ofertasSincronizadas.length > 0) {
+    await disponibilidadRepository.guardarOfertas(ofertasSincronizadas);
   }
 }
 

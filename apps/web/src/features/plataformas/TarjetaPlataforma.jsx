@@ -1,8 +1,8 @@
 import { Switch } from '../../components/ui/Switch.jsx';
+import { CARD_CLASS_NAME } from '../../components/ui/surface.js';
 import { LogoPlataforma } from './LogoPlataforma.jsx';
 
-export const tarjetaClassName =
-  'flex items-center gap-3.5 rounded-xl border border-border bg-surface px-4.5 py-4';
+export const tarjetaClassName = `flex items-center gap-3.5 px-4.5 py-4 ${CARD_CLASS_NAME}`;
 
 export function TarjetaPlataforma({ plataforma, seleccionada, guardando, onChange }) {
   return (

@@ -4,7 +4,9 @@ import { DatabaseError } from '../errors/index.js';
 import { FALLO, mockearConsulta } from '../test/queryBuilderMock.js';
 import * as sincronizacionRepository from './sincronizacion.repository.js';
 
-vi.mock('../config/supabase.config.js', () => ({ supabaseAdmin: { from: vi.fn() } }));
+vi.mock('../config/supabase.config.js', () => ({
+  supabaseAdmin: { from: vi.fn(), rpc: vi.fn() },
+}));
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -33,20 +35,23 @@ describe('sincronizacion.repository', () => {
     expect(builder.insert).toHaveBeenCalledWith({});
   });
 
-  it('suma las consultas registradas dentro de la ventana diaria', async () => {
-    const builder = mockearConsulta(supabaseAdmin.from, {
-      data: [{ titulos_procesados: 20 }, { titulos_procesados: 30 }],
-      error: null,
-    });
+  it('reserva atómicamente una consulta dentro del cupo diario', async () => {
+    supabaseAdmin.rpc.mockResolvedValue({ data: true, error: null });
 
     await expect(
-      sincronizacionRepository.contarTitulosProcesadosEntre(
-        '2026-10-17T00:00:00.000Z',
-        '2026-10-18T00:00:00.000Z',
-      ),
-    ).resolves.toBe(50);
-    expect(builder.gte).toHaveBeenCalledWith('iniciada_en', '2026-10-17T00:00:00.000Z');
-    expect(builder.lt).toHaveBeenCalledWith('iniciada_en', '2026-10-18T00:00:00.000Z');
+      sincronizacionRepository.reservarConsultaDisponibilidad(5, {
+        inicio: '2026-10-17T00:00:00.000Z',
+        fin: '2026-10-18T00:00:00.000Z',
+        limite: 100,
+      }),
+    ).resolves.toBe(true);
+
+    expect(supabaseAdmin.rpc).toHaveBeenCalledWith('reservar_cupo_disponibilidad', {
+      p_sincronizacion_id: 5,
+      p_inicio: '2026-10-17T00:00:00.000Z',
+      p_fin: '2026-10-18T00:00:00.000Z',
+      p_limite: 100,
+    });
   });
 
   it('finaliza una ejecución con los totales y el error acumulado', async () => {
@@ -60,19 +65,22 @@ describe('sincronizacion.repository', () => {
 
     expect(builder.update).toHaveBeenCalledWith({
       finalizada_en: '2026-10-17T06:05:00.000Z',
-      titulos_procesados: 2,
       error: 'Falló un título',
     });
     expect(builder.eq).toHaveBeenCalledWith('id', 5);
   });
 
-  it('lanza DatabaseError si no puede iniciar, contar o cerrar una ejecución', async () => {
+  it('lanza DatabaseError si no puede iniciar, reservar o cerrar una ejecución', async () => {
     mockearConsulta(supabaseAdmin.from, FALLO);
     await expect(sincronizacionRepository.iniciar()).rejects.toBeInstanceOf(DatabaseError);
 
-    mockearConsulta(supabaseAdmin.from, FALLO);
+    supabaseAdmin.rpc.mockResolvedValue(FALLO);
     await expect(
-      sincronizacionRepository.contarTitulosProcesadosEntre('inicio', 'fin'),
+      sincronizacionRepository.reservarConsultaDisponibilidad(5, {
+        inicio: 'inicio',
+        fin: 'fin',
+        limite: 100,
+      }),
     ).rejects.toBeInstanceOf(DatabaseError);
 
     mockearConsulta(supabaseAdmin.from, FALLO);

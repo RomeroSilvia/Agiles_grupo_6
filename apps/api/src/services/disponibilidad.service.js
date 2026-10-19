@@ -6,7 +6,6 @@ import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.j
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
 import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
 import * as watchlistRepository from '../repositories/watchlist.repository.js';
-import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 
 const FUENTE_DATOS = 'Streaming Availability';
 
@@ -102,10 +101,9 @@ function formatearErrores(errores) {
   return errores.length > 0 ? errores.join('\n').slice(0, 8000) : null;
 }
 
-async function finalizarEjecucion(sincronizacionId, { ahora, procesados, errores }) {
+async function finalizarEjecucion(sincronizacionId, { ahora, errores }) {
   await sincronizacionRepository.finalizar(sincronizacionId, {
     finalizadaEn: ahora.toISOString(),
-    titulosProcesados: procesados,
     error: formatearErrores(errores),
   });
 }
@@ -174,7 +172,7 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
     const combinaciones = deduplicarCombinaciones(watchlist);
 
     if (combinaciones.length === 0) {
-      await finalizarEjecucion(sincronizacion.id, { ahora, procesados, errores });
+      await finalizarEjecucion(sincronizacion.id, { ahora, errores });
       return {
         sincronizacionId: sincronizacion.id,
         combinacionesProcesadas: procesados,
@@ -199,18 +197,63 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
       throw new Error('No hay plataformas activas para guardar la disponibilidad');
     }
 
-    const { inicio, fin } = obtenerVentanaUtc(ahora);
-    const solicitudesDelDia = await sincronizacionRepository.contarTitulosProcesadosEntre(
-      inicio,
-      fin,
+    const { inicio, fin } = obtenerVentanaUtc(sincronizacion.iniciadaEn ?? ahora);
+    const lote = seleccionarLote(
+      combinaciones,
+      sincronizacion.id,
+      STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY,
     );
-    const cupoDisponible = Math.max(
-      0,
-      STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY - solicitudesDelDia,
-    );
-    const lote = seleccionarLote(combinaciones, sincronizacion.id, cupoDisponible);
-    const pendientes = combinaciones.length - lote.length;
+    let siguienteCombinacion = 0;
+    let cupoAgotado = false;
+    let errorFatal;
 
+    async function procesarSiguienteCombinacion() {
+      while (!cupoAgotado && !errorFatal && siguienteCombinacion < lote.length) {
+        const combinacion = lote[siguienteCombinacion];
+        siguienteCombinacion += 1;
+
+        try {
+          const reservado = await sincronizacionRepository.reservarConsultaDisponibilidad(
+            sincronizacion.id,
+            {
+              inicio,
+              fin,
+              limite: STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY,
+            },
+          );
+
+          if (!reservado) {
+            cupoAgotado = true;
+            return;
+          }
+
+          procesados += 1;
+          await procesarCombinacion({
+            combinacion,
+            plataformasPorProvider,
+            fuenteId,
+            ahora,
+            errores,
+          });
+        } catch (error) {
+          errorFatal = error;
+          return;
+        }
+      }
+    }
+
+    await Promise.all(
+      Array.from(
+        { length: Math.min(STREAMING_AVAILABILITY_CONFIG.MAX_CONCURRENT_REQUESTS, lote.length) },
+        () => procesarSiguienteCombinacion(),
+      ),
+    );
+
+    if (errorFatal) {
+      throw errorFatal;
+    }
+
+    const pendientes = combinaciones.length - procesados;
     if (pendientes > 0) {
       errores.push(
         'Límite diario de ' +
@@ -221,25 +264,7 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
       );
     }
 
-    const limitarConcurrencia = createConcurrencyLimiter(
-      STREAMING_AVAILABILITY_CONFIG.MAX_CONCURRENT_REQUESTS,
-    );
-    await Promise.all(
-      lote.map((combinacion) =>
-        limitarConcurrencia(async () => {
-          procesados += 1;
-          await procesarCombinacion({
-            combinacion,
-            plataformasPorProvider,
-            fuenteId,
-            ahora,
-            errores,
-          });
-        }),
-      ),
-    );
-
-    await finalizarEjecucion(sincronizacion.id, { ahora, procesados, errores });
+    await finalizarEjecucion(sincronizacion.id, { ahora, errores });
     return {
       sincronizacionId: sincronizacion.id,
       combinacionesProcesadas: procesados,
@@ -250,7 +275,7 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
     const detalle = error instanceof Error ? error.message : 'Error desconocido';
     errores.push(detalle);
     try {
-      await finalizarEjecucion(sincronizacion.id, { ahora, procesados, errores });
+      await finalizarEjecucion(sincronizacion.id, { ahora, errores });
     } catch (errorAlRegistrar) {
       console.error('No se pudo registrar el resultado de la sincronización', errorAlRegistrar);
     }

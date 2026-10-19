@@ -20,7 +20,7 @@ vi.mock('../repositories/plataforma.repository.js', () => ({
 }));
 vi.mock('../repositories/sincronizacion.repository.js', () => ({
   iniciar: vi.fn(),
-  contarTitulosProcesadosEntre: vi.fn(),
+  reservarConsultaDisponibilidad: vi.fn(),
   finalizar: vi.fn(),
 }));
 vi.mock('../repositories/watchlist.repository.js', () => ({
@@ -43,13 +43,21 @@ const PLATAFORMAS = [
   { id: 11, tmdbProviderId: 119 },
   { id: 12, tmdbProviderId: 337 },
 ];
+let solicitudesDelDia;
 
 beforeEach(() => {
   vi.resetAllMocks();
   envMock.env.DEFAULT_REGION = 'AR';
   envMock.env.STREAMING_AVAILABILITY_API_KEY = 'clave-prueba';
-  sincronizacionRepository.iniciar.mockResolvedValue({ id: 1 });
-  sincronizacionRepository.contarTitulosProcesadosEntre.mockResolvedValue(0);
+  sincronizacionRepository.iniciar.mockResolvedValue({ id: 1, iniciadaEn: AHORA.toISOString() });
+  solicitudesDelDia = 0;
+  sincronizacionRepository.reservarConsultaDisponibilidad.mockImplementation(async () => {
+    if (solicitudesDelDia >= STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY) {
+      return false;
+    }
+    solicitudesDelDia += 1;
+    return true;
+  });
   watchlistRepository.listarTitulosConAvisosActivos.mockResolvedValue([COMBINACION]);
   plataformaRepository.listarActivas.mockResolvedValue(PLATAFORMAS);
   fuenteDatosRepository.obtenerIdPorNombre.mockResolvedValue(3);
@@ -76,7 +84,6 @@ describe('sincronizarDisponibilidad', () => {
     expect(plataformaRepository.listarActivas).not.toHaveBeenCalled();
     expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(1, {
       finalizadaEn: AHORA.toISOString(),
-      titulosProcesados: 0,
       error: null,
     });
   });
@@ -235,7 +242,6 @@ describe('sincronizarDisponibilidad', () => {
     expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
-        titulosProcesados: 1,
         error: expect.stringContaining('No se pudo consultar Streaming Availability'),
       }),
     );
@@ -270,12 +276,12 @@ describe('sincronizarDisponibilidad', () => {
     });
     expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(
       1,
-      expect.objectContaining({ titulosProcesados: 100 }),
+      expect.objectContaining({ error: expect.stringContaining('1 combinaciones pendientes') }),
     );
   });
 
-  it('descuenta las consultas ya hechas durante el día UTC', async () => {
-    sincronizacionRepository.contarTitulosProcesadosEntre.mockResolvedValue(95);
+  it('reserva solo el cupo restante del día UTC', async () => {
+    solicitudesDelDia = 95;
     watchlistRepository.listarTitulosConAvisosActivos.mockResolvedValue(
       Array.from({ length: 10 }, (_, index) => ({
         tituloId: index + 1,
@@ -292,5 +298,29 @@ describe('sincronizarDisponibilidad', () => {
       combinacionesProcesadas: 5,
       combinacionesPendientes: 5,
     });
+  });
+
+  it('no supera el cupo diario cuando dos ejecuciones reservan consultas en paralelo', async () => {
+    let siguienteId = 1;
+    sincronizacionRepository.iniciar.mockImplementation(async () => ({
+      id: siguienteId++,
+      iniciadaEn: AHORA.toISOString(),
+    }));
+    watchlistRepository.listarTitulosConAvisosActivos.mockResolvedValue(
+      Array.from({ length: 100 }, (_, index) => ({
+        tituloId: index + 1,
+        tmdbId: index + 1,
+        tipo: 'pelicula',
+        region: 'AR',
+      })),
+    );
+
+    await Promise.all([
+      sincronizarDisponibilidad({ ahora: AHORA }),
+      sincronizarDisponibilidad({ ahora: AHORA }),
+    ]);
+
+    expect(streamingAvailabilityIntegration.obtenerOfertas).toHaveBeenCalledTimes(100);
+    expect(solicitudesDelDia).toBe(100);
   });
 });

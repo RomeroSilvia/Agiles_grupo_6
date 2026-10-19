@@ -16,26 +16,26 @@ export async function iniciar() {
   return fromRow(data);
 }
 
-export async function contarTitulosProcesadosEntre(inicio, fin) {
-  const { data, error } = await supabaseAdmin
-    .from('sincronizacion')
-    .select('titulos_procesados')
-    .gte('iniciada_en', inicio)
-    .lt('iniciada_en', fin);
+export async function reservarConsultaDisponibilidad(sincronizacionId, { inicio, fin, limite }) {
+  const { data, error } = await supabaseAdmin.rpc('reservar_cupo_disponibilidad', {
+    p_sincronizacion_id: sincronizacionId,
+    p_inicio: inicio,
+    p_fin: fin,
+    p_limite: limite,
+  });
 
   if (error) {
     throw new DatabaseError(error);
   }
 
-  return data.reduce((total, ejecucion) => total + ejecucion.titulos_procesados, 0);
+  return data;
 }
 
-export async function finalizar(id, { finalizadaEn, titulosProcesados, error: mensajeError }) {
+export async function finalizar(id, { finalizadaEn, error: mensajeError }) {
   const { error } = await supabaseAdmin
     .from('sincronizacion')
     .update({
       finalizada_en: finalizadaEn,
-      titulos_procesados: titulosProcesados,
       error: mensajeError,
     })
     .eq('id', id);

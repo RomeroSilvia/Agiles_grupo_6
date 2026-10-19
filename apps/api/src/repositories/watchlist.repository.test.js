@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
-import { WATCHLIST_PRIMARY_KEY, WATCHLIST_TITULO_COLUMNS } from '../models/watchlist.model.js';
+import {
+  TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS,
+  WATCHLIST_PRIMARY_KEY,
+  WATCHLIST_TITULO_COLUMNS,
+} from '../models/watchlist.model.js';
 import { FALLO, mockearConsulta, SIN_DATOS } from '../test/queryBuilderMock.js';
 import * as watchlistRepository from './watchlist.repository.js';
 
@@ -25,6 +29,36 @@ const FILA_WATCHLIST = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+});
+
+describe('listarTitulosConAvisosActivos', () => {
+  it('mapea títulos junto con la región de cada perfil y aplica el fallback configurado', async () => {
+    const builder = mockearConsulta(supabaseAdmin.from, {
+      data: [
+        { titulo: { id: 17, tmdb_id: 42, tipo: 'pelicula' }, perfil: { region: 'US' } },
+        { titulo: { id: 17, tmdb_id: 42, tipo: 'pelicula' }, perfil: { region: null } },
+      ],
+      error: null,
+    });
+
+    await expect(watchlistRepository.listarTitulosConAvisosActivos('AR')).resolves.toEqual([
+      { tituloId: 17, tmdbId: 42, tipo: 'pelicula', region: 'US' },
+      { tituloId: 17, tmdbId: 42, tipo: 'pelicula', region: 'AR' },
+    ]);
+
+    expect(supabaseAdmin.from).toHaveBeenCalledWith('watchlist_item');
+    expect(builder.select).toHaveBeenCalledWith(TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS);
+    expect(builder.eq).toHaveBeenCalledWith('aviso_activo', true);
+    expect(builder.order).toHaveBeenCalledWith('titulo_id');
+  });
+
+  it('lanza DatabaseError si falla la consulta', async () => {
+    mockearConsulta(supabaseAdmin.from, FALLO);
+
+    await expect(watchlistRepository.listarTitulosConAvisosActivos('AR')).rejects.toBeInstanceOf(
+      DatabaseError,
+    );
+  });
 });
 
 describe('listarPorUsuario', () => {

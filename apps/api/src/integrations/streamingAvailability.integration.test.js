@@ -36,7 +36,8 @@ describe('streamingAvailability.integration', () => {
     expect(url.searchParams.get('country')).toBe('ar');
     expect(options.headers).toEqual({
       Accept: 'application/json',
-      'X-Rapid-API-Key': 'clave-prueba',
+      'X-RapidAPI-Key': 'clave-prueba',
+      'X-RapidAPI-Host': 'streaming-availability.p.rapidapi.com',
     });
   });
 

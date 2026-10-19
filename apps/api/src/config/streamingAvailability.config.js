@@ -2,6 +2,7 @@ import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 
 export const STREAMING_AVAILABILITY_CONFIG = Object.freeze({
   BASE_URL: 'https://streaming-availability.p.rapidapi.com/shows/',
+  RAPID_API_HOST: 'streaming-availability.p.rapidapi.com',
   REQUEST_TIMEOUT_MS: 8000,
   MAX_REQUESTS_PER_DAY: 100,
   MAX_CONCURRENT_REQUESTS: 4,

@@ -34,7 +34,8 @@ async function consultarOfertas({ tipo, tmdbId, region }) {
     response = await fetch(url, {
       headers: {
         Accept: 'application/json',
-        'X-Rapid-API-Key': env.STREAMING_AVAILABILITY_API_KEY,
+        'X-RapidAPI-Key': env.STREAMING_AVAILABILITY_API_KEY,
+        'X-RapidAPI-Host': STREAMING_AVAILABILITY_CONFIG.RAPID_API_HOST,
       },
       signal: AbortSignal.timeout(STREAMING_AVAILABILITY_CONFIG.REQUEST_TIMEOUT_MS),
     });

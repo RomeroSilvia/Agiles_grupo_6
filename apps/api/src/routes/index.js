@@ -5,6 +5,7 @@ import { authRoutes } from './auth.routes.js';
 import { regionRoutes } from './region.routes.js';
 import { tituloRoutes } from './titulo.routes.js';
 import { plataformaRoutes } from './plataforma.routes.js';
+import { watchlistRoutes } from './watchlist.routes.js';
 
 export const routes = Router();
 
@@ -15,3 +16,4 @@ routes.use('/titulos', tituloRoutes);
 routes.use('/auth', authRoutes);
 routes.use('/region', regionRoutes);
 routes.use('/plataformas', plataformaRoutes);
+routes.use('/watchlist', watchlistRoutes);

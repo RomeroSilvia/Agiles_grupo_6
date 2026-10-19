@@ -4,14 +4,11 @@ const METODOS = [
   'select',
   'eq',
   'is',
-  'gte',
-  'lt',
   'order',
-  'insert',
+  'range',
   'upsert',
   'update',
   'delete',
-  'single',
   'maybeSingle',
 ];
 

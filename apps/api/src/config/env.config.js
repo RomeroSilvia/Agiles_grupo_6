@@ -31,6 +31,7 @@ export const envSchema = z.object({
     })
     .optional(),
   DEFAULT_REGION: z.string().regex(REGION_PATTERN).default('AR'),
+  NODE_CRON_RUN: z.enum(['true', 'false']).default('true'),
   TMDB_API_KEY: z.string().optional(),
   STREAMING_AVAILABILITY_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),

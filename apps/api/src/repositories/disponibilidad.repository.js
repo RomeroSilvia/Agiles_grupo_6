@@ -47,17 +47,3 @@ export async function guardarOfertas(ofertas) {
     throw new DatabaseError(error);
   }
 }
-
-export async function actualizarVerificacion(oferta, { verificadaEn, vigente }) {
-  const { error } = await supabaseAdmin
-    .from('disponibilidad')
-    .update({ verificada_en: verificadaEn, vigente })
-    .eq('titulo_id', oferta.tituloId)
-    .eq('plataforma_id', oferta.plataformaId)
-    .eq('region', oferta.region)
-    .eq('tipo_oferta', oferta.tipoOferta);
-
-  if (error) {
-    throw new DatabaseError(error);
-  }
-}

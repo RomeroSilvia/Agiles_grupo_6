@@ -78,24 +78,39 @@ describe('disponibilidad.repository', () => {
     );
   });
 
-  it('actualiza la verificación sin borrar el registro histórico', async () => {
+  it('conserva los campos históricos al upsertear una oferta no vigente', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, { data: null, error: null });
 
-    await disponibilidadRepository.actualizarVerificacion(
+    await disponibilidadRepository.guardarOfertas([
       {
         tituloId: 42,
         plataformaId: 10,
         region: 'AR',
         tipoOferta: 'suscripcion',
+        deepLink: 'https://www.netflix.com/title/1',
+        fuenteId: 3,
+        detectadaEn: '2026-10-01T00:00:00.000Z',
+        verificadaEn: '2026-10-17T00:00:00.000Z',
+        vigente: false,
       },
-      { verificadaEn: '2026-10-17T00:00:00.000Z', vigente: false },
-    );
+    ]);
 
-    expect(builder.update).toHaveBeenCalledWith({
-      verificada_en: '2026-10-17T00:00:00.000Z',
-      vigente: false,
-    });
-    expect(builder.delete).not.toHaveBeenCalled();
+    expect(builder.upsert).toHaveBeenCalledWith(
+      [
+        {
+          titulo_id: 42,
+          plataforma_id: 10,
+          region: 'AR',
+          tipo_oferta: 'suscripcion',
+          deep_link: 'https://www.netflix.com/title/1',
+          fuente_id: 3,
+          detectada_en: '2026-10-01T00:00:00.000Z',
+          verificada_en: '2026-10-17T00:00:00.000Z',
+          vigente: false,
+        },
+      ],
+      { onConflict: 'titulo_id,plataforma_id,region,tipo_oferta' },
+    );
   });
 
   it('lanza DatabaseError ante fallos de lectura y escritura', async () => {

@@ -11,7 +11,6 @@ vi.mock('../integrations/streamingAvailability.integration.js', () => ({
 vi.mock('../repositories/disponibilidad.repository.js', () => ({
   listarPorTituloYRegion: vi.fn(),
   guardarOfertas: vi.fn(),
-  actualizarVerificacion: vi.fn(),
 }));
 vi.mock('../repositories/fuenteDatos.repository.js', () => ({
   obtenerIdPorNombre: vi.fn(),
@@ -57,7 +56,6 @@ beforeEach(() => {
   streamingAvailabilityIntegration.obtenerOfertas.mockResolvedValue([]);
   disponibilidadRepository.listarPorTituloYRegion.mockResolvedValue([]);
   disponibilidadRepository.guardarOfertas.mockResolvedValue(undefined);
-  disponibilidadRepository.actualizarVerificacion.mockResolvedValue(undefined);
   sincronizacionRepository.finalizar.mockResolvedValue(undefined);
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -106,7 +104,10 @@ describe('sincronizarDisponibilidad', () => {
         plataformaId: 10,
         region: 'AR',
         tipoOferta: 'suscripcion',
+        deepLink: 'https://www.netflix.com/title/1',
+        fuenteId: 3,
         detectadaEn: '2026-10-01T00:00:00.000Z',
+        verificadaEn: '2026-10-16T00:00:00.000Z',
         vigente: true,
       },
       {
@@ -114,6 +115,10 @@ describe('sincronizarDisponibilidad', () => {
         plataformaId: 11,
         region: 'AR',
         tipoOferta: 'suscripcion',
+        deepLink: 'https://www.primevideo.com/title/1',
+        fuenteId: 3,
+        detectadaEn: '2026-09-01T00:00:00.000Z',
+        verificadaEn: '2026-10-16T00:00:00.000Z',
         vigente: true,
       },
     ]);
@@ -145,11 +150,18 @@ describe('sincronizarDisponibilidad', () => {
         verificadaEn: AHORA.toISOString(),
         vigente: true,
       },
+      {
+        tituloId: 42,
+        plataformaId: 11,
+        region: 'AR',
+        tipoOferta: 'suscripcion',
+        deepLink: 'https://www.primevideo.com/title/1',
+        fuenteId: 3,
+        detectadaEn: '2026-09-01T00:00:00.000Z',
+        verificadaEn: AHORA.toISOString(),
+        vigente: false,
+      },
     ]);
-    expect(disponibilidadRepository.actualizarVerificacion).toHaveBeenCalledWith(
-      expect.objectContaining({ plataformaId: 11, vigente: true }),
-      { verificadaEn: AHORA.toISOString(), vigente: false },
-    );
   });
 
   it('usa la región configurada y procesa por separado un título seguido en varias regiones', async () => {
@@ -184,6 +196,10 @@ describe('sincronizarDisponibilidad', () => {
         plataformaId: 10,
         region: 'AR',
         tipoOferta: 'suscripcion',
+        deepLink: 'https://www.netflix.com/title/1',
+        fuenteId: 3,
+        detectadaEn: '2026-10-01T00:00:00.000Z',
+        verificadaEn: '2026-10-16T00:00:00.000Z',
         vigente: false,
       },
     ]);
@@ -191,11 +207,19 @@ describe('sincronizarDisponibilidad', () => {
     const resultado = await sincronizarDisponibilidad({ ahora: AHORA });
 
     expect(resultado.errores).toEqual([]);
-    expect(disponibilidadRepository.guardarOfertas).not.toHaveBeenCalled();
-    expect(disponibilidadRepository.actualizarVerificacion).toHaveBeenCalledWith(
-      expect.objectContaining({ vigente: false }),
-      { verificadaEn: AHORA.toISOString(), vigente: false },
-    );
+    expect(disponibilidadRepository.guardarOfertas).toHaveBeenCalledWith([
+      {
+        tituloId: 42,
+        plataformaId: 10,
+        region: 'AR',
+        tipoOferta: 'suscripcion',
+        deepLink: 'https://www.netflix.com/title/1',
+        fuenteId: 3,
+        detectadaEn: '2026-10-01T00:00:00.000Z',
+        verificadaEn: AHORA.toISOString(),
+        vigente: false,
+      },
+    ]);
   });
 
   it('no modifica el snapshot si falla el proveedor y registra el error', async () => {
@@ -208,7 +232,6 @@ describe('sincronizarDisponibilidad', () => {
     expect(resultado.errores).toHaveLength(1);
     expect(disponibilidadRepository.listarPorTituloYRegion).not.toHaveBeenCalled();
     expect(disponibilidadRepository.guardarOfertas).not.toHaveBeenCalled();
-    expect(disponibilidadRepository.actualizarVerificacion).not.toHaveBeenCalled();
     expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(
       1,
       expect.objectContaining({

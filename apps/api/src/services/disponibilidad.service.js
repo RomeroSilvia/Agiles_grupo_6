@@ -136,19 +136,19 @@ async function procesarCombinacion({
       ahora: ahora.toISOString(),
     });
     const clavesNuevas = new Set(ofertasNuevas.map(claveOferta));
+    const ofertasSincronizadas = [
+      ...ofertasNuevas,
+      ...existentes
+        .filter((existente) => !clavesNuevas.has(claveOferta(existente)))
+        .map((existente) => ({
+          ...existente,
+          verificadaEn: ahora.toISOString(),
+          vigente: false,
+        })),
+    ];
 
-    if (ofertasNuevas.length > 0) {
-      await disponibilidadRepository.guardarOfertas(ofertasNuevas);
-    }
-
-    for (const existente of existentes) {
-      if (clavesNuevas.has(claveOferta(existente))) {
-        continue;
-      }
-      await disponibilidadRepository.actualizarVerificacion(existente, {
-        verificadaEn: ahora.toISOString(),
-        vigente: false,
-      });
+    if (ofertasSincronizadas.length > 0) {
+      await disponibilidadRepository.guardarOfertas(ofertasSincronizadas);
     }
   } catch (error) {
     const detalle =

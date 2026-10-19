@@ -93,7 +93,9 @@ describe('Registro (E4HU2)', () => {
     expect(
       await screen.findByRole('heading', { name: 'Una búsqueda. Todas tus plataformas.' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Menú de la cuenta de ana@mail.com' }),
+    ).toBeInTheDocument();
     expect(request).toHaveBeenCalledWith('/auth/sign-up', {
       method: 'POST',
       body: { email: 'ana@mail.com', password: 'Segura#2026' },

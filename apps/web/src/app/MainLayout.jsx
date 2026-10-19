@@ -1,21 +1,22 @@
-import { REGION_SOURCE } from '@buscador/shared/constants';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
 import { useSession } from '../contexts/session/SessionContext.js';
 import { useRegion } from '../contexts/region/RegionContext.js';
+import { getRegionLabel } from '../contexts/region/regionLabel.js';
+import { Chip } from '../components/ui/Chip.jsx';
 import { LogoInicio } from '../components/ui/LogoInicio.jsx';
 import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
 import { IconButton } from '../components/ui/IconButton.jsx';
 import { BookmarkIcon, MenuIcon, XIcon } from '../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../components/ui/focusRing.js';
+import { MenuUsuario } from './MenuUsuario.jsx';
 import { RUTAS } from './rutas.js';
-
-const cerrarSesionClassName = `cursor-pointer items-center text-sm font-semibold text-muted transition-colors duration-150 hover:text-foreground ${FOCUS_RING_CLASS_NAME}`;
 
 const ENLACES = [
   { to: RUTAS.WATCHLIST, label: 'Mi watchlist' },
   { to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' },
+  { to: RUTAS.PERFIL, label: 'Perfil' },
 ];
 
 function Enlaces({ onNavigate }) {
@@ -34,31 +35,14 @@ function Enlaces({ onNavigate }) {
 }
 
 function AccionesDeSesion() {
-  const { user, loading, signOut } = useSession();
+  const { user, loading } = useSession();
 
   if (loading) {
     return null;
   }
 
   if (user) {
-    return (
-      <div className="flex items-center gap-2">
-        <span
-          title={user.email}
-          aria-label={`Sesión iniciada como ${user.email}`}
-          className="inline-flex size-9 items-center justify-center rounded-full bg-panel text-sm font-bold text-panel-foreground uppercase"
-        >
-          {user.email[0]}
-        </span>
-        <button
-          type="button"
-          onClick={signOut}
-          className={`hidden min-h-11 rounded-full px-3 md:inline-flex ${cerrarSesionClassName}`}
-        >
-          Cerrar sesión
-        </button>
-      </div>
-    );
+    return <MenuUsuario />;
   }
 
   return (
@@ -83,15 +67,10 @@ function AccionesDeSesion() {
 
 export function MainLayout() {
   const { region, source, loading: regionLoading } = useRegion();
-  const { user, signOut } = useSession();
+  const { user } = useSession();
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const cerrarMenu = () => setMenuAbierto(false);
-
-  function cerrarSesionDesdeMenu() {
-    cerrarMenu();
-    signOut();
-  }
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -120,10 +99,10 @@ export function MainLayout() {
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
             {!regionLoading && (
               <span
-                aria-label={`${source === REGION_SOURCE.DEFAULT ? 'Región predeterminada' : 'Región'}: ${region}`}
-                className="hidden rounded-full bg-chip px-3 py-1 font-mono text-xs font-medium text-chip-foreground sm:inline-flex"
+                aria-label={`${getRegionLabel(source)}: ${region}`}
+                className="hidden sm:inline-flex"
               >
-                {region}
+                <Chip>{region}</Chip>
               </span>
             )}
             <ThemeToggle />
@@ -149,13 +128,6 @@ export function MainLayout() {
             className="flex flex-col border-t border-border px-4 py-2 md:hidden"
           >
             <Enlaces onNavigate={cerrarMenu} />
-            <button
-              type="button"
-              onClick={cerrarSesionDesdeMenu}
-              className={`inline-flex min-h-11 rounded-sm ${cerrarSesionClassName}`}
-            >
-              Cerrar sesión
-            </button>
           </nav>
         )}
       </header>

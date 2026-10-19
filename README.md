@@ -52,6 +52,22 @@ supabase/
 - Catálogo y disponibilidad: TMDB (con datos de JustWatch).
 - Las convenciones del proyecto (capas, nombres, idioma, commits) están en [AGENTS.md](./AGENTS.md).
 
+## Pantallas
+
+| Ruta                     | Sesión | Descripción                                                                    |
+| ------------------------ | :----: | ------------------------------------------------------------------------------ |
+| `/`                      |        | Búsqueda de películas y series                                                 |
+| `/titulos/:tipo/:tmdbId` |        | Detalle de un título con su disponibilidad en la región                        |
+| `/mis-plataformas`       |   sí   | Elegir las plataformas contratadas                                             |
+| `/perfil`                |   sí   | Mail y región de la cuenta, plataformas propias y accesos a acciones de cuenta |
+| `/iniciar-sesion`        |        | Inicio de sesión (solo sin sesión)                                             |
+| `/registro`              |        | Registro (solo sin sesión)                                                     |
+
+Con sesión, el avatar del header abre un menú con «Perfil» y «Cerrar sesión». En el perfil, las
+plataformas se editan con el mismo listado que en `/mis-plataformas`. Los accesos a cambiar el mail,
+restablecer la contraseña y eliminar la cuenta aparecen como «Próximamente» hasta que se implemente
+E4HU7 (#50).
+
 ## Endpoints
 
 Todas las rutas empiezan con `/api`. Las respuestas exitosas tienen la forma `{ "data": ... }` y los errores `{ "error": { "code", "message" } }`.

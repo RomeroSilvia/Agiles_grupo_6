@@ -1,4 +1,6 @@
+import { jwtVerify } from 'jose';
 import { supabaseAdmin, createAuthClient } from '../config/supabase.config.js';
+import { JWT_CONFIG, supabaseJwks } from '../config/jwt.config.js';
 import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/index.js';
 
 /**
@@ -90,17 +92,40 @@ export async function iniciarSesionConPassword(email, password) {
   return toSesion(data.session);
 }
 
-/** @returns {Promise<UsuarioSesion | null>} null si el token no es válido o venció */
-export async function obtenerUsuarioPorToken(accessToken) {
-  const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
+// Errores de jose que significan que el token no sirve (vencido, mal formado, firmado con
+// otra clave o emitido para otro proyecto). Cualquier otro (no se pudieron descargar las
+// claves públicas) es una falla del servicio: no debe borrar las cookies.
+const CODIGOS_TOKEN_INVALIDO = new Set([
+  'ERR_JWT_EXPIRED',
+  'ERR_JWT_INVALID',
+  'ERR_JWT_CLAIM_VALIDATION_FAILED',
+  'ERR_JWS_INVALID',
+  'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+  'ERR_JWKS_NO_MATCHING_KEY',
+  'ERR_JOSE_ALG_NOT_ALLOWED',
+  'ERR_JOSE_NOT_SUPPORTED',
+]);
 
-  if (error) {
-    if (esSesionInvalida(error)) {
+/**
+ * Verifica el access token localmente con las claves públicas del proyecto, sin consultar
+ * a Supabase Auth en cada request. Contra: una sesión cerrada o un usuario borrado siguen
+ * siendo válidos hasta que vence el access token (1 hora por defecto en Supabase).
+ * @returns {Promise<UsuarioSesion | null>} null si el token no es válido o venció
+ */
+export async function obtenerUsuarioPorToken(accessToken) {
+  try {
+    const { payload } = await jwtVerify(accessToken, supabaseJwks, {
+      issuer: JWT_CONFIG.ISSUER,
+      audience: JWT_CONFIG.AUDIENCE,
+      requiredClaims: ['sub', 'exp'],
+    });
+    return { id: payload.sub, email: payload.email };
+  } catch (error) {
+    if (CODIGOS_TOKEN_INVALIDO.has(error.code)) {
       return null;
     }
-    throw errorDelServicio(error);
+    throw new ExternalServiceError('de autenticación', error);
   }
-  return toUsuario(data.user);
 }
 
 /** @returns {Promise<Sesion | null>} null si el refresh token no es válido */

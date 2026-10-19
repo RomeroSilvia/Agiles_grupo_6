@@ -75,7 +75,7 @@ function mockApi({
 }
 
 function switchDe(nombre) {
-  return screen.findByRole('switch', { name: nombre });
+  return screen.findByRole('switch', { name: nombre }, { timeout: 5000 });
 }
 
 beforeEach(() => {

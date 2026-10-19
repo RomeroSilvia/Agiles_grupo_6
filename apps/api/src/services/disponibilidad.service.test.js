@@ -339,6 +339,11 @@ describe('sincronizarDisponibilidad', () => {
     const resultado = await sincronizarDisponibilidad({ ahora: AHORA });
 
     expect(streamingAvailabilityIntegration.obtenerOfertas).toHaveBeenCalledTimes(5);
+    expect(sincronizacionRepository.reservarConsultaDisponibilidad).toHaveBeenNthCalledWith(1, 1, {
+      inicio: '2026-10-17T00:00:00.000Z',
+      fin: '2026-10-18T00:00:00.000Z',
+      limite: STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY,
+    });
     expect(resultado).toMatchObject({
       combinacionesProcesadas: 5,
       combinacionesPendientes: 5,

@@ -54,6 +54,18 @@ describe('sincronizacion.repository', () => {
     });
   });
 
+  it('devuelve false cuando la función rechaza la reserva por cupo completo', async () => {
+    supabaseAdmin.rpc.mockResolvedValue({ data: false, error: null });
+
+    await expect(
+      sincronizacionRepository.reservarConsultaDisponibilidad(5, {
+        inicio: '2026-10-17T00:00:00.000Z',
+        fin: '2026-10-18T00:00:00.000Z',
+        limite: 100,
+      }),
+    ).resolves.toBe(false);
+  });
+
   it('finaliza una ejecución con los totales y el error acumulado', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, { data: null, error: null });
 

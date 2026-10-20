@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiError, request } from '../../services/api.service.js';
 import { renderRoute } from '../../test/renderRoute.jsx';
@@ -237,7 +237,9 @@ describe('Cuenta: eliminar cuenta', { timeout: 10_000 }, () => {
       method: 'DELETE',
       body: { confirmation: 'ELIMINAR' },
     });
-    expect(await screen.findByRole('link', { name: /Iniciar sesión/ })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /Iniciar sesión/ })).toBeInTheDocument(),
+    );
     expect(screen.queryByRole('button', { name: /Menú de la cuenta/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Cuenta' })).not.toBeInTheDocument();
   });

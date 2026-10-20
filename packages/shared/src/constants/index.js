@@ -39,3 +39,14 @@ export const REGION_SOURCES = Object.values(REGION_SOURCE);
 export const REGION_PATTERN = /^[A-Z]{2}$/;
 
 export const TMDB_LOGO_BASE_URL = 'https://image.tmdb.org/t/p/w92';
+
+export const APP_NAME = 'Streamly';
+
+export const MINUTOS_VENCIMIENTO_ENLACE = 30;
+
+export const CONFIRMACION_ELIMINAR = 'ELIMINAR';
+
+export const RUTAS_ENLACE_MAIL = Object.freeze({
+  RESTABLECER_PASSWORD: '/restablecer-contrasena',
+  CONFIRMAR_MAIL: '/confirmar-mail',
+});

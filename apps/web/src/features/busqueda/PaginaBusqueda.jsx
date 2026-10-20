@@ -100,11 +100,13 @@ export function PaginaBusqueda() {
     cargarInicialmente: Boolean(busquedaInicial.filtros.genero),
   });
   const busquedaInicialProcesadaRef = useRef(false);
+  const busquedaInicialCanceladaRef = useRef(false);
   const limpiezaUrlPendienteRef = useRef(false);
 
   useEffect(() => {
     if (
       busquedaInicialProcesadaRef.current ||
+      busquedaInicialCanceladaRef.current ||
       !busquedaInicial.consulta ||
       hasSearched ||
       (busquedaInicial.filtros.soloPropias && !filtroPropias.resuelto)
@@ -113,6 +115,7 @@ export function PaginaBusqueda() {
     }
 
     busquedaInicialProcesadaRef.current = true;
+    let completada = false;
     buscarHastaPagina(
       {
         ...busquedaInicial.filtros,
@@ -120,7 +123,15 @@ export function PaginaBusqueda() {
         firmaPlataformas: filtroPropias.firma,
       },
       busquedaInicial.consulta.pagina,
-    );
+    ).finally(() => {
+      completada = true;
+    });
+
+    return () => {
+      if (!completada && !busquedaInicialCanceladaRef.current) {
+        busquedaInicialProcesadaRef.current = false;
+      }
+    };
   }, [
     buscarHastaPagina,
     busquedaInicial,
@@ -221,6 +232,7 @@ export function PaginaBusqueda() {
 
   function reiniciarBusquedaCompleta() {
     busquedaInicialProcesadaRef.current = true;
+    busquedaInicialCanceladaRef.current = true;
     limpiezaUrlPendienteRef.current = true;
     reiniciarBusqueda();
     setSearchParams({}, { replace: true, preventScrollReset: true });

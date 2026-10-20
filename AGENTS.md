@@ -14,7 +14,7 @@ Buscador de películas y series que muestra en qué plataformas de streaming est
 - `packages/shared`: esquemas Zod y constantes usados por front y back.
 - Datos: **un único proyecto de Supabase compartido por todo el equipo** (Postgres + Auth), accedido solo desde el backend con `@supabase/supabase-js`.
 - Tests: Vitest en ambos lados; supertest para endpoints.
-- Mails: Resend.
+- Mails: Resend. Los mails de la cuenta (recuperar contraseña, cambiar mail) salen por SMTP con nodemailer (Gmail en desarrollo).
 
 ## Comandos
 
@@ -56,7 +56,8 @@ apps/api/src/
   controllers/     <entidad>.controller.js: HTTP ↔ service
   routes/          <entidad>.routes.js + index.js
   middlewares/     <nombre>.middleware.js: validate, requireSession, detectRegion, errorHandler
-  integrations/    <servicio>.integration.js: tmdb, streamingAvailability, geoip, resend
+  integrations/    <servicio>.integration.js: tmdb, streamingAvailability, geoip, resend, smtp
+  emails/          plantillas de mail: layout.email.js (logo y nombre de la app) y <nombre>.email.js
   jobs/            <nombre>.job.js: syncAvailability, sendNotifications
   utils/           helpers técnicos genéricos, sin lógica de negocio: ttlCache, concurrencyLimiter
   errors/          clases de error
@@ -91,7 +92,7 @@ Flujo de un request: `route → middlewares → controller → service → repos
 
 Otras reglas:
 
-- Errores disponibles en `errors/`: `ValidationError` (400), `UnauthenticatedError` (401, sin sesión), `ForbiddenError` (403, con sesión pero sin permiso, por ejemplo una función premium), `NotFoundError` (404), `ConflictError` (409, duplicados), `DatabaseError` (500), `ExternalServiceError` (502).
+- Errores disponibles en `errors/`: `ValidationError` (400), `UnauthenticatedError` (401, sin sesión), `ForbiddenError` (403, con sesión pero sin permiso, por ejemplo una función premium), `NotFoundError` (404), `ConflictError` (409, duplicados), `InvalidLinkError` (400, enlace de un mail vencido o ya usado), `DatabaseError` (500), `ExternalServiceError` (502).
 - Si alguien pide un recurso de **otro usuario**, responder 404 y no 403: el 403 confirmaría que el recurso existe.
 - Express 5 captura errores de handlers `async`: no usar try/catch para responder errores ni `asyncHandler`. Lanzar un error de `errors/` y dejar que lo maneje `errorHandler`.
 - En Express 5 `req.query` es de solo lectura: los datos validados se leen de `req.validated`.

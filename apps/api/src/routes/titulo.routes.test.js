@@ -6,8 +6,6 @@ import * as plataformaRepository from '../repositories/plataforma.repository.js'
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 
 vi.mock('../integrations/tmdb.integration.js', () => ({
-  buscarPeliculas: vi.fn(),
-  buscarSeries: vi.fn(),
   obtenerDetalle: vi.fn(),
   obtenerOfertas: vi.fn(),
 }));

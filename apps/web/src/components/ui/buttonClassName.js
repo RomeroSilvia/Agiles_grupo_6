@@ -3,7 +3,7 @@ import { FOCUS_RING_CLASS_NAME } from './focusRing.js';
 const VARIANTS = {
   primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
   accent: 'bg-accent text-accent-foreground hover:bg-accent-hover',
-  secondary: 'border border-border-strong bg-surface text-foreground hover:bg-border/60',
+  secondary: 'border border-border bg-surface text-foreground hover:bg-background',
   danger: 'bg-danger text-danger-foreground hover:bg-danger/90',
   dangerOutline: 'border border-danger bg-transparent text-danger hover:bg-danger/10',
 };

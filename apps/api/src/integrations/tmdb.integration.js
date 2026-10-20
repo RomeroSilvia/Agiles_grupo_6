@@ -8,11 +8,22 @@ import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const PROFILE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_LANGUAGE = 'es-AR';
 
 const RUTA_TMDB_POR_TIPO = Object.freeze({
   [TIPO_TITULO.PELICULA]: 'movie',
   [TIPO_TITULO.SERIE]: 'tv',
+});
+
+const PARAMETRO_ANIO_POR_TIPO = Object.freeze({
+  [TIPO_TITULO.PELICULA]: 'primary_release_year',
+  [TIPO_TITULO.SERIE]: 'first_air_date_year',
+});
+
+const CAMPO_FECHA_POR_TIPO = Object.freeze({
+  [TIPO_TITULO.PELICULA]: 'release_date',
+  [TIPO_TITULO.SERIE]: 'first_air_date',
 });
 
 const TIPO_OFERTA_POR_CLAVE_TMDB = Object.freeze({
@@ -25,9 +36,29 @@ const TIPO_OFERTA_POR_CLAVE_TMDB = Object.freeze({
 
 const limitarConcurrencia = createConcurrencyLimiter(TMDB_CONFIG.MAX_CONCURRENT_REQUESTS);
 
+const busquedasCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
+});
 const ofertasCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
   maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
+});
+const creditosCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
+});
+const generosCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES_GENEROS,
+});
+const personasCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES_PERSONAS,
+});
+const creditosCombinadosCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES_ROLES_PERSONA,
 });
 
 function tmdbRequest(path, params) {
@@ -70,13 +101,8 @@ async function tmdbFetch(path, params = {}) {
   }
 }
 
-function searchParams({ q, pagina }) {
-  return {
-    query: q,
-    language: TMDB_LANGUAGE,
-    include_adult: false,
-    page: pagina,
-  };
+function mapearColeccion(items, mapear) {
+  return Array.isArray(items) ? items.map(mapear) : items;
 }
 
 function obtenerAnio(fecha) {
@@ -89,7 +115,7 @@ function obtenerTexto(valor) {
 }
 
 function normalizarBase(item, tipo) {
-  const fecha = tipo === TIPO_TITULO.PELICULA ? item?.release_date : item?.first_air_date;
+  const fecha = item?.[CAMPO_FECHA_POR_TIPO[tipo]];
 
   return {
     tmdbId: item?.id,
@@ -101,47 +127,149 @@ function normalizarBase(item, tipo) {
   };
 }
 
-function normalizarDetalle(item, tipo) {
-  return {
-    ...normalizarBase(item, tipo),
-    sinopsis: obtenerTexto(item?.overview),
-  };
-}
-
 function normalizarResultado(item, tipo) {
   return {
     ...normalizarBase(item, tipo),
     relevancia: Number.isFinite(item?.popularity) ? item.popularity : 0,
+    generoIds: item?.genre_ids,
+    fecha: item?.[CAMPO_FECHA_POR_TIPO[tipo]] ?? null,
   };
 }
 
-function normalizarRespuesta(response, tipo) {
-  const items = response?.results;
-
+function normalizarRespuestaBusqueda(response, tipo) {
   return {
-    resultados: Array.isArray(items) ? items.map((item) => normalizarResultado(item, tipo)) : items,
+    resultados: mapearColeccion(response?.results, (item) => normalizarResultado(item, tipo)),
     pagina: response?.page,
     totalResultados: response?.total_results,
     totalPaginas: response?.total_pages,
   };
 }
 
-export async function buscarPeliculas({ q, anio, pagina }) {
-  const response = await tmdbRequest('/search/movie', {
-    ...searchParams({ q, pagina }),
-    ...(anio === undefined ? {} : { primary_release_year: anio }),
-  });
-
-  return normalizarRespuesta(response, TIPO_TITULO.PELICULA);
+function normalizarPersona(persona) {
+  return {
+    id: persona?.id,
+    nombre: persona?.name,
+    fotoUrl: persona?.profile_path ? `${PROFILE_BASE_URL}${persona.profile_path}` : null,
+    departamentoConocido: persona?.known_for_department ?? null,
+  };
 }
 
-export async function buscarSeries({ q, anio, pagina }) {
-  const response = await tmdbRequest('/search/tv', {
-    ...searchParams({ q, pagina }),
-    ...(anio === undefined ? {} : { first_air_date_year: anio }),
-  });
+function normalizarCredito(credito, tipo) {
+  return {
+    ...normalizarResultado(credito, tipo),
+    puesto: credito?.job,
+  };
+}
 
-  return normalizarRespuesta(response, TIPO_TITULO.SERIE);
+function parametrosBusqueda({ q, pagina }) {
+  return {
+    query: q,
+    language: TMDB_LANGUAGE,
+    include_adult: false,
+    page: pagina,
+  };
+}
+
+export function buscarTitulosPorTexto({ tipo, q, anio, pagina }) {
+  const ruta = RUTA_TMDB_POR_TIPO[tipo];
+  const parametros = parametrosBusqueda({ q, pagina });
+  if (anio !== undefined) {
+    parametros[PARAMETRO_ANIO_POR_TIPO[tipo]] = anio;
+  }
+
+  return busquedasCache.getOrSet(`texto:${tipo}:${q}:${anio ?? ''}:${pagina}`, async () => {
+    const respuesta = await tmdbRequest(`/search/${ruta}`, parametros);
+    return normalizarRespuestaBusqueda(respuesta, tipo);
+  });
+}
+
+export function descubrirTitulos({ tipo, anio, generoIds, pagina }) {
+  const ruta = RUTA_TMDB_POR_TIPO[tipo];
+  const parametros = {
+    language: TMDB_LANGUAGE,
+    include_adult: false,
+    page: pagina,
+    ...(anio === undefined ? {} : { [PARAMETRO_ANIO_POR_TIPO[tipo]]: anio }),
+    ...(generoIds === undefined ? {} : { with_genres: generoIds.join('|') }),
+  };
+
+  return busquedasCache.getOrSet(
+    `discover:${tipo}:${anio ?? ''}:${generoIds?.join('|') ?? ''}:${pagina}`,
+    async () =>
+      normalizarRespuestaBusqueda(await tmdbRequest(`/discover/${ruta}`, parametros), tipo),
+  );
+}
+
+export function obtenerCreditosPersona({ personaId, tipo }) {
+  return creditosCache.getOrSet(`${personaId}:${tipo}`, async () => {
+    const ruta = RUTA_TMDB_POR_TIPO[tipo];
+    const respuesta = await tmdbRequest(`/person/${personaId}/${ruta}_credits`, {
+      language: TMDB_LANGUAGE,
+    });
+    return {
+      cast: mapearColeccion(respuesta?.cast, (credito) => normalizarCredito(credito, tipo)),
+      crew: mapearColeccion(respuesta?.crew, (credito) => normalizarCredito(credito, tipo)),
+    };
+  });
+}
+
+export function obtenerCreditosCombinados({ personaId }) {
+  return creditosCombinadosCache.getOrSet(String(personaId), async () => {
+    const respuesta = await tmdbRequest(`/person/${personaId}/combined_credits`, {
+      language: TMDB_LANGUAGE,
+    });
+    return {
+      cast: mapearColeccion(respuesta?.cast, (credito) => ({ id: credito?.id })),
+      crew: mapearColeccion(respuesta?.crew, (credito) => ({
+        id: credito?.id,
+        job: credito?.job,
+      })),
+    };
+  });
+}
+
+export function buscarPersonas({ q, pagina }) {
+  const consulta = q.trim();
+  return personasCache.getOrSet(
+    `buscar:${consulta.toLocaleLowerCase('es')}:${pagina}`,
+    async () => {
+      const respuesta = await tmdbRequest('/search/person', {
+        query: consulta,
+        language: TMDB_LANGUAGE,
+        include_adult: false,
+        page: pagina,
+      });
+      return {
+        resultados: mapearColeccion(respuesta?.results, normalizarPersona),
+        totalPaginas: respuesta?.total_pages,
+      };
+    },
+  );
+}
+
+export function obtenerPersona({ personaId }) {
+  return personasCache.getOrSet(`id:${personaId}`, async () => {
+    try {
+      const respuesta = await tmdbRequest(`/person/${personaId}`, { language: TMDB_LANGUAGE });
+      return normalizarPersona(respuesta);
+    } catch (error) {
+      if (error instanceof ExternalServiceError && error.cause?.status === 404) {
+        throw new NotFoundError('No se encontró la persona solicitada');
+      }
+      throw error;
+    }
+  });
+}
+
+export function listarGenerosPorTipo(tipo) {
+  const ruta = RUTA_TMDB_POR_TIPO[tipo];
+  return generosCache.getOrSet(tipo, async () => {
+    const respuesta = await tmdbRequest(`/genre/${ruta}/list`, { language: TMDB_LANGUAGE });
+    return mapearColeccion(respuesta?.genres, (genero) => ({
+      id: genero?.id,
+      nombre: genero?.name,
+    }));
+  });
 }
 
 export async function obtenerDetalle(tipo, tmdbId) {
@@ -162,7 +290,10 @@ export async function obtenerDetalle(tipo, tmdbId) {
     throw error;
   }
 
-  return normalizarDetalle(response, tipo);
+  return {
+    ...normalizarBase(response, tipo),
+    sinopsis: obtenerTexto(response?.overview),
+  };
 }
 
 function normalizarOfertasDeRegion(datosRegion) {

@@ -3,6 +3,7 @@ export const RUTAS = Object.freeze({
   DETALLE_TITULO: 'titulos/:tipo/:tmdbId',
   WATCHLIST: '/watchlist',
   MIS_PLATAFORMAS: '/mis-plataformas',
+  PERFIL: '/perfil',
   INICIAR_SESION: '/iniciar-sesion',
   REGISTRO: '/registro',
 });

@@ -24,6 +24,7 @@
   --chip: #e4f0eb;
   --chip-foreground: #075c44;
   --danger: #b42318;
+  --danger-foreground: #ffffff;
   --danger-surface: #fef3f2;
   --success: #0b7a5b;
 
@@ -53,6 +54,7 @@
   --chip: #173a2c;
   --chip-foreground: #8be0ba;
   --danger: #ff8a7d;
+  --danger-foreground: #16211d;
   --danger-surface: #2d1614;
   --success: #6fd3a8;
 
@@ -141,6 +143,7 @@
   --color-chip: var(--chip);
   --color-chip-foreground: var(--chip-foreground);
   --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
   --color-danger-surface: var(--danger-surface);
   --color-success: var(--success);
   --color-panel: var(--panel);

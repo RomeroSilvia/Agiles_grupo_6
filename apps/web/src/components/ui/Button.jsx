@@ -1,24 +1,20 @@
 import { SpinnerIcon } from './icons.jsx';
-import { FOCUS_RING_CLASS_NAME } from './focusRing.js';
-
-const VARIANTS = {
-  primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
-  accent: 'bg-accent text-accent-foreground hover:bg-accent-hover',
-};
+import { buttonClassName } from './buttonClassName.js';
 
 /**
  * Botón de acción principal. Mientras `loading` está activo queda deshabilitado
  * y muestra `loadingText` para que no se envíe dos veces.
  *
- * @param {{ variant?: 'primary' | 'accent', loading?: boolean, loadingText?: string } & import('react').ButtonHTMLAttributes<HTMLButtonElement>} props
+ * @param {{ variant?: 'primary' | 'accent' | 'secondary' | 'danger' | 'dangerOutline', fullWidth?: boolean, loading?: boolean, loadingText?: string } & import('react').ButtonHTMLAttributes<HTMLButtonElement>} props
  */
 export function Button({
-  variant = 'primary',
+  variant,
+  fullWidth,
   loading = false,
   loadingText,
   disabled,
   type = 'button',
-  className = '',
+  className,
   children,
   ...props
 }) {
@@ -27,7 +23,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-5 text-base font-semibold transition-colors duration-150 ${FOCUS_RING_CLASS_NAME} active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${VARIANTS[variant]} ${className}`}
+      className={buttonClassName({ variant, fullWidth, className })}
       {...props}
     >
       {loading && <SpinnerIcon />}

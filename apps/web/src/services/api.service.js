@@ -1,3 +1,9 @@
+export const API_ERROR_CODES = Object.freeze({
+  CONFLICT: 'CONFLICT',
+  FORBIDDEN: 'FORBIDDEN',
+  INVALID_LINK: 'INVALID_LINK',
+});
+
 export class ApiError extends Error {
   constructor({ status, code, message, details }) {
     super(message);

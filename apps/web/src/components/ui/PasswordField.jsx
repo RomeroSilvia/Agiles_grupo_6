@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { IconButton } from './IconButton.jsx';
 import { TextField } from './TextField.jsx';
 import { EyeIcon, EyeOffIcon } from './icons.jsx';
 
@@ -11,14 +12,12 @@ export function PasswordField(props) {
       {...props}
       type={visible ? 'text' : 'password'}
       trailing={
-        <button
-          type="button"
+        <IconButton
           onClick={() => setVisible((current) => !current)}
           aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-          className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-muted transition-colors duration-150 hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary"
         >
           {visible ? <EyeOffIcon /> : <EyeIcon />}
-        </button>
+        </IconButton>
       }
     />
   );

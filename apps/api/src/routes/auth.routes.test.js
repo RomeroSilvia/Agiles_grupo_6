@@ -5,6 +5,7 @@ import * as authRepository from '../repositories/auth.repository.js';
 import * as intentoLoginRepository from '../repositories/intentoLogin.repository.js';
 import * as emailService from '../services/email.service.js';
 import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/index.js';
+import { RATE_LIMIT_RECUPERACION } from '../config/cuenta.config.js';
 import { USUARIO } from '../test/fixtures.js';
 
 // La base es compartida: los tests nunca llegan a Supabase
@@ -340,6 +341,21 @@ describe('POST /api/auth/password-recovery', () => {
     expect(res.status).toBe(400);
     expect(authRepository.generarEnlace).not.toHaveBeenCalled();
   });
+
+  it('responde 429 si desde la misma IP se piden demasiados enlaces', async () => {
+    authRepository.generarEnlace.mockResolvedValue(null);
+    const app = createApp();
+
+    let res;
+    for (let i = 0; i <= RATE_LIMIT_RECUPERACION.maxRequests; i++) {
+      res = await request(app)
+        .post('/api/auth/password-recovery')
+        .send({ email: `persona${i}@mail.com` });
+    }
+
+    expect(res.status).toBe(429);
+    expect(res.body.error.code).toBe('RATE_LIMITED');
+  });
 });
 
 describe('POST /api/auth/password-reset', () => {
@@ -361,6 +377,8 @@ describe('POST /api/auth/password-reset', () => {
     });
     expect(authRepository.cerrarSesion).toHaveBeenCalledWith(SESION.accessToken, 'global');
     expect(intentoLoginRepository.limpiar).toHaveBeenCalledWith(USUARIO.email);
+    expect(cookiesDe(res)).toMatch(/access_token=;/);
+    expect(cookiesDe(res)).toMatch(/refresh_token=;/);
   });
 
   it('responde 400 INVALID_LINK si el enlace venció o ya se usó', async () => {
@@ -373,6 +391,7 @@ describe('POST /api/auth/password-reset', () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_LINK');
     expect(authRepository.actualizarUsuario).not.toHaveBeenCalled();
+    expect(cookiesDe(res)).toBe('');
   });
 
   it('rechaza una contraseña que no cumple los requisitos', async () => {
@@ -407,6 +426,22 @@ describe('POST /api/auth/password-change', () => {
     });
     expect(authRepository.cerrarSesion).toHaveBeenCalledWith('access-de-prueba', 'global');
     expect(cookiesDe(res)).toMatch(/access_token=access-nuevo/);
+  });
+
+  it('cierra las otras sesiones con los tokens renovados si el access token venció', async () => {
+    authRepository.obtenerUsuarioPorToken.mockResolvedValue(null);
+    authRepository.refrescarSesion.mockResolvedValue({ ...SESION, accessToken: 'access-renovado' });
+    authRepository.iniciarSesionConPassword.mockResolvedValue(SESION);
+    authRepository.cerrarSesion.mockResolvedValue(true);
+
+    const res = await request(createApp())
+      .post('/api/auth/password-change')
+      .set('Cookie', 'access_token=vencido; refresh_token=refresh-de-prueba')
+      .send({ currentPassword: PASSWORD_VALIDA, newPassword: PASSWORD_NUEVA });
+
+    expect(res.status).toBe(204);
+    expect(authRepository.cerrarSesion).toHaveBeenCalledWith('access-renovado', 'global');
+    expect(authRepository.cerrarSesion).not.toHaveBeenCalledWith('vencido', 'global');
   });
 
   it('responde 403 si la contraseña actual no es correcta y no la cambia', async () => {
@@ -546,6 +581,24 @@ describe('POST /api/auth/email-change/confirm', () => {
 
     expect(res.status).toBe(200);
     expect(cookiesDe(res)).toMatch(/access_token=access-con-mail-nuevo/);
+    expect(authRepository.cerrarSesion).not.toHaveBeenCalled();
+  });
+
+  it('revoca la sesión del enlace si se abre sin la sesión del mismo usuario', async () => {
+    authRepository.verificarEnlace.mockResolvedValue({
+      user: NUEVO,
+      appMetadata: {},
+      sesion: { ...SESION, accessToken: 'access-del-enlace', user: NUEVO },
+    });
+    authRepository.cerrarSesion.mockResolvedValue(true);
+
+    const res = await request(createApp())
+      .post('/api/auth/email-change/confirm')
+      .send({ token: TOKEN_ENLACE });
+
+    expect(res.status).toBe(200);
+    expect(authRepository.cerrarSesion).toHaveBeenCalledWith('access-del-enlace');
+    expect(cookiesDe(res)).toBe('');
   });
 
   it('responde 400 INVALID_LINK si el enlace venció o ya se usó', async () => {
@@ -573,6 +626,7 @@ describe('DELETE /api/auth/account', () => {
     expect(res.status).toBe(204);
     expect(authRepository.cerrarSesion).toHaveBeenCalledWith('access-de-prueba', 'global');
     expect(authRepository.eliminarUsuario).toHaveBeenCalledWith(USUARIO.id);
+    expect(intentoLoginRepository.limpiar).toHaveBeenCalledWith(USUARIO.email);
     expect(cookiesDe(res)).toMatch(/access_token=;/);
     expect(cookiesDe(res)).toMatch(/refresh_token=;/);
   });

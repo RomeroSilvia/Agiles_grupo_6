@@ -71,7 +71,7 @@ export async function solicitarCambioMail(usuario, { email: nuevoEmail, password
   );
 }
 
-export async function confirmarCambioMail({ token }) {
+export async function confirmarCambioMail({ token }, usuarioActual) {
   const { user, appMetadata, sesion } = await verificarEnlace(TIPO_ENLACE.CAMBIO_MAIL, token);
 
   const emailAnterior = appMetadata.mail_anterior;
@@ -82,6 +82,10 @@ export async function confirmarCambioMail({ token }) {
     await authRepository.actualizarUsuario(user.id, { appMetadata: { mail_anterior: null } });
   }
 
+  if (sesion && usuarioActual?.id !== user.id) {
+    await authService.cerrarSesion(sesion).catch((error) => console.error(error));
+    return { user, sesion: null };
+  }
   return { user, sesion };
 }
 
@@ -89,6 +93,7 @@ export async function eliminarCuenta(usuario, { password }, tokens) {
   if (password) {
     await authService.verificarIdentidad({ email: usuario.email, password });
   }
+  await intentoLoginRepository.limpiar(usuario.email);
   await authService.cerrarTodasLasSesiones(tokens);
   await authRepository.eliminarUsuario(usuario.id);
 }

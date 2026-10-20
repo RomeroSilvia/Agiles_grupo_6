@@ -1,17 +1,5 @@
-import {
-  ACCESS_TOKEN_COOKIE,
-  REFRESH_TOKEN_COOKIE,
-  clearSessionCookies,
-  setSessionCookies,
-} from '../config/cookies.config.js';
+import { clearSessionCookies, setSessionCookies } from '../config/cookies.config.js';
 import * as cuentaService from '../services/cuenta.service.js';
-
-function tokensDeSesion(req) {
-  return {
-    accessToken: req.cookies?.[ACCESS_TOKEN_COOKIE],
-    refreshToken: req.cookies?.[REFRESH_TOKEN_COOKIE],
-  };
-}
 
 export function solicitarRecuperacion(req, res) {
   cuentaService.solicitarRecuperacion(req.validated.body);
@@ -20,6 +8,7 @@ export function solicitarRecuperacion(req, res) {
 
 export async function restablecerPassword(req, res) {
   await cuentaService.restablecerPassword(req.validated.body);
+  clearSessionCookies(res);
   res.status(204).end();
 }
 
@@ -27,7 +16,7 @@ export async function cambiarPassword(req, res) {
   const sesion = await cuentaService.cambiarPassword(
     req.user,
     req.validated.body,
-    tokensDeSesion(req),
+    req.sessionTokens,
   );
   setSessionCookies(res, sesion);
   res.status(204).end();
@@ -39,15 +28,15 @@ export async function solicitarCambioMail(req, res) {
 }
 
 export async function confirmarCambioMail(req, res) {
-  const { user, sesion } = await cuentaService.confirmarCambioMail(req.validated.body);
-  if (sesion && req.user?.id === user.id) {
+  const { user, sesion } = await cuentaService.confirmarCambioMail(req.validated.body, req.user);
+  if (sesion) {
     setSessionCookies(res, sesion);
   }
   res.json({ data: { email: user.email } });
 }
 
 export async function eliminarCuenta(req, res) {
-  await cuentaService.eliminarCuenta(req.user, req.validated.body, tokensDeSesion(req));
+  await cuentaService.eliminarCuenta(req.user, req.validated.body, req.sessionTokens);
   clearSessionCookies(res);
   res.status(204).end();
 }

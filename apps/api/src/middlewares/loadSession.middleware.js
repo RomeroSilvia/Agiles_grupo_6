@@ -18,6 +18,7 @@ export async function loadSession(req, res, next) {
 
   if (!accessToken && !refreshToken) {
     req.user = null;
+    req.sessionTokens = null;
     return next();
   }
 
@@ -31,5 +32,11 @@ export async function loadSession(req, res, next) {
   }
 
   req.user = user;
+  req.sessionTokens = user
+    ? {
+        accessToken: sesionRenovada?.accessToken ?? accessToken,
+        refreshToken: sesionRenovada?.refreshToken ?? refreshToken,
+      }
+    : null;
   next();
 }

@@ -16,10 +16,10 @@ function respuestaVacia(pagina) {
 }
 
 async function filtrarPagina({ filtros, pagina, region, plataformas }) {
-  const { resultados, totalPaginas, totalResultados } = await busquedaService.buscarTitulos({
-    ...filtros,
-    pagina,
-  });
+  const { resultados, totalPaginas, totalResultados } = await busquedaService.buscarTitulos(
+    { ...filtros, pagina },
+    { avanzarSiVacio: false },
+  );
   const disponibilidades = await usuarioPlataformaService.obtenerPlataformasDelUsuarioPorTitulo({
     titulos: resultados,
     region,

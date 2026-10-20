@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { Switch } from '../../components/ui/Switch.jsx';
 import { RUTAS } from '../../app/rutas.js';
+import { ETIQUETA_BUSQUEDA_CLASS_NAME } from './busqueda.styles.js';
 
 const ID_SWITCH = 'solo-propias';
 const ETIQUETA = 'Solo mis plataformas';
@@ -35,9 +36,7 @@ export function FiltroPlataformasPropias({ filtro, activo, onChange }) {
 
   return (
     <div className="space-y-2">
-      <span className="block font-mono text-xs font-medium tracking-wide text-muted uppercase">
-        Plataformas
-      </span>
+      <span className={ETIQUETA_BUSQUEDA_CLASS_NAME}>Plataformas</span>
       <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background px-4 py-2.75">
         <TextoDelFiltro sinPlataformas={filtro.sinPlataformas} error={filtro.error} />
         <Switch

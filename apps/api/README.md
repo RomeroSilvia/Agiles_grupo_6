@@ -7,10 +7,12 @@ Las convenciones están en [AGENTS.md](../../AGENTS.md).
 ## Jobs
 
 La API registra la sincronización de disponibilidad todos los días a las 03:00, hora de
-Argentina. Para ejecutarla manualmente desde la raíz, usar npm run job -w apps/api -- syncAvailability.
-En despliegues con varias réplicas, configurar `NODE_CRON_RUN=true` en una sola y `false` en las demás.
+Argentina, solo cuando `NODE_CRON_RUN=true`. Por defecto queda deshabilitada. En el despliegue,
+habilitarla en una sola instancia dedicada. Para ejecutarla manualmente desde la raíz, usar
+`npm run job -w apps/api -- syncAvailability`.
 
-El job requiere STREAMING_AVAILABILITY_API_KEY, consulta como máximo 100 combinaciones de
-título y región por día UTC y guarda los snapshots en disponibilidad. Si hay más combinaciones,
-las reparte entre ejecuciones para respetar el límite del proveedor. Las búsquedas interactivas
-siguen consultando TMDB y no llaman a Streaming Availability.
+El job requiere `STREAMING_AVAILABILITY_API_KEY`, consulta como máximo 100 combinaciones de
+título y región por día UTC y guarda los snapshots en disponibilidad. Si hay más
+combinaciones, las reparte entre ejecuciones para respetar el límite del proveedor.
+Las búsquedas del catálogo consultan TMDB; el detalle puede consultar Streaming Availability
+cuando necesita obtener un deep link.

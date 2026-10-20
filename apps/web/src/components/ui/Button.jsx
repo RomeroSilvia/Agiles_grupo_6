@@ -4,6 +4,7 @@ import { FOCUS_RING_CLASS_NAME } from './focusRing.js';
 const VARIANTS = {
   primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
   accent: 'bg-accent text-accent-foreground hover:bg-accent-hover',
+  secondary: 'border border-border bg-surface text-foreground hover:bg-background',
   outline: 'border border-primary text-primary hover:bg-primary/10',
   outlineDanger: 'border border-danger text-danger hover:bg-danger/10',
 };
@@ -20,7 +21,7 @@ const SIZES = {
  * Para cambiar el ancho o el tamaño usar `fullWidth` y `size`, no clases en `className`:
  * dos clases de Tailwind que se contradicen no se pisan por el orden en que se escriben.
  *
- * @param {{ variant?: 'primary' | 'accent' | 'outline' | 'outlineDanger', size?: 'md' | 'compact' | 'sm', fullWidth?: boolean, loading?: boolean, loadingText?: string } & import('react').ButtonHTMLAttributes<HTMLButtonElement>} props
+ * @param {{ variant?: 'primary' | 'accent' | 'secondary' | 'outline' | 'outlineDanger', size?: 'md' | 'compact' | 'sm', fullWidth?: boolean, loading?: boolean, loadingText?: string } & import('react').ButtonHTMLAttributes<HTMLButtonElement>} props
  */
 export function Button({
   variant = 'primary',

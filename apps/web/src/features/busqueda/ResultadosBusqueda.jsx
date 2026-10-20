@@ -21,6 +21,7 @@ function obtenerVista({
   hasSearched,
   hayResultados,
   busquedaFiltrada,
+  hayFiltrosAvanzados,
 }) {
   if (isLoading && !isLoadingMore) {
     return VISTAS_RESULTADOS.CARGANDO;
@@ -33,6 +34,9 @@ function obtenerVista({
   }
   if (!hasSearched) {
     return null;
+  }
+  if (hayFiltrosAvanzados) {
+    return VISTAS_RESULTADOS.SIN_RESULTADOS;
   }
   return busquedaFiltrada
     ? VISTAS_RESULTADOS.SIN_RESULTADOS_PROPIOS
@@ -58,6 +62,7 @@ export function ResultadosBusqueda({
   error,
   hasSearched,
   busquedaFiltrada,
+  hayFiltrosAvanzados,
   tituloBuscado,
   onReintentar,
   onCargarMas,
@@ -70,6 +75,7 @@ export function ResultadosBusqueda({
     hasSearched,
     hayResultados: resultados.length > 0,
     busquedaFiltrada,
+    hayFiltrosAvanzados,
   });
   const hayMasPaginas = pagina < totalPaginas;
   const mostrarVerificacionIncompleta = busquedaFiltrada && verificacionIncompleta;
@@ -93,7 +99,7 @@ export function ResultadosBusqueda({
           className="space-y-4 rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
         >
           <p>{error}</p>
-          {busquedaFiltrada && (
+          {(busquedaFiltrada || hayFiltrosAvanzados) && (
             <Button variant="outlineDanger" size="compact" fullWidth={false} onClick={onReintentar}>
               Reintentar
             </Button>
@@ -113,25 +119,45 @@ export function ResultadosBusqueda({
       )}
 
       {vista === VISTAS_RESULTADOS.SIN_RESULTADOS && (
-        <p
-          role="status"
-          aria-live="polite"
-          className="rounded-2xl border border-border bg-surface p-5 text-muted"
-        >
-          No encontramos contenido disponible con esos filtros.
-        </p>
+        <div className="space-y-4 rounded-2xl border border-border bg-surface p-5 text-muted">
+          <p role="status" aria-live="polite">
+            {hayFiltrosAvanzados && hayMasPaginas
+              ? 'Todavía no encontramos coincidencias en estas páginas.'
+              : hayFiltrosAvanzados
+                ? 'No hay resultados para esa combinación de filtros.'
+                : 'No encontramos contenido disponible con esos filtros.'}
+          </p>
+          {hayFiltrosAvanzados && hayMasPaginas && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCargarMas}
+              size="compact"
+              fullWidth={false}
+              disabled={isLoading}
+              loading={isLoadingMore}
+              loadingText="Buscando…"
+            >
+              Seguir buscando
+            </Button>
+          )}
+        </div>
       )}
 
       {vista === VISTAS_RESULTADOS.RESULTADOS && (
         <>
-          <div className="mb-5 flex flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-4">
-            <h2 className="min-w-0 text-xl font-semibold break-words">
-              Resultados para &quot;{tituloBuscado}&quot;
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="text-xl font-semibold">
+              {tituloBuscado
+                ? `Resultados para "${tituloBuscado}"`
+                : 'Resultados con los filtros seleccionados'}
             </h2>
-            <p role="status" aria-live="polite" className="text-sm text-muted md:shrink-0">
+            <p role="status" aria-live="polite" className="text-sm text-muted">
               {busquedaFiltrada
                 ? 'Resultados encontrados para tus plataformas'
-                : `Mostrando ${resultados.length} de ${totalResultados} ${totalResultados === 1 ? 'título' : 'títulos'}`}
+                : hayFiltrosAvanzados
+                  ? `Mostrando ${resultados.length} ${resultados.length === 1 ? 'resultado' : 'resultados'}`
+                  : `Mostrando ${resultados.length} de ${totalResultados} ${totalResultados === 1 ? 'título' : 'títulos'}`}
             </p>
           </div>
           {mostrarVerificacionIncompleta && (

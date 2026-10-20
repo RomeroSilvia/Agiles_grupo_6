@@ -10,6 +10,7 @@ const METODOS = [
   'update',
   'delete',
   'maybeSingle',
+  'single',
 ];
 
 export const SIN_DATOS = { data: null, error: null };

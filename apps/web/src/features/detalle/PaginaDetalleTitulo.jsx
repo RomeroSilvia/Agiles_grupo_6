@@ -263,7 +263,11 @@ export function PaginaDetalleTitulo() {
                       >
                         {plataformas.map(({ plataforma, esPropia }) => (
                           <li key={plataforma.id}>
-                            <TarjetaDisponibilidad plataforma={plataforma} esPropia={esPropia} />
+                            <TarjetaDisponibilidad
+                              plataforma={plataforma}
+                              esPropia={esPropia}
+                              nombreTitulo={titulo.nombre}
+                            />
                           </li>
                         ))}
                       </ul>

@@ -1,4 +1,5 @@
 import { jwtVerify } from 'jose';
+import { isAuthSessionMissingError } from '@supabase/supabase-js';
 import { supabaseAdmin, createAuthClient } from '../config/supabase.config.js';
 import { JWT_CONFIG, supabaseJwks } from '../config/jwt.config.js';
 import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/index.js';
@@ -16,6 +17,13 @@ import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/i
  * @property {number} expiresIn Segundos hasta que vence el access token
  * @property {UsuarioSesion} user
  */
+
+export const ALCANCE_SESION = Object.freeze({ LOCAL: 'local', GLOBAL: 'global' });
+
+export const TIPO_ENLACE = Object.freeze({
+  RECUPERACION: Object.freeze({ generar: 'recovery', verificar: 'recovery' }),
+  CAMBIO_MAIL: Object.freeze({ generar: 'email_change_new', verificar: 'email_change' }),
+});
 
 /** @returns {Sesion} */
 function toSesion(session) {
@@ -46,7 +54,12 @@ const CODIGOS_SESION_INVALIDA = new Set([
 ]);
 
 function esSesionInvalida(error) {
-  return CODIGOS_SESION_INVALIDA.has(error.code) || error.status === 401 || error.status === 403;
+  return (
+    CODIGOS_SESION_INVALIDA.has(error.code) ||
+    isAuthSessionMissingError(error) ||
+    error.status === 401 ||
+    error.status === 403
+  );
 }
 
 function errorDelServicio(error) {
@@ -147,8 +160,8 @@ export async function refrescarSesion(refreshToken) {
  * Revoca el refresh token de esta sesión (solo este dispositivo).
  * @returns {Promise<boolean>} false si el access token ya no es válido y no se pudo revocar
  */
-export async function cerrarSesion(accessToken) {
-  const { error } = await supabaseAdmin.auth.admin.signOut(accessToken, 'local');
+export async function cerrarSesion(accessToken, alcance = ALCANCE_SESION.LOCAL) {
+  const { error } = await supabaseAdmin.auth.admin.signOut(accessToken, alcance);
 
   if (error) {
     if (esSesionInvalida(error)) {
@@ -157,4 +170,61 @@ export async function cerrarSesion(accessToken) {
     throw errorDelServicio(error);
   }
   return true;
+}
+
+export async function generarEnlace(tipo, { email, nuevoEmail }) {
+  const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+    type: tipo.generar,
+    email,
+    ...(nuevoEmail && { newEmail: nuevoEmail }),
+  });
+
+  if (error) {
+    if (error.code === 'user_not_found') {
+      return null;
+    }
+    if (error.code === 'email_exists') {
+      throw new ConflictError('No podés usar ese mail. Probá con otro.');
+    }
+    throw errorDelServicio(error);
+  }
+  return data.properties.hashed_token;
+}
+
+export async function verificarEnlace(tipo, tokenHash) {
+  const { data, error } = await createAuthClient().auth.verifyOtp({
+    token_hash: tokenHash,
+    type: tipo.verificar,
+  });
+
+  if (error) {
+    if (error.code === 'otp_expired' || esSesionInvalida(error)) {
+      return null;
+    }
+    throw errorDelServicio(error);
+  }
+  return {
+    user: toUsuario(data.user),
+    appMetadata: data.user.app_metadata ?? {},
+    sesion: data.session ? toSesion(data.session) : null,
+  };
+}
+
+export async function actualizarUsuario(id, { password, appMetadata }) {
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
+    password,
+    app_metadata: appMetadata,
+  });
+
+  if (error) {
+    throw errorDelServicio(error);
+  }
+}
+
+export async function eliminarUsuario(id) {
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+
+  if (error && error.code !== 'user_not_found') {
+    throw errorDelServicio(error);
+  }
 }

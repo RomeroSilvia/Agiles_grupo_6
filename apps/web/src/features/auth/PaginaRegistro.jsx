@@ -5,11 +5,10 @@ import { useSession } from '../../contexts/session/SessionContext.js';
 import { useZodForm } from '../../hooks/useZodForm.js';
 import { Button } from '../../components/ui/Button.jsx';
 import { TextField } from '../../components/ui/TextField.jsx';
-import { PasswordField } from '../../components/ui/PasswordField.jsx';
 import { CheckIcon } from '../../components/ui/icons.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
-import { PasswordRequirements } from './PasswordRequirements.jsx';
+import { CamposPasswordNueva } from './CamposPasswordNueva.jsx';
 import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { RUTAS } from '../../app/rutas.js';
 
@@ -79,17 +78,7 @@ export function PaginaRegistro() {
           placeholder="vos@mail.com"
           {...field('email')}
         />
-        <PasswordField
-          label="Contraseña"
-          autoComplete="new-password"
-          hint={<PasswordRequirements password={values.password} />}
-          {...field('password')}
-        />
-        <PasswordField
-          label="Repetí la contraseña"
-          autoComplete="new-password"
-          {...field('confirmPassword')}
-        />
+        <CamposPasswordNueva field={field} values={values} />
 
         <FormError>{formError}</FormError>
 

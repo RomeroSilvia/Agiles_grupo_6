@@ -28,6 +28,8 @@ Las convenciones, el stack y las reglas de capas están en `AGENTS.md` (importad
 ## Marca y assets del front
 
 - El nombre de la app sale de `APP_NAME` en `apps/web/src/config/app.config.js`; no escribir "Streamly" a mano (las mayúsculas van con la clase `uppercase`). La única excepción es el `<title>` de `apps/web/index.html`, que es HTML estático.
+- Los íconos se importan solo desde `components/ui/icons.jsx`, que adapta los de `lucide-react` (decorativos, `size-5` por defecto). Para sumar uno, agregar ahí un `createIcon(...)`; no importar `lucide-react` directo.
+- Los botones de acción usan `components/ui/Button.jsx` con `variant`, `size` y `fullWidth`; los que son solo un ícono, `IconButton.jsx`; y los que se ven como enlace, `TextButton.jsx`. No repetir clases de botón en `features/`. Para cambiar ancho o padding, usar esas props y no clases en `className`, porque dos clases de Tailwind que se contradicen no se pisan.
 - El logo es `components/ui/Logo.jsx` (ícono `src/assets/logo-s.svg` + nombre). Para enlazarlo al inicio usar `components/ui/LogoInicio.jsx` y pasarle el anillo de foco por `className`.
 - `apps/web/public/` es para archivos que se sirven tal cual, como `favicon.ico` (tamaños de 16, 32 y 48 px). Las imágenes que importa el código van en `src/assets/` y las del README, en `docs/`. Antes de subirlas, achicarlas y comprimirlas.
 

@@ -5,7 +5,8 @@ import { NotFoundPage } from '../../app/NotFoundPage.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Poster } from '../../components/ui/Poster.jsx';
-import { FOCUS_RING_CLASS_NAME, LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
+import { TextButton } from '../../components/ui/TextButton.jsx';
+import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { formatearPuntuacion } from '../../utils/formatearPuntuacion.js';
 import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
@@ -163,13 +164,7 @@ export function PaginaDetalleTitulo() {
                   {estadoWatchlistCargado &&
                     ` Estado guardado: ${agregado ? 'está en tu watchlist.' : 'no está en tu watchlist.'}`}
                 </span>
-                <button
-                  type="button"
-                  onClick={reintentarWatchlist}
-                  className={`cursor-pointer font-semibold underline underline-offset-4 hover:opacity-80 ${FOCUS_RING_CLASS_NAME}`}
-                >
-                  Reintentar
-                </button>
+                <TextButton onClick={reintentarWatchlist}>Reintentar</TextButton>
               </div>
             )}
           </div>
@@ -231,13 +226,7 @@ export function PaginaDetalleTitulo() {
                 className="flex flex-col gap-2 rounded-2xl border border-danger/30 bg-danger-surface p-4 text-sm text-danger sm:flex-row sm:items-center sm:justify-between"
               >
                 <span>{errorDisponibilidad}</span>
-                <button
-                  type="button"
-                  onClick={reintentarDisponibilidad}
-                  className={`cursor-pointer font-semibold underline underline-offset-4 hover:opacity-80 ${FOCUS_RING_CLASS_NAME}`}
-                >
-                  Reintentar
-                </button>
+                <TextButton onClick={reintentarDisponibilidad}>Reintentar</TextButton>
               </div>
             )}
 
@@ -274,7 +263,11 @@ export function PaginaDetalleTitulo() {
                       >
                         {plataformas.map(({ plataforma, esPropia }) => (
                           <li key={plataforma.id}>
-                            <TarjetaDisponibilidad plataforma={plataforma} esPropia={esPropia} />
+                            <TarjetaDisponibilidad
+                              plataforma={plataforma}
+                              esPropia={esPropia}
+                              nombreTitulo={titulo.nombre}
+                            />
                           </li>
                         ))}
                       </ul>

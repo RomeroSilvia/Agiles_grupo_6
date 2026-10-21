@@ -6,6 +6,7 @@ const METODOS = [
   'is',
   'gte',
   'lt',
+  'in',
   'order',
   'range',
   'insert',

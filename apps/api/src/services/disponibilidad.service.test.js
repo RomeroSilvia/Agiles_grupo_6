@@ -23,6 +23,10 @@ vi.mock('../repositories/sincronizacion.repository.js', () => ({
   reservarConsultaDisponibilidad: vi.fn(),
   finalizar: vi.fn(),
 }));
+vi.mock('../repositories/verificacionDisponibilidad.repository.js', () => ({
+  listarPorTitulos: vi.fn(),
+  registrar: vi.fn(),
+}));
 vi.mock('../repositories/watchlist.repository.js', () => ({
   listarTitulosConAvisosActivos: vi.fn(),
 }));
@@ -32,6 +36,7 @@ import * as disponibilidadRepository from '../repositories/disponibilidad.reposi
 import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
 import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
+import * as verificacionDisponibilidadRepository from '../repositories/verificacionDisponibilidad.repository.js';
 import * as watchlistRepository from '../repositories/watchlist.repository.js';
 import { STREAMING_AVAILABILITY_CONFIG } from '../config/streamingAvailability.config.js';
 import { DatabaseError } from '../errors/index.js';
@@ -65,6 +70,8 @@ beforeEach(() => {
   streamingAvailabilityIntegration.obtenerOfertas.mockResolvedValue([]);
   disponibilidadRepository.listarPorTituloYRegion.mockResolvedValue([]);
   disponibilidadRepository.guardarOfertas.mockResolvedValue(undefined);
+  verificacionDisponibilidadRepository.listarPorTitulos.mockResolvedValue([]);
+  verificacionDisponibilidadRepository.registrar.mockResolvedValue(0);
   sincronizacionRepository.finalizar.mockResolvedValue(undefined);
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -146,6 +153,11 @@ describe('sincronizarDisponibilidad', () => {
     const resultado = await sincronizarDisponibilidad({ ahora: AHORA });
 
     expect(streamingAvailabilityIntegration.obtenerOfertas).toHaveBeenCalledTimes(1);
+    expect(verificacionDisponibilidadRepository.registrar).toHaveBeenCalledWith({
+      tituloId: 42,
+      region: 'AR',
+      regionPredeterminada: 'AR',
+    });
     expect(resultado.combinacionesProcesadas).toBe(1);
     expect(disponibilidadRepository.guardarOfertas).toHaveBeenCalledWith([
       {
@@ -335,6 +347,34 @@ describe('sincronizarDisponibilidad', () => {
       1,
       expect.objectContaining({ error: expect.stringContaining('1 combinaciones pendientes') }),
     );
+  });
+
+  it('prioriza títulos sin verificación y luego los verificados hace más tiempo', async () => {
+    watchlistRepository.listarTitulosConAvisosActivos.mockResolvedValue([
+      { ...COMBINACION, tituloId: 1, tmdbId: 1 },
+      { ...COMBINACION, tituloId: 2, tmdbId: 2 },
+      { ...COMBINACION, tituloId: 3, tmdbId: 3 },
+    ]);
+    verificacionDisponibilidadRepository.listarPorTitulos.mockResolvedValue([
+      { tituloId: 1, region: 'AR', verificadaEn: '2026-10-16T00:00:00.000Z' },
+      { tituloId: 2, region: 'AR', verificadaEn: '2026-10-17T00:00:00.000Z' },
+    ]);
+    let reservas = 0;
+    sincronizacionRepository.reservarConsultaDisponibilidad.mockImplementation(async () => {
+      reservas += 1;
+      return reservas === 1;
+    });
+
+    const resultado = await sincronizarDisponibilidad({ ahora: AHORA });
+
+    expect(verificacionDisponibilidadRepository.listarPorTitulos).toHaveBeenCalledWith([1, 2, 3]);
+    expect(streamingAvailabilityIntegration.obtenerOfertas).toHaveBeenCalledTimes(1);
+    expect(streamingAvailabilityIntegration.obtenerOfertas).toHaveBeenCalledWith({
+      tipo: 'pelicula',
+      tmdbId: 3,
+      region: 'AR',
+    });
+    expect(resultado).toMatchObject({ combinacionesProcesadas: 1, combinacionesPendientes: 2 });
   });
 
   it('reserva solo el cupo restante del día UTC', async () => {

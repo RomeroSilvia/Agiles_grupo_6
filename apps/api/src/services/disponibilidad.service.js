@@ -6,6 +6,7 @@ import * as disponibilidadRepository from '../repositories/disponibilidad.reposi
 import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
 import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
+import * as verificacionDisponibilidadRepository from '../repositories/verificacionDisponibilidad.repository.js';
 import * as watchlistRepository from '../repositories/watchlist.repository.js';
 
 const FUENTE_DATOS = 'Streaming Availability';
@@ -18,6 +19,31 @@ function deduplicarCombinaciones(combinaciones) {
   return [...new Map(combinaciones.map((item) => [claveCombinacion(item), item])).values()].sort(
     (a, b) => a.tituloId - b.tituloId || a.region.localeCompare(b.region),
   );
+}
+
+function ordenarPorUltimaVerificacion(combinaciones, verificaciones) {
+  const fechaPorCombinacion = new Map(
+    verificaciones.map(({ tituloId, region, verificadaEn }) => [
+      claveCombinacion({ tituloId, region }),
+      new Date(verificadaEn).getTime(),
+    ]),
+  );
+
+  return combinaciones.sort((a, b) => {
+    const fechaA = fechaPorCombinacion.get(claveCombinacion(a));
+    const fechaB = fechaPorCombinacion.get(claveCombinacion(b));
+
+    if (fechaA === undefined && fechaB !== undefined) {
+      return -1;
+    }
+    if (fechaA !== undefined && fechaB === undefined) {
+      return 1;
+    }
+
+    return (
+      (fechaA ?? 0) - (fechaB ?? 0) || a.tituloId - b.tituloId || a.region.localeCompare(b.region)
+    );
+  });
 }
 
 function claveOferta({ plataformaId, tipoOferta }) {
@@ -89,15 +115,6 @@ function obtenerVentanaUtc(ahora) {
   return { inicio: inicio.toISOString(), fin: fin.toISOString() };
 }
 
-function seleccionarLote(combinaciones, sincronizacionId, cupoDisponible) {
-  const maximoPorLote = STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY;
-  const cantidadLotes = Math.ceil(combinaciones.length / maximoPorLote);
-  const indiceLote = (Number(sincronizacionId) - 1) % cantidadLotes;
-  const inicio = indiceLote * maximoPorLote;
-
-  return combinaciones.slice(inicio, inicio + Math.min(maximoPorLote, cupoDisponible));
-}
-
 function formatearErrores(errores) {
   return errores.length > 0 ? errores.join('\n').slice(0, 8000) : null;
 }
@@ -165,6 +182,12 @@ async function procesarCombinacion({
   if (ofertasSincronizadas.length > 0) {
     await disponibilidadRepository.guardarOfertas(ofertasSincronizadas);
   }
+
+  await verificacionDisponibilidadRepository.registrar({
+    tituloId: combinacion.tituloId,
+    region: combinacion.region,
+    regionPredeterminada: env.DEFAULT_REGION,
+  });
 }
 
 export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
@@ -174,7 +197,7 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
 
   try {
     const watchlist = await watchlistRepository.listarTitulosConAvisosActivos(env.DEFAULT_REGION);
-    const combinaciones = deduplicarCombinaciones(watchlist);
+    let combinaciones = deduplicarCombinaciones(watchlist);
 
     if (combinaciones.length === 0) {
       await finalizarEjecucion(sincronizacion.id, { ahora, errores });
@@ -190,10 +213,14 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
       throw new Error('Falta configurar STREAMING_AVAILABILITY_API_KEY');
     }
 
-    const [plataformas, fuenteId] = await Promise.all([
+    const [plataformas, fuenteId, verificaciones] = await Promise.all([
       plataformaRepository.listarActivas(),
       fuenteDatosRepository.obtenerIdPorNombre(FUENTE_DATOS),
+      verificacionDisponibilidadRepository.listarPorTitulos(
+        combinaciones.map(({ tituloId }) => tituloId),
+      ),
     ]);
+    combinaciones = ordenarPorUltimaVerificacion(combinaciones, verificaciones);
     if (!fuenteId) {
       throw new DatabaseError(new Error('No existe la fuente de datos "' + FUENTE_DATOS + '"'));
     }
@@ -206,18 +233,13 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
     }
 
     const { inicio, fin } = obtenerVentanaUtc(sincronizacion.iniciadaEn ?? ahora);
-    const lote = seleccionarLote(
-      combinaciones,
-      sincronizacion.id,
-      STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY,
-    );
     let siguienteCombinacion = 0;
     let cupoAgotado = false;
     let errorFatal;
 
     async function procesarSiguienteCombinacion() {
-      while (!cupoAgotado && !errorFatal && siguienteCombinacion < lote.length) {
-        const combinacion = lote[siguienteCombinacion];
+      while (!cupoAgotado && !errorFatal && siguienteCombinacion < combinaciones.length) {
+        const combinacion = combinaciones[siguienteCombinacion];
         siguienteCombinacion += 1;
 
         try {
@@ -252,7 +274,12 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
 
     await Promise.all(
       Array.from(
-        { length: Math.min(STREAMING_AVAILABILITY_CONFIG.MAX_CONCURRENT_REQUESTS, lote.length) },
+        {
+          length: Math.min(
+            STREAMING_AVAILABILITY_CONFIG.MAX_CONCURRENT_REQUESTS,
+            combinaciones.length,
+          ),
+        },
         () => procesarSiguienteCombinacion(),
       ),
     );

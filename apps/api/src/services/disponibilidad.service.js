@@ -119,9 +119,10 @@ function formatearErrores(errores) {
   return errores.length > 0 ? errores.join('\n').slice(0, 8000) : null;
 }
 
-async function finalizarEjecucion(sincronizacionId, { ahora, errores }) {
+async function finalizarEjecucion(sincronizacionId, { ahora, errores, avisosGenerados = 0 }) {
   await sincronizacionRepository.finalizar(sincronizacionId, {
     finalizadaEn: ahora.toISOString(),
+    avisosGenerados,
     error: formatearErrores(errores),
   });
 }
@@ -152,7 +153,7 @@ async function procesarCombinacion({
       region: combinacion.region,
       error: detalle,
     });
-    return;
+    return 0;
   }
 
   const existentes = await disponibilidadRepository.listarPorTituloYRegion(
@@ -183,7 +184,7 @@ async function procesarCombinacion({
     await disponibilidadRepository.guardarOfertas(ofertasSincronizadas);
   }
 
-  await verificacionDisponibilidadRepository.registrar({
+  return verificacionDisponibilidadRepository.registrar({
     tituloId: combinacion.tituloId,
     region: combinacion.region,
     regionPredeterminada: env.DEFAULT_REGION,
@@ -193,6 +194,7 @@ async function procesarCombinacion({
 export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
   const sincronizacion = await sincronizacionRepository.iniciar();
   let procesados = 0;
+  let avisosGenerados = 0;
   const errores = [];
 
   try {
@@ -205,6 +207,7 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
         sincronizacionId: sincronizacion.id,
         combinacionesProcesadas: procesados,
         combinacionesPendientes: 0,
+        avisosGenerados,
         errores,
       };
     }
@@ -258,13 +261,16 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
           }
 
           procesados += 1;
-          await procesarCombinacion({
+          // Se suma después del await: con varias consultas en paralelo, `+= await` leería
+          // el total viejo y perdería avisos.
+          const avisos = await procesarCombinacion({
             combinacion,
             plataformasPorProvider,
             fuenteId,
             ahora,
             errores,
           });
+          avisosGenerados += avisos;
         } catch (error) {
           errorFatal = error;
           return;
@@ -299,18 +305,19 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
       );
     }
 
-    await finalizarEjecucion(sincronizacion.id, { ahora, errores });
+    await finalizarEjecucion(sincronizacion.id, { ahora, errores, avisosGenerados });
     return {
       sincronizacionId: sincronizacion.id,
       combinacionesProcesadas: procesados,
       combinacionesPendientes: pendientes,
+      avisosGenerados,
       errores,
     };
   } catch (error) {
     const detalle = error instanceof Error ? error.message : 'Error desconocido';
     errores.push(detalle);
     try {
-      await finalizarEjecucion(sincronizacion.id, { ahora, errores });
+      await finalizarEjecucion(sincronizacion.id, { ahora, errores, avisosGenerados });
     } catch (errorAlRegistrar) {
       console.error('No se pudo registrar el resultado de la sincronización', errorAlRegistrar);
     }

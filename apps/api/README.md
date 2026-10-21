@@ -18,3 +18,11 @@ Las búsquedas del catálogo consultan TMDB; el detalle puede consultar Streamin
 cuando necesita obtener un deep link. Las consultas del job y del detalle comparten el cupo
 diario de 100 requests y reservan cada llamada antes de contactar al proveedor. Los deep links
 guardados en la base o en caché no consumen requests adicionales.
+
+Cuando un título de la watchlist pasa de no estar disponible a estar disponible en la región
+del usuario, la sincronización deja un aviso pendiente por plataforma. El job
+`sendNotifications` corre cada hora (en el minuto 30, con la misma condición de
+`NODE_CRON_RUN`) y manda un mail por usuario y título con todas las plataformas nuevas. Usa
+`RESEND_API_KEY` y `RESEND_FROM`. Si un envío falla se reintenta en las ejecuciones siguientes,
+hasta 3 veces; si Resend responde que se llegó al límite de envíos, los mails que faltan quedan
+para la próxima hora. Para ejecutarlo manualmente: `npm run job -w apps/api -- sendNotifications`.

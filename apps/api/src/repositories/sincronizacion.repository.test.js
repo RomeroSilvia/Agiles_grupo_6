@@ -66,17 +66,18 @@ describe('sincronizacion.repository', () => {
     ).resolves.toBe(false);
   });
 
-  it('finaliza una ejecución con los totales y el error acumulado', async () => {
+  it('finaliza una ejecución con los avisos generados y el error acumulado', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, { data: null, error: null });
 
     await sincronizacionRepository.finalizar(5, {
       finalizadaEn: '2026-10-17T06:05:00.000Z',
-      titulosProcesados: 2,
+      avisosGenerados: 2,
       error: 'Falló un título',
     });
 
     expect(builder.update).toHaveBeenCalledWith({
       finalizada_en: '2026-10-17T06:05:00.000Z',
+      avisos_generados: 2,
       error: 'Falló un título',
     });
     expect(builder.eq).toHaveBeenCalledWith('id', 5);

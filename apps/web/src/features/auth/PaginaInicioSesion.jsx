@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button.jsx';
 import { TextField } from '../../components/ui/TextField.jsx';
 import { PasswordField } from '../../components/ui/PasswordField.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
+import { MensajeAside } from './MensajeAside.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
 import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { RUTAS } from '../../app/rutas.js';
@@ -40,15 +41,10 @@ export function PaginaInicioSesion() {
   return (
     <AuthLayout
       aside={
-        <>
-          <p className="text-5xl leading-[1.05] font-extrabold tracking-tight text-balance xl:text-6xl">
-            Una búsqueda. Todas tus plataformas.
-          </p>
-          <p className="mt-6 text-lg leading-relaxed text-panel-muted">
-            Iniciá sesión para filtrar por tus plataformas propias, guardar tu watchlist y recibir
-            avisos de disponibilidad.
-          </p>
-        </>
+        <MensajeAside
+          titulo="Una búsqueda. Todas tus plataformas."
+          texto="Iniciá sesión para filtrar por tus plataformas propias, guardar tu watchlist y recibir avisos de disponibilidad."
+        />
       }
     >
       <h1 className="text-3xl font-extrabold tracking-tight">Iniciar sesión</h1>
@@ -63,7 +59,19 @@ export function PaginaInicioSesion() {
           placeholder="vos@mail.com"
           {...field('email')}
         />
-        <PasswordField label="Contraseña" autoComplete="current-password" {...field('password')} />
+        <div className="space-y-2">
+          <PasswordField
+            label="Contraseña"
+            autoComplete="current-password"
+            {...field('password')}
+          />
+          <Link
+            to={RUTAS.RECUPERAR_PASSWORD}
+            className={`${LINK_CLASS_NAME} inline-block rounded-sm text-sm hover:underline`}
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
 
         <FormError>{formError}</FormError>
 

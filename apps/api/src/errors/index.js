@@ -54,6 +54,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class InvalidLinkError extends AppError {
+  constructor(message = 'El enlace venció o ya se usó. Pedí uno nuevo.') {
+    super(message, { status: 400, code: 'INVALID_LINK' });
+  }
+}
+
 export class TooManyAttemptsError extends AppError {
   /** @param {Date} retryAt Desde cuándo se puede volver a intentar */
   constructor(retryAt) {

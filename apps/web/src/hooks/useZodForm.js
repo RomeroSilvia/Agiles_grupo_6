@@ -28,6 +28,7 @@ function erroresPorCampo(result) {
  * @param {Record<string, string>} initialValues
  */
 export function useZodForm(schema, initialValues) {
+  const [initial] = useState(initialValues);
   const [values, setValues] = useState(initialValues);
   const [touched, setTouched] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -64,5 +65,11 @@ export function useZodForm(schema, initialValues) {
     [schema, values],
   );
 
-  return { values, field, validate };
+  const reset = useCallback(() => {
+    setValues(initial);
+    setTouched({});
+    setSubmitted(false);
+  }, [initial]);
+
+  return { values, field, validate, reset };
 }

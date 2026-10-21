@@ -1,6 +1,6 @@
 import * as authRepository from '../repositories/auth.repository.js';
 import * as intentoLoginRepository from '../repositories/intentoLogin.repository.js';
-import { TooManyAttemptsError, UnauthenticatedError } from '../errors/index.js';
+import { ForbiddenError, TooManyAttemptsError, UnauthenticatedError } from '../errors/index.js';
 
 // Bloqueo temporal del ingreso para frenar ataques de fuerza bruta
 export const MAX_INTENTOS_LOGIN = 5;
@@ -31,7 +31,19 @@ export async function registrarUsuario({ email, password }) {
  * E4HU2: inicia sesión con mail y contraseña.
  * @returns {Promise<import('../repositories/auth.repository.js').Sesion>}
  */
-export async function iniciarSesion({ email, password }) {
+export function iniciarSesion(credenciales) {
+  return autenticarConBloqueo(credenciales, () => new UnauthenticatedError(CREDENCIALES_INVALIDAS));
+}
+
+export async function verificarIdentidad(credenciales) {
+  const sesion = await autenticarConBloqueo(
+    credenciales,
+    () => new ForbiddenError('La contraseña actual no es correcta'),
+  );
+  await authRepository.cerrarSesion(sesion.accessToken);
+}
+
+async function autenticarConBloqueo({ email, password }, crearErrorCredenciales) {
   const bloqueadoHasta = await intentoLoginRepository.obtenerBloqueo(email);
   if (bloqueadoHasta) {
     throw new TooManyAttemptsError(bloqueadoHasta);
@@ -47,7 +59,7 @@ export async function iniciarSesion({ email, password }) {
     if (nuevoBloqueo) {
       throw new TooManyAttemptsError(nuevoBloqueo);
     }
-    throw new UnauthenticatedError(CREDENCIALES_INVALIDAS);
+    throw crearErrorCredenciales();
   }
 
   await intentoLoginRepository.limpiar(email);
@@ -83,14 +95,24 @@ export async function obtenerSesion({ accessToken, refreshToken }) {
  * Cierra la sesión de este dispositivo revocando su refresh token. Si el access token
  * venció, primero lo renueva: Supabase necesita un access token válido para revocar.
  */
-export async function cerrarSesion({ accessToken, refreshToken }) {
-  if (accessToken && (await authRepository.cerrarSesion(accessToken))) {
+export function cerrarSesion(tokens) {
+  return revocarSesion(tokens, (accessToken) => authRepository.cerrarSesion(accessToken));
+}
+
+export function cerrarTodasLasSesiones(tokens) {
+  return revocarSesion(tokens, (accessToken) =>
+    authRepository.cerrarSesion(accessToken, authRepository.ALCANCE_SESION.GLOBAL),
+  );
+}
+
+async function revocarSesion({ accessToken, refreshToken }, revocar) {
+  if (accessToken && (await revocar(accessToken))) {
     return;
   }
 
   const sesion = refreshToken ? await renovarSesion(refreshToken) : null;
   if (sesion) {
-    await authRepository.cerrarSesion(sesion.accessToken);
+    await revocar(sesion.accessToken);
   }
 }
 

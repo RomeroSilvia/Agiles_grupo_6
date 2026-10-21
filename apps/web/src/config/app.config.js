@@ -1,1 +1,1 @@
-export const APP_NAME = 'Streamly';
+export { APP_NAME } from '@buscador/shared/constants';

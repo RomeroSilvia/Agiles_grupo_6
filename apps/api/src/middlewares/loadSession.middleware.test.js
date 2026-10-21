@@ -124,6 +124,10 @@ describe('loadSession', () => {
 
     expect(refreshSession).toHaveBeenCalledWith({ refresh_token: 'refresh-vigente' });
     expect(req.user).toEqual(USUARIO);
+    expect(req.sessionTokens).toEqual({
+      accessToken: 'access-nuevo',
+      refreshToken: 'refresh-nuevo',
+    });
     expect(res.cookie).toHaveBeenCalledWith('access_token', 'access-nuevo', expect.any(Object));
     expect(res.cookie).toHaveBeenCalledWith('refresh_token', 'refresh-nuevo', expect.any(Object));
   });

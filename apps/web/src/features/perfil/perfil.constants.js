@@ -1,4 +1,5 @@
 import { KeyIcon, MailIcon, TrashIcon } from '../../components/ui/icons.jsx';
+import { SECCIONES_CUENTA, rutaSeccionCuenta } from '../../app/rutas.js';
 
 export const ACCIONES_CUENTA = Object.freeze([
   {
@@ -6,21 +7,21 @@ export const ACCIONES_CUENTA = Object.freeze([
     titulo: 'Cambiar mail',
     descripcion: 'Te pedimos confirmarlo desde el nuevo mail',
     Icono: MailIcon,
-    to: null,
+    to: rutaSeccionCuenta(SECCIONES_CUENTA.MAIL),
   },
   {
-    id: 'restablecer-contrasena',
-    titulo: 'Restablecer contraseña',
-    descripcion: 'Te enviamos un enlace por mail',
+    id: 'cambiar-contrasena',
+    titulo: 'Cambiar contraseña',
+    descripcion: 'Con tu contraseña actual o con un enlace por mail',
     Icono: KeyIcon,
-    to: null,
+    to: rutaSeccionCuenta(SECCIONES_CUENTA.PASSWORD),
   },
   {
     id: 'eliminar-cuenta',
     titulo: 'Eliminar cuenta',
-    descripcion: 'Dar de baja tu cuenta',
+    descripcion: 'Borrar tu cuenta y tus datos',
     Icono: TrashIcon,
-    to: null,
+    to: rutaSeccionCuenta(SECCIONES_CUENTA.ELIMINAR),
     peligro: true,
   },
 ]);

@@ -177,14 +177,20 @@ describe('Perfil', () => {
     expect(await switchDe('Disney Plus')).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('muestra las acciones de cuenta como próximamente, sin enlaces', async () => {
+  it('enlaza cada acción de cuenta a su sección en la pantalla Cuenta', async () => {
     renderRoute('/perfil');
 
-    for (const titulo of ['Cambiar mail', 'Restablecer contraseña', 'Eliminar cuenta']) {
-      expect(await screen.findByText(titulo)).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: new RegExp(titulo) })).not.toBeInTheDocument();
+    for (const [titulo, seccion] of [
+      ['Cambiar mail', 'mail'],
+      ['Cambiar contraseña', 'contrasena'],
+      ['Eliminar cuenta', 'eliminar'],
+    ]) {
+      expect(await screen.findByRole('link', { name: new RegExp(titulo) })).toHaveAttribute(
+        'href',
+        `/perfil/cuenta#${seccion}`,
+      );
     }
-    expect(screen.getAllByText('Próximamente')).toHaveLength(3);
+    expect(screen.queryByText('Próximamente')).not.toBeInTheDocument();
   });
 
   it('en celular abre y cierra cada sección', async () => {

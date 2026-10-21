@@ -1,15 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AuthApiError } from '@supabase/supabase-js';
+import { AuthApiError, AuthSessionMissingError } from '@supabase/supabase-js';
 import { base64url as codificar, errors } from 'jose';
 import { supabaseAdmin, createAuthClient } from '../config/supabase.config.js';
 import { supabaseJwks } from '../config/jwt.config.js';
-import { ExternalServiceError, RateLimitError } from '../errors/index.js';
+import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/index.js';
 import * as authRepository from './auth.repository.js';
 
 vi.mock('../config/supabase.config.js', () => {
-  const authClient = { auth: { signInWithPassword: vi.fn(), refreshSession: vi.fn() } };
+  const authClient = {
+    auth: { signInWithPassword: vi.fn(), refreshSession: vi.fn(), verifyOtp: vi.fn() },
+  };
   return {
-    supabaseAdmin: { auth: { getUser: vi.fn(), admin: { signOut: vi.fn() } } },
+    supabaseAdmin: {
+      auth: { getUser: vi.fn(), admin: { signOut: vi.fn(), generateLink: vi.fn() } },
+    },
     createAuthClient: () => authClient,
   };
 });
@@ -116,9 +120,87 @@ describe('cerrarSesion', () => {
     await expect(authRepository.cerrarSesion('vencido')).resolves.toBe(false);
   });
 
+  it('devuelve false si la sesión ya no existe en Supabase', async () => {
+    supabaseAdmin.auth.admin.signOut.mockResolvedValue(fallo(new AuthSessionMissingError()));
+
+    await expect(authRepository.cerrarSesion('revocado')).resolves.toBe(false);
+  });
+
   it('lanza el error si Supabase falla', async () => {
     supabaseAdmin.auth.admin.signOut.mockResolvedValue(fallo(CAIDO));
 
     await expect(authRepository.cerrarSesion('token')).rejects.toBeInstanceOf(ExternalServiceError);
+  });
+
+  it('revoca todas las sesiones con el alcance global', async () => {
+    supabaseAdmin.auth.admin.signOut.mockResolvedValue({ data: null, error: null });
+
+    await authRepository.cerrarSesion('token', authRepository.ALCANCE_SESION.GLOBAL);
+
+    expect(supabaseAdmin.auth.admin.signOut).toHaveBeenCalledWith('token', 'global');
+  });
+});
+
+describe('generarEnlace', () => {
+  const { RECUPERACION, CAMBIO_MAIL } = authRepository.TIPO_ENLACE;
+
+  it('devuelve el token sin mandar mails', async () => {
+    supabaseAdmin.auth.admin.generateLink.mockResolvedValue({
+      data: { properties: { hashed_token: 'hash' }, user: {} },
+      error: null,
+    });
+
+    await expect(authRepository.generarEnlace(RECUPERACION, { email: 'a@mail.com' })).resolves.toBe(
+      'hash',
+    );
+    expect(supabaseAdmin.auth.admin.generateLink).toHaveBeenCalledWith({
+      type: 'recovery',
+      email: 'a@mail.com',
+    });
+  });
+
+  it('devuelve null si no hay una cuenta con ese mail', async () => {
+    supabaseAdmin.auth.admin.generateLink.mockResolvedValue(
+      fallo(new AuthApiError('User not found', 404, 'user_not_found')),
+    );
+
+    await expect(
+      authRepository.generarEnlace(RECUPERACION, { email: 'nadie@mail.com' }),
+    ).resolves.toBeNull();
+  });
+
+  it('lanza ConflictError si el mail nuevo ya está en uso', async () => {
+    supabaseAdmin.auth.admin.generateLink.mockResolvedValue(
+      fallo(new AuthApiError('Email exists', 422, 'email_exists')),
+    );
+
+    await expect(
+      authRepository.generarEnlace(CAMBIO_MAIL, { email: 'a@mail.com', nuevoEmail: 'b@mail.com' }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(supabaseAdmin.auth.admin.generateLink).toHaveBeenCalledWith({
+      type: 'email_change_new',
+      email: 'a@mail.com',
+      newEmail: 'b@mail.com',
+    });
+  });
+});
+
+describe('verificarEnlace', () => {
+  it('devuelve null si el enlace venció o ya se usó', async () => {
+    authClient.verifyOtp.mockResolvedValue(
+      fallo(new AuthApiError('Token has expired or is invalid', 403, 'otp_expired')),
+    );
+
+    await expect(
+      authRepository.verificarEnlace(authRepository.TIPO_ENLACE.RECUPERACION, 'hash'),
+    ).resolves.toBeNull();
+  });
+
+  it('lanza ExternalServiceError si Supabase falla', async () => {
+    authClient.verifyOtp.mockResolvedValue(fallo(CAIDO));
+
+    await expect(
+      authRepository.verificarEnlace(authRepository.TIPO_ENLACE.CAMBIO_MAIL, 'hash'),
+    ).rejects.toBeInstanceOf(ExternalServiceError);
   });
 });

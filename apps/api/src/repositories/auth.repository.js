@@ -210,6 +210,19 @@ export async function verificarEnlace(tipo, tokenHash) {
   };
 }
 
+/** @returns {Promise<string | null>} null si el usuario ya no existe */
+export async function obtenerEmail(id) {
+  const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+
+  if (error) {
+    if (error.code === 'user_not_found' || error.status === 404) {
+      return null;
+    }
+    throw errorDelServicio(error);
+  }
+  return data.user.email ?? null;
+}
+
 export async function actualizarUsuario(id, { password, appMetadata }) {
   const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
     password,

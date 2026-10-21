@@ -13,6 +13,8 @@ export const LOGO_ATTACHMENT = Object.freeze({
 
 const { light, dark } = EMAIL_COLORS;
 
+const PIE_CUENTA = `Recibiste este mail por un movimiento en tu cuenta de ${APP_NAME}.`;
+
 const DARK_MODE_STYLES = `
   @media (prefers-color-scheme: dark) {
     .fondo { background-color: ${dark.background} !important; }
@@ -41,7 +43,7 @@ function renderBoton({ texto, url }) {
     </p>`;
 }
 
-function renderHtml({ preheader, titulo, parrafos, accion, nota }) {
+function renderHtml({ preheader, titulo, parrafos, accion, nota, pie = PIE_CUENTA }) {
   const parrafosHtml = parrafos
     .map(
       (parrafo) =>
@@ -85,7 +87,7 @@ function renderHtml({ preheader, titulo, parrafos, accion, nota }) {
             </tr>
             <tr>
               <td class="secundario" style="padding: 24px 8px 0; font-family: ${EMAIL_FONTS.sans}; font-size: 12px; line-height: 18px; color: ${light.muted};">
-                Recibiste este mail por un movimiento en tu cuenta de ${escapeHtml(APP_NAME)}.
+                ${escapeHtml(pie)}
               </td>
             </tr>
           </table>
@@ -96,14 +98,14 @@ function renderHtml({ preheader, titulo, parrafos, accion, nota }) {
 </html>`;
 }
 
-function renderText({ titulo, parrafos, accion, nota }) {
+function renderText({ titulo, parrafos, accion, nota, pie = PIE_CUENTA }) {
   return [
     APP_NAME.toUpperCase(),
     titulo,
     ...parrafos,
     accion && `${accion.texto}: ${accion.url}`,
     nota,
-    `Recibiste este mail por un movimiento en tu cuenta de ${APP_NAME}.`,
+    pie,
   ]
     .filter(Boolean)
     .join('\n\n');

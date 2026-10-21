@@ -85,6 +85,7 @@ describe('sincronizarDisponibilidad', () => {
       sincronizacionId: 1,
       combinacionesProcesadas: 0,
       combinacionesPendientes: 0,
+      avisosGenerados: 0,
       errores: [],
     });
 
@@ -92,8 +93,27 @@ describe('sincronizarDisponibilidad', () => {
     expect(plataformaRepository.listarActivas).not.toHaveBeenCalled();
     expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(1, {
       finalizadaEn: AHORA.toISOString(),
+      avisosGenerados: 0,
       error: null,
     });
+  });
+
+  it('suma los avisos que generó cada título y región y los registra en la ejecución', async () => {
+    watchlistRepository.listarTitulosConAvisosActivos.mockResolvedValue([
+      COMBINACION,
+      { ...COMBINACION, tituloId: 43, tmdbId: 2 },
+    ]);
+    verificacionDisponibilidadRepository.registrar
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(1);
+
+    const resultado = await sincronizarDisponibilidad({ ahora: AHORA });
+
+    expect(resultado.avisosGenerados).toBe(3);
+    expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ avisosGenerados: 3 }),
+    );
   });
 
   it('lanza DatabaseError si no existe la fuente requerida para guardar snapshots', async () => {

@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
+import { obtenerDestinoPlataforma } from './destinoPlataforma.js';
 
 const tarjetaClassName =
   'flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3';
@@ -39,12 +40,14 @@ function TarjetaNoPropia({ plataforma }) {
   );
 }
 
-export function TarjetaDisponibilidad({ plataforma, esPropia }) {
+export function TarjetaDisponibilidad({ plataforma, esPropia, nombreTitulo }) {
   if (!esPropia) {
     return <TarjetaNoPropia plataforma={plataforma} />;
   }
 
-  if (!plataforma.urlHome) {
+  const destino = obtenerDestinoPlataforma(plataforma);
+
+  if (!destino) {
     return (
       <div className={tarjetaClassName}>
         <ContenidoTarjeta plataforma={plataforma} />
@@ -52,13 +55,19 @@ export function TarjetaDisponibilidad({ plataforma, esPropia }) {
     );
   }
 
+  const etiqueta =
+    destino.esDeepLink && nombreTitulo
+      ? `Ver ${nombreTitulo} en ${plataforma.nombre}`
+      : `Ir a ${plataforma.nombre}`;
+
   return (
     <a
-      href={plataforma.urlHome}
+      href={destino.href}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       className={`${tarjetaClassName} transition-colors duration-150 hover:border-primary/50 ${FOCUS_RING_CLASS_NAME}`}
-      title={`Ir a ${plataforma.nombre}`}
+      aria-label={etiqueta}
+      title={etiqueta}
     >
       <ContenidoTarjeta plataforma={plataforma} />
     </a>

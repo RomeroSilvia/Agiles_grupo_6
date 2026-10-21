@@ -1,5 +1,6 @@
 import { env } from '../config/env.config.js';
 import { STREAMING_AVAILABILITY_CONFIG } from '../config/streamingAvailability.config.js';
+import { DatabaseError } from '../errors/index.js';
 import * as streamingAvailabilityIntegration from '../integrations/streamingAvailability.integration.js';
 import * as disponibilidadRepository from '../repositories/disponibilidad.repository.js';
 import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
@@ -193,6 +194,9 @@ export async function sincronizarDisponibilidad({ ahora = new Date() } = {}) {
       plataformaRepository.listarActivas(),
       fuenteDatosRepository.obtenerIdPorNombre(FUENTE_DATOS),
     ]);
+    if (!fuenteId) {
+      throw new DatabaseError(new Error('No existe la fuente de datos "' + FUENTE_DATOS + '"'));
+    }
     const plataformasPorProvider = new Map(
       plataformas.map((plataforma) => [plataforma.tmdbProviderId, plataforma]),
     );

@@ -89,6 +89,18 @@ describe('sincronizarDisponibilidad', () => {
     });
   });
 
+  it('lanza DatabaseError si no existe la fuente requerida para guardar snapshots', async () => {
+    fuenteDatosRepository.obtenerIdPorNombre.mockResolvedValue(null);
+
+    await expect(sincronizarDisponibilidad({ ahora: AHORA })).rejects.toBeInstanceOf(DatabaseError);
+
+    expect(streamingAvailabilityIntegration.obtenerOfertas).not.toHaveBeenCalled();
+    expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ error: expect.any(String) }),
+    );
+  });
+
   it('consulta una sola vez cada título y región y conserva las altas vigentes', async () => {
     watchlistRepository.listarTitulosConAvisosActivos.mockResolvedValue([
       COMBINACION,

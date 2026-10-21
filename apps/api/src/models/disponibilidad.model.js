@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { TIPOS_OFERTA } from '@buscador/shared/constants';
-import { regionSchema } from '@buscador/shared/schemas';
+import { httpUrlSchema, regionSchema } from '@buscador/shared/schemas';
 
 export const DISPONIBILIDAD_COLUMNS =
   'titulo_id, plataforma_id, region, tipo_oferta, deep_link, fuente_id, detectada_en, verificada_en, vigente';
 export const DISPONIBILIDAD_PRIMARY_KEY = 'titulo_id,plataforma_id,region,tipo_oferta';
 
-export function fromSnapshotRow(row) {
+export function fromRow(row) {
   return {
     tituloId: row.titulo_id,
     plataformaId: row.plataforma_id,
@@ -14,9 +14,40 @@ export function fromSnapshotRow(row) {
     tipoOferta: row.tipo_oferta,
     deepLink: row.deep_link,
     fuenteId: row.fuente_id,
-    detectadaEn: row.detectada_en,
-    verificadaEn: row.verificada_en,
+    detectadaEn: new Date(row.detectada_en),
+    verificadaEn: new Date(row.verificada_en),
     vigente: row.vigente,
+  };
+}
+
+function toIsoString(value) {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+export function toSnapshotRow(oferta) {
+  return {
+    titulo_id: oferta.tituloId,
+    plataforma_id: oferta.plataformaId,
+    region: oferta.region,
+    tipo_oferta: oferta.tipoOferta,
+    deep_link: oferta.deepLink,
+    fuente_id: oferta.fuenteId,
+    detectada_en: toIsoString(oferta.detectadaEn),
+    verificada_en: toIsoString(oferta.verificadaEn),
+    vigente: oferta.vigente,
+  };
+}
+
+// El deep link completa la disponibilidad y no modifica el snapshot del job.
+export function toDeepLinkRow(disponibilidad) {
+  return {
+    titulo_id: disponibilidad.tituloId,
+    plataforma_id: disponibilidad.plataformaId,
+    region: disponibilidad.region,
+    tipo_oferta: disponibilidad.tipoOferta,
+    deep_link: disponibilidad.deepLink,
+    fuente_id: disponibilidad.fuenteId,
+    verificada_en: toIsoString(disponibilidad.verificadaEn),
   };
 }
 
@@ -31,10 +62,11 @@ export const disponibilidadSchema = z.object({
           tmdbProviderId: z.number().int().positive(),
           nombre: z.string().min(1),
           logoPath: z.string().min(1).nullable(),
-          urlHome: z.url().nullable(),
+          urlHome: httpUrlSchema.nullable(),
+          deepLink: httpUrlSchema.nullable(),
         }),
       ),
     }),
   ),
-  enlaceTmdb: z.url().nullable(),
+  enlaceTmdb: httpUrlSchema.nullable(),
 });

@@ -490,6 +490,100 @@ describe('PaginaDetalleTitulo', () => {
       expect(screen.getByText('Amazon Prime Video')).toBeInTheDocument();
     });
 
+    it('abre la ficha del título en la plataforma elegida cuando hay deep link', async () => {
+      configurarFetch(
+        detallePelicula,
+        respuestaDisponibilidad('AR', [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+            deepLink: 'https://www.netflix.com/title/1',
+          },
+          {
+            id: 2,
+            tmdbProviderId: 119,
+            nombre: 'Amazon Prime Video',
+            logoPath: '/prime.jpg',
+            urlHome: 'https://www.primevideo.com',
+            deepLink: 'https://www.primevideo.com/detail/1',
+          },
+        ]),
+      );
+
+      renderDetalle();
+
+      const netflix = await screen.findByRole('link', { name: 'Ver Dune en Netflix' });
+      expect(netflix).toHaveAttribute('href', 'https://www.netflix.com/title/1');
+      expect(netflix).toHaveAttribute('target', '_blank');
+      expect(netflix).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(screen.getByRole('link', { name: 'Ver Dune en Amazon Prime Video' })).toHaveAttribute(
+        'href',
+        'https://www.primevideo.com/detail/1',
+      );
+      expect(screen.getByRole('link', { name: 'JustWatch' })).toBeInTheDocument();
+    });
+
+    it('no muestra un nombre de respaldo en el enlace cuando el título no tiene nombre', async () => {
+      configurarFetch(
+        { ...detallePelicula, nombre: null },
+        respuestaDisponibilidad('AR', [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+            deepLink: 'https://www.netflix.com/title/1',
+          },
+        ]),
+      );
+
+      renderDetalle();
+
+      expect(await screen.findByRole('link', { name: 'Ir a Netflix' })).toHaveAttribute(
+        'href',
+        'https://www.netflix.com/title/1',
+      );
+    });
+
+    it('usa la home de la plataforma cuando el deep link falta o no es válido', async () => {
+      configurarFetch(
+        detallePelicula,
+        respuestaDisponibilidad('AR', [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+            deepLink: null,
+          },
+          {
+            id: 2,
+            tmdbProviderId: 119,
+            nombre: 'Amazon Prime Video',
+            logoPath: '/prime.jpg',
+            urlHome: 'https://www.primevideo.com',
+            deepLink: 'javascript:alert(1)',
+          },
+        ]),
+      );
+
+      renderDetalle();
+
+      expect(await screen.findByRole('link', { name: 'Ir a Netflix' })).toHaveAttribute(
+        'href',
+        'https://www.netflix.com',
+      );
+      expect(screen.getByRole('link', { name: 'Ir a Amazon Prime Video' })).toHaveAttribute(
+        'href',
+        'https://www.primevideo.com',
+      );
+    });
+
     it('muestra la modalidad de cada oferta y el enlace de TMDB', async () => {
       const enlaceTmdb = 'https://www.themoviedb.org/movie/1/watch';
       configurarFetch(detallePelicula, {

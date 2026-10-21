@@ -3,12 +3,8 @@ import * as plataformaRepository from '../repositories/plataforma.repository.js'
 import * as usuarioPlataformaRepository from '../repositories/usuarioPlataforma.repository.js';
 import { NotFoundError } from '../errors/index.js';
 
-export function filtrarPlataformasConOfertaIncluida(ofertasDeRegion, plataformas) {
-  const ofertasPorProveedor = new Map(
-    ofertasDeRegion
-      .filter(({ tipoOferta }) => TIPOS_OFERTA_INCLUIDOS.includes(tipoOferta))
-      .map((oferta) => [oferta.tmdbProviderId, oferta]),
-  );
+function plataformasConOferta(ofertas, plataformas) {
+  const ofertasPorProveedor = new Map(ofertas.map((oferta) => [oferta.tmdbProviderId, oferta]));
 
   return plataformas
     .filter(({ tmdbProviderId }) => ofertasPorProveedor.has(tmdbProviderId))
@@ -19,22 +15,19 @@ export function filtrarPlataformasConOfertaIncluida(ofertasDeRegion, plataformas
     }));
 }
 
+export function filtrarPlataformasConOfertaIncluida(ofertasDeRegion, plataformas) {
+  return plataformasConOferta(
+    ofertasDeRegion.filter(({ tipoOferta }) => TIPOS_OFERTA_INCLUIDOS.includes(tipoOferta)),
+    plataformas,
+  );
+}
+
 export function agruparPlataformasPorTipoOferta(ofertasDeRegion, plataformas) {
   return TIPOS_OFERTA_INCLUIDOS.flatMap((tipoOferta) => {
-    const ofertasPorProveedor = new Map(
-      ofertasDeRegion
-        .filter((oferta) => oferta.tipoOferta === tipoOferta)
-        .map((oferta) => [oferta.tmdbProviderId, oferta]),
+    const plataformasDisponibles = plataformasConOferta(
+      ofertasDeRegion.filter((oferta) => oferta.tipoOferta === tipoOferta),
+      plataformas,
     );
-    const plataformasDisponibles = plataformas
-      .filter(({ tmdbProviderId }) => ofertasPorProveedor.has(tmdbProviderId))
-      .map((plataforma) => ({
-        ...plataforma,
-        logoPath:
-          plataforma.logoPath ??
-          ofertasPorProveedor.get(plataforma.tmdbProviderId).logoPath ??
-          null,
-      }));
 
     return plataformasDisponibles.length > 0
       ? [{ tipoOferta, plataformas: plataformasDisponibles }]

@@ -704,7 +704,7 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
     const aviso = screen.getByText(
       'Ninguno de los títulos encontrados está disponible en tus plataformas.',
     ).parentElement;
-    expect(await within(aviso).findByRole('button', { name: 'Buscando...' })).toBeDisabled();
+    expect(await within(aviso).findByRole('button', { name: 'Buscando…' })).toBeDisabled();
   });
 
   it('si falla el filtrado informa el error y permite reintentar', async () => {

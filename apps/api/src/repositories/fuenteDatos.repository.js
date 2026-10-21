@@ -11,9 +11,5 @@ export async function obtenerIdPorNombre(nombre) {
   if (error) {
     throw new DatabaseError(error);
   }
-  if (!data) {
-    throw new DatabaseError(new Error('No existe la fuente de datos "' + nombre + '"'));
-  }
-
-  return data.id;
+  return data?.id ?? null;
 }

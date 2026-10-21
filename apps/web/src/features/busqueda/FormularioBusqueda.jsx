@@ -182,8 +182,14 @@ export function FormularioBusqueda({
             />
 
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <Button type="submit" disabled={isLoading} className="sm:w-auto">
-                {isLoading ? 'Buscando...' : 'Buscar'}
+              <Button
+                type="submit"
+                size="compact"
+                loading={isLoading}
+                loadingText="Buscando…"
+                className="sm:w-auto"
+              >
+                Buscar
               </Button>
             </div>
           </div>

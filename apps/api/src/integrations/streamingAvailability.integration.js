@@ -1,66 +1,93 @@
+import { httpUrlSchema } from '@buscador/shared/schemas';
 import { env } from '../config/env.config.js';
-import { STREAMING_AVAILABILITY_CONFIG } from '../config/streamingAvailability.config.js';
+import {
+  STREAMING_AVAILABILITY_CONFIG,
+  TIPO_OFERTA_POR_TIPO_STREAMING_AVAILABILITY,
+} from '../config/streamingAvailability.config.js';
+import { RUTA_TMDB_POR_TIPO } from '../config/tmdb.config.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { streamingAvailabilityResponseSchema } from '../models/streamingAvailability.model.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
+import { fetchJson } from '../utils/fetchJson.js';
 import { validateExternalResponse } from '../utils/validateExternalResponse.js';
 
+const SERVICE = 'Streaming Availability';
 const limitarConcurrencia = createConcurrencyLimiter(
   STREAMING_AVAILABILITY_CONFIG.MAX_CONCURRENT_REQUESTS,
 );
 
-export function obtenerOfertas({ tipo, tmdbId, region }) {
-  return limitarConcurrencia(() => consultarOfertas({ tipo, tmdbId, region }));
-}
-
-async function consultarOfertas({ tipo, tmdbId, region }) {
-  const ruta = STREAMING_AVAILABILITY_CONFIG.RUTA_POR_TIPO[tipo];
+async function consultar({ tipo, tmdbId, region }) {
+  const ruta = RUTA_TMDB_POR_TIPO[tipo];
   if (!ruta) {
     throw new TypeError(`Tipo de título inválido: ${tipo}`);
   }
   if (!env.STREAMING_AVAILABILITY_API_KEY) {
     throw new ExternalServiceError(
-      'Streaming Availability',
+      SERVICE,
       new Error('Falta configurar STREAMING_AVAILABILITY_API_KEY'),
     );
   }
 
-  const pais = region.toLowerCase();
   const url = new URL(`${ruta}/${tmdbId}`, STREAMING_AVAILABILITY_CONFIG.BASE_URL);
-  url.searchParams.set('country', pais);
+  url.searchParams.set('country', region.toLowerCase());
 
-  let response;
   try {
-    response = await fetch(url, {
+    return await fetchJson(url, {
+      service: SERVICE,
+      timeoutMs: STREAMING_AVAILABILITY_CONFIG.TIMEOUT_MS,
       headers: {
-        Accept: 'application/json',
         'X-RapidAPI-Key': env.STREAMING_AVAILABILITY_API_KEY,
-        'X-RapidAPI-Host': STREAMING_AVAILABILITY_CONFIG.RAPID_API_HOST,
+        'X-RapidAPI-Host': STREAMING_AVAILABILITY_CONFIG.RAPIDAPI_HOST,
       },
-      signal: AbortSignal.timeout(STREAMING_AVAILABILITY_CONFIG.REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new ExternalServiceError('Streaming Availability', error);
+    if (error instanceof ExternalServiceError && error.cause?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function normalizarOpciones(response, region) {
+  const opciones = response?.streamingOptions?.[region.toLowerCase()];
+  if (!Array.isArray(opciones)) {
+    return [];
   }
 
-  if (!response.ok) {
-    const cause = new Error(`HTTP ${response.status} en ${url.pathname}`);
-    cause.status = response.status;
-    throw new ExternalServiceError('Streaming Availability', cause);
-  }
+  return opciones
+    .map((opcion) => {
+      const servicio = opcion?.service?.id;
+      const tipoOferta = TIPO_OFERTA_POR_TIPO_STREAMING_AVAILABILITY[opcion?.type];
+      const deepLink = httpUrlSchema.safeParse(opcion?.link).data;
 
-  let body;
-  try {
-    body = await response.json();
-  } catch (error) {
-    throw new ExternalServiceError('Streaming Availability', error);
-  }
+      return typeof servicio === 'string' && tipoOferta && deepLink
+        ? { servicio, tipoOferta, deepLink }
+        : null;
+    })
+    .filter(Boolean);
+}
 
-  const resultado = validateExternalResponse(
-    streamingAvailabilityResponseSchema,
-    body,
-    'Streaming Availability',
-  );
+/** Devuelve las ofertas de Streaming Availability para el job de sincronización. */
+export function obtenerOfertas({ tipo, tmdbId, region }) {
+  return limitarConcurrencia(async () => {
+    const response = await consultar({ tipo, tmdbId, region });
+    if (!response) {
+      return [];
+    }
 
-  return resultado.streamingOptions[pais] ?? [];
+    const resultado = validateExternalResponse(
+      streamingAvailabilityResponseSchema,
+      response,
+      SERVICE,
+    );
+    return resultado.streamingOptions[region.toLowerCase()] ?? [];
+  });
+}
+
+/** Deep links por título y región: [{ servicio, tipoOferta, deepLink }]. */
+export function obtenerDeepLinks({ tipo, tmdbId, region }) {
+  return limitarConcurrencia(async () => {
+    const response = await consultar({ tipo, tmdbId, region });
+    return response ? normalizarOpciones(response, region) : [];
+  });
 }

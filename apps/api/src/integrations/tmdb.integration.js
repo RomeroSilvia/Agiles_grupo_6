@@ -1,20 +1,17 @@
 import { env } from '../config/env.config.js';
-import { TMDB_CONFIG } from '../config/tmdb.config.js';
+import { RUTA_TMDB_POR_TIPO, TMDB_CONFIG } from '../config/tmdb.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
+import { fetchJson } from '../utils/fetchJson.js';
 import { createTtlCache } from '../utils/ttlCache.js';
 import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
+import { httpUrlSchema } from '@buscador/shared/schemas';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const PROFILE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_LANGUAGE = 'es-AR';
-
-const RUTA_TMDB_POR_TIPO = Object.freeze({
-  [TIPO_TITULO.PELICULA]: 'movie',
-  [TIPO_TITULO.SERIE]: 'tv',
-});
 
 const PARAMETRO_ANIO_POR_TIPO = Object.freeze({
   [TIPO_TITULO.PELICULA]: 'primary_release_year',
@@ -78,27 +75,7 @@ async function tmdbFetch(path, params = {}) {
     }
   }
 
-  let response;
-  try {
-    response = await fetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-  } catch (error) {
-    throw new ExternalServiceError('TMDB', error);
-  }
-
-  if (!response.ok) {
-    const cause = new Error(`HTTP ${response.status} en ${path}`);
-    cause.status = response.status;
-    throw new ExternalServiceError('TMDB', cause);
-  }
-
-  try {
-    return await response.json();
-  } catch (error) {
-    throw new ExternalServiceError('TMDB', error);
-  }
+  return fetchJson(url, { service: 'TMDB', timeoutMs: TIMEOUT_MS });
 }
 
 function mapearColeccion(items, mapear) {
@@ -309,19 +286,6 @@ function normalizarOfertasDeRegion(datosRegion) {
   });
 }
 
-function normalizarEnlaceTmdb(enlace) {
-  if (typeof enlace !== 'string') {
-    return null;
-  }
-
-  try {
-    const url = new URL(enlace);
-    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
 function normalizarOfertas(response) {
   const regiones = response?.results;
   if (!regiones || typeof regiones !== 'object' || Array.isArray(regiones)) {
@@ -332,7 +296,7 @@ function normalizarOfertas(response) {
     Object.entries(regiones).map(([region, datosRegion]) => [
       region,
       {
-        enlaceTmdb: normalizarEnlaceTmdb(datosRegion?.link),
+        enlaceTmdb: httpUrlSchema.safeParse(datosRegion?.link).data ?? null,
         ofertas: normalizarOfertasDeRegion(datosRegion),
       },
     ]),

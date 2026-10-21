@@ -14,6 +14,7 @@ const METODOS = [
   'delete',
   'single',
   'maybeSingle',
+  'single',
 ];
 
 export const SIN_DATOS = { data: null, error: null };

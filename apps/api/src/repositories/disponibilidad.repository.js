@@ -4,7 +4,8 @@ import {
   DISPONIBILIDAD_COLUMNS,
   DISPONIBILIDAD_PRIMARY_KEY,
   fromRow,
-  toRow,
+  toDeepLinkRow,
+  toSnapshotRow,
 } from '../models/disponibilidad.model.js';
 
 export async function listarPorTituloYRegion(tituloId, region) {
@@ -17,13 +18,28 @@ export async function listarPorTituloYRegion(tituloId, region) {
   if (error) {
     throw new DatabaseError(error);
   }
+
   return data.map(fromRow);
+}
+
+export async function guardarOfertas(ofertas) {
+  if (ofertas.length === 0) {
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from('disponibilidad')
+    .upsert(ofertas.map(toSnapshotRow), { onConflict: DISPONIBILIDAD_PRIMARY_KEY });
+
+  if (error) {
+    throw new DatabaseError(error);
+  }
 }
 
 export async function guardarDeepLinks(disponibilidades) {
   const { error } = await supabaseAdmin
     .from('disponibilidad')
-    .upsert(disponibilidades.map(toRow), { onConflict: DISPONIBILIDAD_PRIMARY_KEY });
+    .upsert(disponibilidades.map(toDeepLinkRow), { onConflict: DISPONIBILIDAD_PRIMARY_KEY });
 
   if (error) {
     throw new DatabaseError(error);

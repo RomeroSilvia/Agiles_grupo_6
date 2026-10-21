@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TIPOS_TITULO } from '@buscador/shared/constants';
+import { regionSchema } from '@buscador/shared/schemas';
 import { WATCHLIST_PAGE_SIZE } from '../config/watchlist.config.js';
 
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
@@ -10,6 +11,8 @@ const TMDB_POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 export const WATCHLIST_TITULO_COLUMNS =
   'id, agregado_en, titulo!inner(id, tmdb_id, tipo, nombre, anio, poster_path, puntuacion)';
 export const WATCHLIST_PRIMARY_KEY = 'usuario_id,titulo_id';
+export const TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS =
+  'titulo!inner(id, tmdb_id, tipo), perfil!inner(region)';
 
 export const watchlistQuerySchema = z.object({
   pagina: z.coerce.number().int().min(1).max(WATCHLIST_MAX_PAGE).default(1),
@@ -55,5 +58,25 @@ export function fromWatchlistRow(row) {
         : null,
       puntuacion: data.titulo.puntuacion,
     },
+  };
+}
+
+const tituloWatchlistActivoRowSchema = z.object({
+  titulo: z.object({
+    id: z.number().int().positive(),
+    tmdb_id: z.number().int().positive(),
+    tipo: z.enum(TIPOS_TITULO),
+  }),
+  perfil: z.object({ region: regionSchema.nullable() }),
+});
+
+export function fromActiveWatchlistRow(row, regionPredeterminada) {
+  const data = tituloWatchlistActivoRowSchema.parse(row);
+
+  return {
+    tituloId: data.titulo.id,
+    tmdbId: data.titulo.tmdb_id,
+    tipo: data.titulo.tipo,
+    region: data.perfil.region ?? regionPredeterminada,
   };
 }

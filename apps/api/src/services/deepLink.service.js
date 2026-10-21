@@ -3,11 +3,13 @@ import {
   SERVICIO_POR_TMDB_PROVIDER_ID,
   STREAMING_AVAILABILITY_CONFIG,
 } from '../config/streamingAvailability.config.js';
+import { env } from '../config/env.config.js';
 import { DatabaseError, ExternalServiceError } from '../errors/index.js';
 import * as streamingAvailabilityIntegration from '../integrations/streamingAvailability.integration.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as disponibilidadRepository from '../repositories/disponibilidad.repository.js';
 import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
+import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
 import * as tituloRepository from '../repositories/titulo.repository.js';
 import { createTtlCache } from '../utils/ttlCache.js';
 
@@ -15,6 +17,69 @@ const deepLinksCache = createTtlCache({
   ttlMs: STREAMING_AVAILABILITY_CONFIG.CACHE_TTL_MS,
   maxEntries: STREAMING_AVAILABILITY_CONFIG.CACHE_MAX_ENTRIES,
 });
+
+function obtenerVentanaUtc(ahora) {
+  const inicio = new Date(ahora);
+  inicio.setUTCHours(0, 0, 0, 0);
+  const fin = new Date(inicio);
+  fin.setUTCDate(fin.getUTCDate() + 1);
+  return { inicio: inicio.toISOString(), fin: fin.toISOString() };
+}
+
+function mensajeError(error) {
+  return error instanceof Error ? error.message : 'Error desconocido';
+}
+
+async function finalizarConsulta(sincronizacionId, error) {
+  try {
+    await sincronizacionRepository.finalizar(sincronizacionId, {
+      finalizadaEn: new Date().toISOString(),
+      error,
+    });
+  } catch (errorAlRegistrar) {
+    console.error(
+      'No se pudo registrar la consulta interactiva de disponibilidad',
+      errorAlRegistrar,
+    );
+  }
+}
+
+async function consultarConReserva({ tipo, tmdbId, region }) {
+  // Sin credenciales no hay consulta externa que reservar.
+  if (!env.STREAMING_AVAILABILITY_API_KEY) {
+    return streamingAvailabilityIntegration.obtenerDeepLinks({ tipo, tmdbId, region });
+  }
+
+  const sincronizacion = await sincronizacionRepository.iniciar();
+  const { inicio, fin } = obtenerVentanaUtc(sincronizacion.iniciadaEn ?? new Date());
+  let errorConsulta = null;
+
+  try {
+    const reservada = await sincronizacionRepository.reservarConsultaDisponibilidad(
+      sincronizacion.id,
+      {
+        inicio,
+        fin,
+        limite: STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY,
+      },
+    );
+
+    if (!reservada) {
+      errorConsulta =
+        'Límite diario de ' +
+        STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY +
+        ' consultas de disponibilidad alcanzado.';
+      return null;
+    }
+
+    return await streamingAvailabilityIntegration.obtenerDeepLinks({ tipo, tmdbId, region });
+  } catch (error) {
+    errorConsulta = mensajeError(error);
+    throw error;
+  } finally {
+    await finalizarConsulta(sincronizacion.id, errorConsulta);
+  }
+}
 
 function claveOferta(plataformaId, tipoOferta) {
   return `${plataformaId}:${tipoOferta}`;
@@ -113,13 +178,17 @@ async function resolverDeepLinks({ tipo, tmdbId, region, enlazables }) {
 
   let opciones;
   try {
-    opciones = await streamingAvailabilityIntegration.obtenerDeepLinks({ tipo, tmdbId, region });
+    opciones = await consultarConReserva({ tipo, tmdbId, region });
   } catch (error) {
     if (error instanceof ExternalServiceError) {
       console.error(error);
       return new Map();
     }
     throw error;
+  }
+
+  if (opciones === null) {
+    return new Map();
   }
 
   const deepLinks = new Map(

@@ -2,6 +2,8 @@ import { supabaseAdmin } from '../config/supabase.config.js';
 import { ConflictError, DatabaseError } from '../errors/index.js';
 import { WATCHLIST_PAGE_SIZE } from '../config/watchlist.config.js';
 import {
+  TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS,
+  fromActiveWatchlistRow,
   fromWatchlistRow,
   WATCHLIST_PRIMARY_KEY,
   WATCHLIST_TITULO_COLUMNS,
@@ -12,6 +14,34 @@ function lanzarError(error) {
     throw new ConflictError('El título ya está en tu watchlist');
   }
   throw new DatabaseError(error);
+}
+
+export async function listarTitulosConAvisosActivos(regionPredeterminada) {
+  const resultados = [];
+  let desde = 0;
+
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from('watchlist_item')
+      .select(TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS)
+      .eq('aviso_activo', true)
+      .order('titulo_id')
+      .order('id')
+      .range(desde, desde + WATCHLIST_PAGE_SIZE - 1);
+
+    if (error) {
+      throw new DatabaseError(error);
+    }
+
+    const pagina = data ?? [];
+    resultados.push(...pagina.map((row) => fromActiveWatchlistRow(row, regionPredeterminada)));
+
+    if (pagina.length < WATCHLIST_PAGE_SIZE) {
+      return resultados;
+    }
+
+    desde += WATCHLIST_PAGE_SIZE;
+  }
 }
 
 export async function listarPorUsuario(usuarioId, pagina) {

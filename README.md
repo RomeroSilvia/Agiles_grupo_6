@@ -32,7 +32,7 @@ npm run dev     # API en :3000 y web en :5173
 npm run check   # lint + formato + tests
 ```
 
-Copiar `apps/api/.env.example` como `apps/api/.env` y completar las claves de Supabase (las pasa quien administra el proyecto) y `TMDB_API_KEY`.
+Copiar `apps/api/.env.example` como `apps/api/.env` y completar las claves de Supabase (las pasa quien administra el proyecto) y `TMDB_API_KEY`. La sincronización diaria requiere `STREAMING_AVAILABILITY_API_KEY` y `NODE_CRON_RUN=true` en una sola instancia del despliegue; por defecto el cron queda desactivado. En local se puede ejecutar manualmente con `npm run job -w apps/api -- syncAvailability`.
 
 ## Estructura
 

@@ -8,6 +8,22 @@ const REQUIRED_ENV = {
 };
 
 describe('env.config', () => {
+  it('mantiene deshabilitados los jobs programados si no se habilitan explícitamente', () => {
+    const result = envSchema.safeParse(REQUIRED_ENV);
+
+    expect(result.success).toBe(true);
+    expect(result.data.NODE_CRON_RUN).toBe('false');
+  });
+
+  it.each(['yes', '1', ''])('rechaza NODE_CRON_RUN=%s', (value) => {
+    const result = envSchema.safeParse({ ...REQUIRED_ENV, NODE_CRON_RUN: value });
+
+    expect(result.success).toBe(false);
+    expect(result.error.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: ['NODE_CRON_RUN'] })]),
+    );
+  });
+
   it('acepta IPs y subredes de confianza separadas por comas', () => {
     const result = envSchema.safeParse({
       ...REQUIRED_ENV,

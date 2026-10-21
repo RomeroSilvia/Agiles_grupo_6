@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
 import { FALLO, SIN_DATOS, mockearConsulta } from '../test/queryBuilderMock.js';
@@ -6,51 +6,106 @@ import * as disponibilidadRepository from './disponibilidad.repository.js';
 
 vi.mock('../config/supabase.config.js', () => ({ supabaseAdmin: { from: vi.fn() } }));
 
-const VERIFICADA_EN = new Date('2026-10-01T12:00:00.000Z');
+const VERIFICADA_EN = new Date('2026-10-17T06:00:00.000Z');
 
 beforeEach(() => {
   vi.resetAllMocks();
 });
 
-describe('listarPorTituloYRegion', () => {
-  it('devuelve las disponibilidades del título en la región, vigentes o no', async () => {
-    const builder = mockearConsulta(supabaseAdmin.from, {
+describe('disponibilidad.repository', () => {
+  it('devuelve snapshots completos como objetos de dominio', async () => {
+    mockearConsulta(supabaseAdmin.from, {
       data: [
         {
-          plataforma_id: 1,
+          titulo_id: 42,
+          plataforma_id: 10,
+          region: 'AR',
           tipo_oferta: 'suscripcion',
           deep_link: 'https://www.netflix.com/title/1',
-          verificada_en: VERIFICADA_EN.toISOString(),
+          fuente_id: 3,
+          detectada_en: '2026-10-01T00:00:00.000Z',
+          verificada_en: '2026-10-17T00:00:00.000Z',
+          vigente: true,
         },
       ],
       error: null,
     });
 
-    await expect(disponibilidadRepository.listarPorTituloYRegion(10, 'AR')).resolves.toEqual([
+    await expect(disponibilidadRepository.listarPorTituloYRegion(42, 'AR')).resolves.toEqual([
       {
-        plataformaId: 1,
+        tituloId: 42,
+        plataformaId: 10,
+        region: 'AR',
         tipoOferta: 'suscripcion',
         deepLink: 'https://www.netflix.com/title/1',
-        verificadaEn: VERIFICADA_EN,
+        fuenteId: 3,
+        detectadaEn: new Date('2026-10-01T00:00:00.000Z'),
+        verificadaEn: new Date('2026-10-17T00:00:00.000Z'),
+        vigente: true,
       },
     ]);
-    expect(supabaseAdmin.from).toHaveBeenCalledWith('disponibilidad');
-    expect(builder.eq).toHaveBeenCalledWith('titulo_id', 10);
-    expect(builder.eq).toHaveBeenCalledWith('region', 'AR');
-    expect(builder.eq).not.toHaveBeenCalledWith('vigente', expect.anything());
   });
 
-  it('lanza DatabaseError si falla la consulta', async () => {
-    mockearConsulta(supabaseAdmin.from, FALLO);
+  it('guarda snapshots completos con la clave natural', async () => {
+    const builder = mockearConsulta(supabaseAdmin.from, SIN_DATOS);
 
-    await expect(disponibilidadRepository.listarPorTituloYRegion(10, 'AR')).rejects.toBeInstanceOf(
-      DatabaseError,
+    await disponibilidadRepository.guardarOfertas([
+      {
+        tituloId: 42,
+        plataformaId: 10,
+        region: 'AR',
+        tipoOferta: 'suscripcion',
+        deepLink: 'https://www.netflix.com/title/1',
+        fuenteId: 3,
+        detectadaEn: new Date('2026-10-01T00:00:00.000Z'),
+        verificadaEn: VERIFICADA_EN,
+        vigente: true,
+      },
+    ]);
+
+    expect(builder.upsert).toHaveBeenCalledWith(
+      [
+        {
+          titulo_id: 42,
+          plataforma_id: 10,
+          region: 'AR',
+          tipo_oferta: 'suscripcion',
+          deep_link: 'https://www.netflix.com/title/1',
+          fuente_id: 3,
+          detectada_en: '2026-10-01T00:00:00.000Z',
+          verificada_en: VERIFICADA_EN.toISOString(),
+          vigente: true,
+        },
+      ],
+      { onConflict: 'titulo_id,plataforma_id,region,tipo_oferta' },
     );
   });
-});
 
-describe('guardarDeepLinks', () => {
-  it('hace upsert por la clave primaria sin tocar detectada_en ni vigente', async () => {
+  it('conserva detectada_en al retirar una oferta del snapshot vigente', async () => {
+    const builder = mockearConsulta(supabaseAdmin.from, SIN_DATOS);
+
+    await disponibilidadRepository.guardarOfertas([
+      {
+        tituloId: 42,
+        plataformaId: 10,
+        region: 'AR',
+        tipoOferta: 'suscripcion',
+        deepLink: 'https://www.netflix.com/title/1',
+        fuenteId: 3,
+        detectadaEn: '2026-10-01T00:00:00.000Z',
+        verificadaEn: VERIFICADA_EN,
+        vigente: false,
+      },
+    ]);
+
+    expect(builder.upsert.mock.calls[0][0][0]).toMatchObject({
+      detectada_en: '2026-10-01T00:00:00.000Z',
+      verificada_en: VERIFICADA_EN.toISOString(),
+      vigente: false,
+    });
+  });
+
+  it('guarda deep links sin modificar detectada_en ni vigente', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, SIN_DATOS);
 
     await disponibilidadRepository.guardarDeepLinks([
@@ -82,11 +137,26 @@ describe('guardarDeepLinks', () => {
     expect(opciones).toEqual({ onConflict: 'titulo_id,plataforma_id,region,tipo_oferta' });
   });
 
-  it('lanza DatabaseError si falla el upsert', async () => {
-    mockearConsulta(supabaseAdmin.from, FALLO);
+  it('omite el upsert de snapshots cuando no hay ofertas', async () => {
+    await disponibilidadRepository.guardarOfertas([]);
 
-    await expect(disponibilidadRepository.guardarDeepLinks([])).rejects.toBeInstanceOf(
+    expect(supabaseAdmin.from).not.toHaveBeenCalled();
+  });
+
+  it('lanza DatabaseError ante fallos de lectura y escritura', async () => {
+    mockearConsulta(supabaseAdmin.from, FALLO);
+    await expect(disponibilidadRepository.listarPorTituloYRegion(42, 'AR')).rejects.toBeInstanceOf(
       DatabaseError,
     );
+
+    mockearConsulta(supabaseAdmin.from, FALLO);
+    await expect(
+      disponibilidadRepository.guardarOfertas([{ tituloId: 42 }]),
+    ).rejects.toBeInstanceOf(DatabaseError);
+
+    mockearConsulta(supabaseAdmin.from, FALLO);
+    await expect(
+      disponibilidadRepository.guardarDeepLinks([{ tituloId: 42 }]),
+    ).rejects.toBeInstanceOf(DatabaseError);
   });
 });

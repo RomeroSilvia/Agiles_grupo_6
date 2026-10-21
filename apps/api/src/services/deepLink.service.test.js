@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DatabaseError, ExternalServiceError } from '../errors/index.js';
+import { STREAMING_AVAILABILITY_CONFIG } from '../config/streamingAvailability.config.js';
 import * as streamingAvailabilityIntegration from '../integrations/streamingAvailability.integration.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as disponibilidadRepository from '../repositories/disponibilidad.repository.js';
 import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
+import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
 import * as tituloRepository from '../repositories/titulo.repository.js';
 import { agregarDeepLinks } from './deepLink.service.js';
+
+const envMock = vi.hoisted(() => ({ env: { STREAMING_AVAILABILITY_API_KEY: 'clave-prueba' } }));
+
+vi.mock('../config/env.config.js', () => envMock);
 
 vi.mock('../integrations/streamingAvailability.integration.js', () => ({
   obtenerDeepLinks: vi.fn(),
@@ -16,6 +22,11 @@ vi.mock('../repositories/disponibilidad.repository.js', () => ({
   guardarDeepLinks: vi.fn(),
 }));
 vi.mock('../repositories/fuenteDatos.repository.js', () => ({ obtenerIdPorNombre: vi.fn() }));
+vi.mock('../repositories/sincronizacion.repository.js', () => ({
+  iniciar: vi.fn(),
+  reservarConsultaDisponibilidad: vi.fn(),
+  finalizar: vi.fn(),
+}));
 vi.mock('../repositories/titulo.repository.js', () => ({
   obtenerPorTmdbIdYTipo: vi.fn(),
   guardarDesdeTmdb: vi.fn(),
@@ -78,12 +89,19 @@ function deepLinksDe(resultado) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  envMock.env.STREAMING_AVAILABILITY_API_KEY = 'clave-prueba';
   vi.spyOn(console, 'error').mockImplementation(() => {});
   tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue(null);
   tituloRepository.guardarDesdeTmdb.mockResolvedValue(TITULO_GUARDADO);
   disponibilidadRepository.listarPorTituloYRegion.mockResolvedValue([]);
   disponibilidadRepository.guardarDeepLinks.mockResolvedValue();
   fuenteDatosRepository.obtenerIdPorNombre.mockResolvedValue(2);
+  sincronizacionRepository.iniciar.mockResolvedValue({
+    id: 5,
+    iniciadaEn: '2026-10-20T06:00:00.000Z',
+  });
+  sincronizacionRepository.reservarConsultaDisponibilidad.mockResolvedValue(true);
+  sincronizacionRepository.finalizar.mockResolvedValue(undefined);
   tmdbIntegration.obtenerDetalle.mockResolvedValue({ tmdbId: 1, tipo: 'pelicula', nombre: 'Dune' });
   streamingAvailabilityIntegration.obtenerDeepLinks.mockResolvedValue([
     { servicio: 'netflix', tipoOferta: 'suscripcion', deepLink: ENLACE_NETFLIX },
@@ -125,6 +143,46 @@ describe('agregarDeepLinks', () => {
       }),
       expect.objectContaining({ plataformaId: 2, deepLink: ENLACE_PRIME }),
     ]);
+  });
+
+  it('reserva el cupo diario antes de consultar Streaming Availability', async () => {
+    await agregarDeepLinks(consulta());
+
+    expect(sincronizacionRepository.reservarConsultaDisponibilidad).toHaveBeenCalledWith(5, {
+      inicio: '2026-10-20T00:00:00.000Z',
+      fin: '2026-10-21T00:00:00.000Z',
+      limite: STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY,
+    });
+    expect(streamingAvailabilityIntegration.obtenerDeepLinks).toHaveBeenCalledTimes(1);
+    expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(5, {
+      finalizadaEn: expect.any(String),
+      error: null,
+    });
+  });
+
+  it('usa la home como respaldo y no consulta al proveedor si se agotó el cupo', async () => {
+    sincronizacionRepository.reservarConsultaDisponibilidad.mockResolvedValue(false);
+
+    const resultado = await agregarDeepLinks(consulta());
+
+    expect(streamingAvailabilityIntegration.obtenerDeepLinks).not.toHaveBeenCalled();
+    expect(disponibilidadRepository.guardarDeepLinks).not.toHaveBeenCalled();
+    expect(deepLinksDe(resultado)).toEqual({
+      'Netflix:suscripcion': null,
+      'Amazon Prime Video:suscripcion': null,
+    });
+    expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(5, {
+      finalizadaEn: expect.any(String),
+      error: expect.stringContaining(String(STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY)),
+    });
+  });
+
+  it('no consulta al proveedor si falla la reserva del cupo', async () => {
+    sincronizacionRepository.reservarConsultaDisponibilidad.mockRejectedValue(new DatabaseError());
+
+    await expect(agregarDeepLinks(consulta())).rejects.toBeInstanceOf(DatabaseError);
+
+    expect(streamingAvailabilityIntegration.obtenerDeepLinks).not.toHaveBeenCalled();
   });
 
   it('usa los deep links guardados y vigentes sin consultar Streaming Availability', async () => {

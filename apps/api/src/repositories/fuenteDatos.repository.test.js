@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
 import { FALLO, SIN_DATOS, mockearConsulta } from '../test/queryBuilderMock.js';
@@ -11,15 +11,18 @@ beforeEach(() => {
 });
 
 describe('obtenerIdPorNombre', () => {
-  it('devuelve el id de la fuente', async () => {
-    const builder = mockearConsulta(supabaseAdmin.from, { data: { id: 2 }, error: null });
+  it.each(['Streaming Availability', 'JustWatch'])(
+    'devuelve el identificador de la fuente %s',
+    async (nombre) => {
+      const builder = mockearConsulta(supabaseAdmin.from, { data: { id: 3 }, error: null });
 
-    await expect(fuenteDatosRepository.obtenerIdPorNombre('JustWatch')).resolves.toBe(2);
-    expect(supabaseAdmin.from).toHaveBeenCalledWith('fuente_datos');
-    expect(builder.eq).toHaveBeenCalledWith('nombre', 'JustWatch');
-  });
+      await expect(fuenteDatosRepository.obtenerIdPorNombre(nombre)).resolves.toBe(3);
+      expect(supabaseAdmin.from).toHaveBeenCalledWith('fuente_datos');
+      expect(builder.eq).toHaveBeenCalledWith('nombre', nombre);
+    },
+  );
 
-  it('devuelve null si la fuente no existe', async () => {
+  it('devuelve null si la fuente todavía no está registrada', async () => {
     mockearConsulta(supabaseAdmin.from, SIN_DATOS);
 
     await expect(fuenteDatosRepository.obtenerIdPorNombre('Otra')).resolves.toBeNull();

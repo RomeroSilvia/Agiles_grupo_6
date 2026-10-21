@@ -6,6 +6,7 @@ import * as streamingAvailabilityIntegration from '../integrations/streamingAvai
 import * as disponibilidadRepository from '../repositories/disponibilidad.repository.js';
 import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
+import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
 import * as tituloRepository from '../repositories/titulo.repository.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 
@@ -34,6 +35,12 @@ vi.mock('../repositories/disponibilidad.repository.js', () => ({
 
 vi.mock('../repositories/fuenteDatos.repository.js', () => ({
   obtenerIdPorNombre: vi.fn(),
+}));
+
+vi.mock('../repositories/sincronizacion.repository.js', () => ({
+  iniciar: vi.fn(),
+  reservarConsultaDisponibilidad: vi.fn(),
+  finalizar: vi.fn(),
 }));
 
 const detallePelicula = {
@@ -108,6 +115,12 @@ beforeEach(() => {
   disponibilidadRepository.listarPorTituloYRegion.mockResolvedValue([]);
   disponibilidadRepository.guardarDeepLinks.mockResolvedValue();
   fuenteDatosRepository.obtenerIdPorNombre.mockResolvedValue(2);
+  sincronizacionRepository.iniciar.mockResolvedValue({
+    id: 1,
+    iniciadaEn: '2026-10-20T03:00:00.000Z',
+  });
+  sincronizacionRepository.reservarConsultaDisponibilidad.mockResolvedValue(true);
+  sincronizacionRepository.finalizar.mockResolvedValue(undefined);
 });
 
 describe('GET /api/titulos/:tipo/:tmdbId', () => {

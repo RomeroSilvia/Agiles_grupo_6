@@ -1,7 +1,16 @@
-import { DEFAULT_REGION } from '@buscador/shared/constants';
+import {
+  CODIGOS_REGION_SOPORTADOS,
+  DEFAULT_REGION,
+  MAX_REGIONES_ALTERNATIVAS,
+} from '@buscador/shared/constants';
+import { ExternalServiceError } from '../errors/index.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
-import { disponibilidadSchema } from '../models/disponibilidad.model.js';
+import {
+  comparacionDisponibilidadSchema,
+  disponibilidadSchema,
+  regionesAlternativasSchema,
+} from '../models/disponibilidad.model.js';
 import { tituloSchema } from '../models/titulo.model.js';
 import { validateExternalResponse } from '../utils/validateExternalResponse.js';
 import * as deepLinkService from './deepLink.service.js';
@@ -34,5 +43,125 @@ export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REG
     region: codigoRegion,
     ofertas: ofertasConDeepLinks,
     enlaceTmdb: ofertasDeRegion.enlaceTmdb,
+  });
+}
+
+function armarDisponibilidadDeRegion({ codigoRegion, ofertasPorRegion, plataformasActivas }) {
+  const datosRegion = ofertasPorRegion?.[codigoRegion];
+  if (datosRegion instanceof Error) {
+    throw datosRegion;
+  }
+  if (
+    datosRegion !== undefined &&
+    (!datosRegion || typeof datosRegion !== 'object' || !Array.isArray(datosRegion.ofertas))
+  ) {
+    throw new ExternalServiceError(
+      'TMDB',
+      new Error(`Datos de disponibilidad inválidos para la región ${codigoRegion}`),
+    );
+  }
+
+  const regionData = datosRegion ?? { enlaceTmdb: null, ofertas: [] };
+  const ofertasAgrupadas = plataformaService
+    .agruparPlataformasPorTipoOferta(regionData.ofertas, plataformasActivas)
+    .map(({ tipoOferta, plataformas }) => ({
+      tipoOferta,
+      plataformas: plataformas.map((plataforma) => ({
+        ...plataforma,
+        deepLink: plataforma.deepLink ?? null,
+      })),
+    }));
+
+  return validateExternalResponse(disponibilidadSchema, {
+    region: codigoRegion,
+    ofertas: ofertasAgrupadas,
+    enlaceTmdb: regionData.enlaceTmdb,
+  });
+}
+
+export async function compararDisponibilidad({ tipo, tmdbId, regiones }) {
+  const codigosUnicos = [...new Set(regiones.map((region) => String(region).toUpperCase()))];
+  const [ofertasPorRegion, plataformasActivas] = await Promise.all([
+    tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
+    plataformaRepository.listarActivas(),
+  ]);
+
+  const resultados = await Promise.allSettled(
+    codigosUnicos.map(async (codigoRegion) =>
+      armarDisponibilidadDeRegion({
+        codigoRegion,
+        ofertasPorRegion,
+        plataformasActivas,
+      }),
+    ),
+  );
+
+  const regionesConfirmadas = [];
+  const regionesFallidas = [];
+
+  resultados.forEach((resultado, indice) => {
+    if (resultado.status === 'fulfilled') {
+      regionesConfirmadas.push(resultado.value);
+    } else {
+      regionesFallidas.push(codigosUnicos[indice]);
+    }
+  });
+
+  if (codigosUnicos.length > 0 && regionesConfirmadas.length === 0) {
+    throw new ExternalServiceError(
+      'TMDB',
+      new Error('No se pudo consultar la disponibilidad en las regiones solicitadas'),
+    );
+  }
+
+  return validateExternalResponse(comparacionDisponibilidadSchema, {
+    regiones: regionesConfirmadas,
+    regionesFallidas,
+  });
+}
+
+export async function obtenerRegionesAlternativas({ tipo, tmdbId, region = DEFAULT_REGION }) {
+  const codigoRegion = String(region).toUpperCase();
+  const [ofertasPorRegion, plataformasActivas] = await Promise.all([
+    tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
+    plataformaRepository.listarActivas(),
+  ]);
+
+  const disponibilidadActual = armarDisponibilidadDeRegion({
+    codigoRegion,
+    ofertasPorRegion,
+    plataformasActivas,
+  });
+
+  if (disponibilidadActual.ofertas.length > 0) {
+    return validateExternalResponse(regionesAlternativasSchema, {
+      region: codigoRegion,
+      disponibleEnRegionActual: true,
+      alternativas: [],
+    });
+  }
+
+  const regionesCandidatas = CODIGOS_REGION_SOPORTADOS.filter((codigo) => codigo !== codigoRegion);
+  const comparacion = await compararDisponibilidad({
+    tipo,
+    tmdbId,
+    regiones: regionesCandidatas,
+  });
+
+  const alternativas = comparacion.regiones
+    .filter(({ ofertas }) => ofertas.length > 0)
+    .slice(0, MAX_REGIONES_ALTERNATIVAS);
+
+  if (alternativas.length === 0 && comparacion.regionesFallidas.length > 0) {
+    throw new ExternalServiceError(
+      'TMDB',
+      new Error('No se pudo confirmar la disponibilidad en regiones alternativas'),
+    );
+  }
+
+  return validateExternalResponse(regionesAlternativasSchema, {
+    region: codigoRegion,
+    disponibleEnRegionActual: false,
+    alternativas,
   });
 }

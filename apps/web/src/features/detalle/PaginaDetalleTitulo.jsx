@@ -14,6 +14,8 @@ import { useSession } from '../../contexts/session/SessionContext.js';
 import { ETIQUETAS_TIPO_TITULO_SINGULAR } from '../busqueda/busqueda.constants.js';
 import { useDetalleTitulo } from './useDetalleTitulo.js';
 import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
+import { ComparadorRegiones } from './ComparadorRegiones.jsx';
+import { SugerenciaRegionesAlternativas } from './SugerenciaRegionesAlternativas.jsx';
 import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
@@ -244,9 +246,20 @@ export function PaginaDetalleTitulo() {
             {!cargandoDisponibilidad &&
               !errorDisponibilidad &&
               ofertasConPropiedad.length === 0 && (
-                <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
-                  No encontramos disponibilidad en plataformas de streaming para tu región.
-                </p>
+                <>
+                  <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
+                    No encontramos disponibilidad en plataformas de streaming para tu región.
+                  </p>
+                  <SugerenciaRegionesAlternativas
+                    tipo={tipo}
+                    tmdbId={tmdbId}
+                    regionActual={region}
+                    nombreTitulo={titulo.nombre}
+                    distinguirPropias={distinguirPropias}
+                    seleccionadas={seleccionadas}
+                    activo={Boolean(user) && !cargandoSesion && !regionLoading}
+                  />
+                </>
               )}
 
             {!cargandoDisponibilidad && !errorDisponibilidad && ofertasConPropiedad.length > 0 && (
@@ -275,6 +288,19 @@ export function PaginaDetalleTitulo() {
                   );
                 })}
               </div>
+            )}
+
+            {!regionLoading && (
+              <ComparadorRegiones
+                tipo={tipo}
+                tmdbId={tmdbId}
+                regionActual={region}
+                nombreTitulo={titulo.nombre}
+                distinguirPropias={distinguirPropias}
+                seleccionadas={seleccionadas}
+                tieneSesion={Boolean(user)}
+                cargandoSesion={cargandoSesion}
+              />
             )}
 
             <div className="pt-2">

@@ -66,6 +66,18 @@ function configurarFetch(
         json: async () => ({ data: { agregado: false } }),
       });
     }
+    if (urlStr.includes('/disponibilidad/alternativas')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          data: {
+            region: regionDetectada.region,
+            disponibleEnRegionActual: false,
+            alternativas: [],
+          },
+        }),
+      });
+    }
     if (urlStr.includes('/disponibilidad')) {
       return Promise.resolve({
         ok: true,
@@ -125,6 +137,13 @@ function configurarFetchWatchlist({ fallarAlta = false } = {}) {
 
     if (url.pathname === '/api/region') {
       return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'ip' } }));
+    }
+    if (url.pathname === '/api/titulos/pelicula/1/disponibilidad/alternativas') {
+      return Promise.resolve(
+        respuestaHttp({
+          data: { region: 'AR', disponibleEnRegionActual: false, alternativas: [] },
+        }),
+      );
     }
     if (url.pathname === '/api/titulos/pelicula/1/disponibilidad') {
       return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad() }));
@@ -814,6 +833,328 @@ describe('PaginaDetalleTitulo', () => {
         'href',
         'https://www.justwatch.com',
       );
+    });
+  });
+
+  describe('Comparación de disponibilidad entre regiones (E2HU2)', () => {
+    it('solicita iniciar sesión cuando la persona no está autenticada', async () => {
+      configurarFetch();
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: SIN_SESION });
+
+      expect(
+        await screen.findByText(/Iniciá sesión para comparar la disponibilidad en otras regiones/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Iniciar sesión para comparar regiones' }),
+      ).toHaveAttribute('href', '/iniciar-sesion');
+    });
+
+    it('muestra las regiones y plataformas cuando el título está disponible en otra región (Escenario 1)', async () => {
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/comparacion')) {
+          return Promise.resolve(
+            respuestaHttp({
+              data: {
+                regiones: [
+                  {
+                    region: 'US',
+                    enlaceTmdb: null,
+                    ofertas: [
+                      {
+                        tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+                        plataformas: [
+                          {
+                            id: 3,
+                            tmdbProviderId: 337,
+                            nombre: 'Disney Plus',
+                            logoPath: '/disney.jpg',
+                            urlHome: 'https://www.disneyplus.com',
+                            deepLink: null,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+                regionesFallidas: [],
+              },
+            }),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      const botonUs = await screen.findByRole('button', { name: /Estados Unidos \(US\)/i });
+      fireEvent.click(botonUs);
+      fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
+
+      const resultados = await screen.findByLabelText('Resultados de comparación por región');
+      expect(within(resultados).getByText('Estados Unidos (US)')).toBeInTheDocument();
+      expect(within(resultados).getByText('Disney Plus')).toBeInTheDocument();
+    });
+
+    it('informa cuando no se encontró disponibilidad en las regiones comparadas (Escenario 2)', async () => {
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/comparacion')) {
+          return Promise.resolve(
+            respuestaHttp({
+              data: {
+                regiones: [
+                  { region: 'ES', ofertas: [], enlaceTmdb: null },
+                  { region: 'MX', ofertas: [], enlaceTmdb: null },
+                ],
+                regionesFallidas: [],
+              },
+            }),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      fireEvent.click(await screen.findByRole('button', { name: /España \(ES\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: /México \(MX\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
+
+      expect(
+        await screen.findByText(
+          /No se encontró disponibilidad para este título en las regiones consultadas \(España \(ES\), México \(MX\)\)\./i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('muestra resultados confirmados e identifica la región fallida ante un fallo parcial (Escenario 5)', async () => {
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/comparacion')) {
+          return Promise.resolve(
+            respuestaHttp({
+              data: {
+                regiones: [
+                  {
+                    region: 'US',
+                    enlaceTmdb: null,
+                    ofertas: [
+                      {
+                        tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+                        plataformas: [
+                          {
+                            id: 1,
+                            tmdbProviderId: 8,
+                            nombre: 'Netflix',
+                            logoPath: '/netflix.jpg',
+                            urlHome: 'https://www.netflix.com',
+                            deepLink: null,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+                regionesFallidas: ['BR'],
+              },
+            }),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      fireEvent.click(await screen.findByRole('button', { name: /Estados Unidos \(US\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Brasil \(BR\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
+
+      expect(
+        await screen.findByText(/No se pudo obtener la disponibilidad para: Brasil \(BR\)\./i),
+      ).toBeInTheDocument();
+      const resultados = screen.getByLabelText('Resultados de comparación por región');
+      expect(within(resultados).getByText('Netflix')).toBeInTheDocument();
+    });
+  });
+
+  describe('Sugerencia de regiones alternativas (E2HU3)', () => {
+    it('sugiere regiones alternativas e informa sobre VPN sin ofrecer un servicio de VPN cuando no está en la región actual (Escenarios 1, 2 y 3)', async () => {
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/alternativas')) {
+          return Promise.resolve(
+            respuestaHttp({
+              data: {
+                region: 'AR',
+                disponibleEnRegionActual: false,
+                alternativas: [
+                  {
+                    region: 'US',
+                    enlaceTmdb: null,
+                    ofertas: [
+                      {
+                        tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+                        plataformas: [
+                          {
+                            id: 3,
+                            tmdbProviderId: 337,
+                            nombre: 'Disney Plus',
+                            logoPath: '/disney.jpg',
+                            urlHome: 'https://www.disneyplus.com',
+                            deepLink: null,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            }),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      const seccionSugerencia = await screen.findByRole('region', {
+        name: 'Regiones alternativas disponibles',
+      });
+      expect(within(seccionSugerencia).getByText('Disney Plus')).toBeInTheDocument();
+      expect(
+        within(seccionSugerencia).getByText(
+          /Podés decidir por tu cuenta si acceder a este título utilizando una VPN/i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(seccionSugerencia).getByText(
+          /brinda únicamente información de disponibilidad y no ofrece directamente un servicio de VPN/i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(seccionSugerencia).queryByRole('link', { name: /vpn/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('no muestra sugerencia cuando no hay disponibilidad fuera de la región actual (Escenario 2 de #10)', async () => {
+      configurarFetch(detallePelicula, respuestaDisponibilidad('AR'));
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      expect(
+        await screen.findByText(
+          'No encontramos disponibilidad en plataformas de streaming para tu región.',
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('region', { name: 'Regiones alternativas disponibles' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('no muestra sugerencia de región alternativa cuando el título sí está disponible en la región actual (Escenario 3 de #10)', async () => {
+      const fetchMock = configurarFetch(
+        detallePelicula,
+        respuestaDisponibilidad('AR', [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+          },
+        ]),
+      );
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      expect(await screen.findByText('Netflix')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('region', { name: 'Regiones alternativas disponibles' }),
+      ).not.toBeInTheDocument();
+      expect(fetchMock.mock.calls.some(([url]) => url.toString().includes('/alternativas'))).toBe(
+        false,
+      );
+    });
+
+    it('informa el error recuperable sin mostrar regiones no confirmadas cuando falla la consulta de alternativas (Escenario 6 de #10)', async () => {
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/alternativas')) {
+          return Promise.resolve(
+            respuestaHttp(
+              {
+                error: {
+                  code: 'EXTERNAL_SERVICE',
+                  message: 'No se pudo consultar regiones alternativas',
+                },
+              },
+              502,
+            ),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      expect(
+        await screen.findByText('No se pudo consultar regiones alternativas'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('region', { name: 'Regiones alternativas disponibles' }),
+      ).not.toBeInTheDocument();
     });
   });
 });

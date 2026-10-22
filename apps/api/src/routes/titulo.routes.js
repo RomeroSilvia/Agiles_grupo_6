@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { Router } from 'express';
 import { REGION_PATTERN, TIPOS_TITULO } from '@buscador/shared/constants';
+import { comparacionDisponibilidadQuerySchema } from '@buscador/shared/schemas';
 import { STREAMING_AVAILABILITY_CONFIG } from '../config/streamingAvailability.config.js';
 import * as tituloController from '../controllers/titulo.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.middleware.js';
+import { requireSession } from '../middlewares/requireSession.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 
 const tituloParamsSchema = z.object({
@@ -18,6 +20,24 @@ const tituloQuerySchema = z.object({
 export const tituloRoutes = Router();
 
 const limitarDisponibilidad = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_DISPONIBILIDAD);
+const limitarComparacion = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_DISPONIBILIDAD);
+const limitarAlternativas = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_DISPONIBILIDAD);
+
+tituloRoutes.get(
+  '/:tipo/:tmdbId/disponibilidad/comparacion',
+  limitarComparacion,
+  requireSession,
+  validate({ params: tituloParamsSchema, query: comparacionDisponibilidadQuerySchema }),
+  tituloController.compararDisponibilidad,
+);
+
+tituloRoutes.get(
+  '/:tipo/:tmdbId/disponibilidad/alternativas',
+  limitarAlternativas,
+  requireSession,
+  validate({ params: tituloParamsSchema, query: tituloQuerySchema }),
+  tituloController.obtenerRegionesAlternativas,
+);
 
 tituloRoutes.get(
   '/:tipo/:tmdbId/disponibilidad',

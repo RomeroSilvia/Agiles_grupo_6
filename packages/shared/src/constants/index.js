@@ -96,6 +96,34 @@ export const REGION_SOURCES = Object.values(REGION_SOURCE);
 // Código de país ISO 3166-1 alfa-2, igual que el CHECK de perfil.region
 export const REGION_PATTERN = /^[A-Z]{2}$/;
 
+export const REGIONES_SOPORTADAS = Object.freeze([
+  { codigo: 'AR', nombre: 'Argentina' },
+  { codigo: 'BR', nombre: 'Brasil' },
+  { codigo: 'CL', nombre: 'Chile' },
+  { codigo: 'CO', nombre: 'Colombia' },
+  { codigo: 'MX', nombre: 'México' },
+  { codigo: 'PE', nombre: 'Perú' },
+  { codigo: 'UY', nombre: 'Uruguay' },
+  { codigo: 'US', nombre: 'Estados Unidos' },
+  { codigo: 'CA', nombre: 'Canadá' },
+  { codigo: 'ES', nombre: 'España' },
+  { codigo: 'GB', nombre: 'Reino Unido' },
+  { codigo: 'FR', nombre: 'Francia' },
+  { codigo: 'DE', nombre: 'Alemania' },
+  { codigo: 'IT', nombre: 'Italia' },
+  { codigo: 'JP', nombre: 'Japón' },
+]);
+
+export const CODIGOS_REGION_SOPORTADOS = Object.freeze(
+  REGIONES_SOPORTADAS.map(({ codigo }) => codigo),
+);
+
+export const NOMBRES_REGION = Object.freeze(
+  Object.fromEntries(REGIONES_SOPORTADAS.map(({ codigo, nombre }) => [codigo, nombre])),
+);
+
+export const MAX_REGIONES_COMPARACION = 5;
+
 export const TMDB_LOGO_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 
 export const APP_NAME = 'Streamly';

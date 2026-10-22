@@ -123,6 +123,7 @@ export const NOMBRES_REGION = Object.freeze(
 );
 
 export const MAX_REGIONES_COMPARACION = 5;
+export const MAX_REGIONES_ALTERNATIVAS = 3;
 
 export const TMDB_LOGO_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 

@@ -14,6 +14,7 @@ import { useSession } from '../../contexts/session/SessionContext.js';
 import { ETIQUETAS_TIPO_TITULO_SINGULAR } from '../busqueda/busqueda.constants.js';
 import { useDetalleTitulo } from './useDetalleTitulo.js';
 import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
+import { ComparadorRegiones } from './ComparadorRegiones.jsx';
 import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
@@ -275,6 +276,19 @@ export function PaginaDetalleTitulo() {
                   );
                 })}
               </div>
+            )}
+
+            {!regionLoading && (
+              <ComparadorRegiones
+                tipo={tipo}
+                tmdbId={tmdbId}
+                regionActual={region}
+                nombreTitulo={titulo.nombre}
+                distinguirPropias={distinguirPropias}
+                seleccionadas={seleccionadas}
+                tieneSesion={Boolean(user)}
+                cargandoSesion={cargandoSesion}
+              />
             )}
 
             <div className="pt-2">

@@ -15,7 +15,7 @@ const MAIL = {
   html: '<p>Hola</p>',
   text: 'Hola',
   attachments: [{ filename: 'logo.png', path: '/logo.png', cid: 'logo' }],
-  idempotencyKey: 'aviso-disponibilidad/1-2/0',
+  idempotencyKey: 'aviso-disponibilidad/1-2',
 };
 
 function respuesta(status, body) {
@@ -43,7 +43,7 @@ describe('sendEmail', () => {
     expect(opciones.method).toBe('POST');
     expect(opciones.headers).toMatchObject({
       Authorization: 'Bearer re_prueba',
-      'Idempotency-Key': 'aviso-disponibilidad/1-2/0',
+      'Idempotency-Key': 'aviso-disponibilidad/1-2',
     });
     expect(JSON.parse(opciones.body)).toEqual({
       from: 'Streamly <avisos@streamly.com>',

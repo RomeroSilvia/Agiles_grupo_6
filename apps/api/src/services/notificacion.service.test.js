@@ -97,7 +97,7 @@ describe('enviarNotificaciones', () => {
       titulo: DUNE,
       plataformas: ['Netflix', 'Prime Video'],
       enlace: 'https://streamly.app/titulos/pelicula/42',
-      idempotencyKey: 'aviso-disponibilidad/1-2/0',
+      idempotencyKey: 'aviso-disponibilidad/1-2',
     });
     expect(notificacionRepository.marcarEnviadas).toHaveBeenCalledWith([1, 2], expect.any(String));
     expect(notificacionRepository.marcarEnviadas).toHaveBeenCalledWith([3], expect.any(String));
@@ -134,9 +134,14 @@ describe('enviarNotificaciones', () => {
       intentos: 2,
       error: 'HTTP 500: rechazado',
     });
+    // El aviso 1 ya tenía un intento: la clave no cambia para que Resend no lo mande dos veces.
+    expect(emailService.enviarAvisoDisponibilidad).toHaveBeenCalledWith(
+      'ana@mail.com',
+      expect.objectContaining({ idempotencyKey: 'aviso-disponibilidad/1' }),
+    );
     expect(emailService.enviarAvisoDisponibilidad).toHaveBeenLastCalledWith(
       'luis@mail.com',
-      expect.objectContaining({ idempotencyKey: 'aviso-disponibilidad/2/0' }),
+      expect.objectContaining({ idempotencyKey: 'aviso-disponibilidad/2' }),
     );
     expect(notificacionRepository.marcarEnviadas).toHaveBeenCalledWith([2], expect.any(String));
   });

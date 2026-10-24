@@ -89,8 +89,9 @@ export async function enviarNotificaciones() {
         titulo: grupo.titulo,
         plataformas: grupo.plataformas,
         enlace: crearEnlaceDetalle(grupo.titulo),
-        // Cambia con cada intento: si un envío falló, el reintento no reusa la clave anterior.
-        idempotencyKey: `aviso-disponibilidad/${grupo.ids.join('-')}/${grupo.intentos}`,
+        // Es la misma en cada intento: si Resend aceptó el mail pero la respuesta no llegó
+        // (timeout, corte de conexión), el reintento no lo vuelve a mandar.
+        idempotencyKey: `aviso-disponibilidad/${grupo.ids.join('-')}`,
       });
     } catch (error) {
       if (!(error instanceof ExternalServiceError)) {

@@ -25,24 +25,24 @@ describe('perfil.repository', () => {
     await expect(perfilRepository.obtenerRegion(USUARIO.id)).resolves.toBeNull();
   });
 
-  it('solo guarda la región si todavía no hay una en el perfil', async () => {
+  it('actualiza la región solo si está vacía o es distinta', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, { data: { region: 'UY' }, error: null });
 
-    await expect(perfilRepository.guardarRegionSiVacia(USUARIO.id, 'UY')).resolves.toBe('UY');
+    await expect(perfilRepository.actualizarRegion(USUARIO.id, 'UY')).resolves.toBe('UY');
     expect(builder.update).toHaveBeenCalledWith({ region: 'UY' });
     expect(builder.eq).toHaveBeenCalledWith('id', USUARIO.id);
-    expect(builder.is).toHaveBeenCalledWith('region', null);
+    expect(builder.or).toHaveBeenCalledWith('region.is.null,region.neq.UY');
   });
 
-  it('devuelve null si otra solicitud guardó la región primero', async () => {
+  it('devuelve null si el perfil ya tenía esa región', async () => {
     mockearConsulta(supabaseAdmin.from, { data: null, error: null });
-    await expect(perfilRepository.guardarRegionSiVacia(USUARIO.id, 'UY')).resolves.toBeNull();
+    await expect(perfilRepository.actualizarRegion(USUARIO.id, 'UY')).resolves.toBeNull();
   });
 
   it('propaga los errores de la base', async () => {
     mockearConsulta(supabaseAdmin.from, FALLO);
     await expect(perfilRepository.obtenerRegion(USUARIO.id)).rejects.toBeInstanceOf(DatabaseError);
-    await expect(perfilRepository.guardarRegionSiVacia(USUARIO.id, 'UY')).rejects.toBeInstanceOf(
+    await expect(perfilRepository.actualizarRegion(USUARIO.id, 'UY')).rejects.toBeInstanceOf(
       DatabaseError,
     );
   });

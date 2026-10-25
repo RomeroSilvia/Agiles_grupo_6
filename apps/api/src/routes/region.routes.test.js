@@ -12,12 +12,18 @@ vi.mock('../integrations/geoip.integration.js');
 vi.mock('../repositories/auth.repository.js');
 vi.mock('../repositories/perfil.repository.js');
 
+const COOKIE_SESION = 'access_token=access-de-prueba';
+
+function pedirRegionConSesion() {
+  return request(createApp()).get('/api/region').set('Cookie', COOKIE_SESION);
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   geoipIntegration.getRegionByIp.mockResolvedValue('UY');
   authRepository.obtenerUsuarioPorToken.mockResolvedValue(USUARIO);
   perfilRepository.obtenerRegion.mockResolvedValue(null);
-  perfilRepository.guardarRegionSiVacia.mockResolvedValue('UY');
+  perfilRepository.actualizarRegion.mockResolvedValue('UY');
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -31,6 +37,7 @@ describe('GET /api/region', () => {
     expect(geoipIntegration.getRegionByIp).toHaveBeenCalledTimes(1);
     expect(geoipIntegration.getRegionByIp).not.toHaveBeenCalledWith('8.8.8.8');
     expect(perfilRepository.obtenerRegion).not.toHaveBeenCalled();
+    expect(perfilRepository.actualizarRegion).not.toHaveBeenCalled();
   });
 
   it('usa X-Forwarded-For cuando la IP del proxy está declarada como confiable', async () => {
@@ -43,50 +50,34 @@ describe('GET /api/region', () => {
     expect(geoipIntegration.getRegionByIp).toHaveBeenCalledWith('8.8.8.8');
   });
 
-  it('reutiliza la región guardada sin repetir la detección', async () => {
+  it('usa la región de la IP con sesión aunque el perfil tenga otra y la guarda', async () => {
+    perfilRepository.obtenerRegion.mockResolvedValue('AR');
+    geoipIntegration.getRegionByIp.mockResolvedValue('US');
+
+    const res = await pedirRegionConSesion();
+
+    expect(res.body).toEqual({ data: { region: 'US', source: 'ip' } });
+    expect(perfilRepository.actualizarRegion).toHaveBeenCalledWith(USUARIO.id, 'US');
+    expect(perfilRepository.obtenerRegion).not.toHaveBeenCalled();
+  });
+
+  it('usa la región del perfil con sesión si no puede detectar la IP', async () => {
+    geoipIntegration.getRegionByIp.mockResolvedValue(null);
     perfilRepository.obtenerRegion.mockResolvedValue('BR');
 
-    const res = await request(createApp())
-      .get('/api/region')
-      .set('Cookie', 'access_token=access-de-prueba');
+    const res = await pedirRegionConSesion();
 
     expect(res.body).toEqual({ data: { region: 'BR', source: 'profile' } });
     expect(perfilRepository.obtenerRegion).toHaveBeenCalledWith(USUARIO.id);
-    expect(geoipIntegration.getRegionByIp).not.toHaveBeenCalled();
-    expect(perfilRepository.guardarRegionSiVacia).not.toHaveBeenCalled();
+    expect(perfilRepository.actualizarRegion).not.toHaveBeenCalled();
   });
 
-  it('guarda la región detectada en un perfil que aún no la tiene', async () => {
-    const res = await request(createApp())
-      .get('/api/region')
-      .set('Cookie', 'access_token=access-de-prueba');
+  it('usa la región predeterminada con sesión si no puede detectar la IP y el perfil está vacío', async () => {
+    geoipIntegration.getRegionByIp.mockResolvedValue(null);
 
-    expect(res.body).toEqual({ data: { region: 'UY', source: 'ip' } });
-    expect(perfilRepository.guardarRegionSiVacia).toHaveBeenCalledWith(USUARIO.id, 'UY');
-  });
+    const res = await pedirRegionConSesion();
 
-  it('usa la región de la IP si el usuario todavía no tiene un perfil', async () => {
-    perfilRepository.guardarRegionSiVacia.mockResolvedValue(null);
-
-    const res = await request(createApp())
-      .get('/api/region')
-      .set('Cookie', 'access_token=access-de-prueba');
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ data: { region: 'UY', source: 'ip' } });
-    expect(perfilRepository.obtenerRegion).toHaveBeenCalledTimes(2);
-    expect(perfilRepository.guardarRegionSiVacia).toHaveBeenCalledWith(USUARIO.id, 'UY');
-  });
-
-  it('usa la región que guardó otra solicitud si hubo una carrera', async () => {
-    perfilRepository.guardarRegionSiVacia.mockResolvedValue(null);
-    perfilRepository.obtenerRegion.mockResolvedValueOnce(null).mockResolvedValueOnce('BR');
-
-    const res = await request(createApp())
-      .get('/api/region')
-      .set('Cookie', 'access_token=access-de-prueba');
-
-    expect(res.body).toEqual({ data: { region: 'BR', source: 'profile' } });
+    expect(res.body).toEqual({ data: { region: env.DEFAULT_REGION, source: 'default' } });
   });
 
   it('identifica el fallback configurado cuando falla la detección', async () => {
@@ -98,33 +89,29 @@ describe('GET /api/region', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: { region: env.DEFAULT_REGION, source: 'default' } });
-    expect(perfilRepository.guardarRegionSiVacia).not.toHaveBeenCalled();
+    expect(perfilRepository.actualizarRegion).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith('No se pudo detectar la región por IP', error);
   });
 
-  it('usa la región detectada y registra un warning si no puede leer el perfil', async () => {
+  it('usa la región predeterminada y registra un warning si no puede leer el perfil', async () => {
     const error = new DatabaseError(new Error('base no disponible'));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    geoipIntegration.getRegionByIp.mockResolvedValue(null);
     perfilRepository.obtenerRegion.mockRejectedValueOnce(error);
 
-    const res = await request(createApp())
-      .get('/api/region')
-      .set('Cookie', 'access_token=access-de-prueba');
+    const res = await pedirRegionConSesion();
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ data: { region: 'UY', source: 'ip' } });
-    expect(geoipIntegration.getRegionByIp).toHaveBeenCalledTimes(1);
+    expect(res.body).toEqual({ data: { region: env.DEFAULT_REGION, source: 'default' } });
     expect(warn).toHaveBeenCalledWith('No se pudo consultar la región del perfil', error);
   });
 
   it('conserva la región detectada y registra un warning si no puede guardarla', async () => {
     const error = new DatabaseError(new Error('base no disponible'));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    perfilRepository.guardarRegionSiVacia.mockRejectedValueOnce(error);
+    perfilRepository.actualizarRegion.mockRejectedValueOnce(error);
 
-    const res = await request(createApp())
-      .get('/api/region')
-      .set('Cookie', 'access_token=access-de-prueba');
+    const res = await pedirRegionConSesion();
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: { region: 'UY', source: 'ip' } });

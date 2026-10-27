@@ -26,13 +26,25 @@ import { enviarNotificaciones } from './notificacion.service.js';
 const ANA = 'b7d8e1c2-0000-4000-8000-000000000001';
 const LUIS = 'b7d8e1c2-0000-4000-8000-000000000002';
 const DUNE = { id: 17, tmdbId: 42, tipo: 'pelicula', nombre: 'Dune', anio: 2021 };
+const CREADA_EN = '2026-10-27T06:00:00.123456+00:00';
+const LOTE = new Date(CREADA_EN).getTime();
 
-function aviso(id, { usuarioId = ANA, titulo = DUNE, plataforma = 'Netflix', intentos = 0 } = {}) {
+function aviso(
+  id,
+  {
+    usuarioId = ANA,
+    titulo = DUNE,
+    plataforma = 'Netflix',
+    intentos = 0,
+    creadaEn = CREADA_EN,
+  } = {},
+) {
   return {
     id,
     usuarioId,
     region: 'AR',
     intentos,
+    creadaEn,
     titulo,
     plataforma: { id: id, nombre: plataforma },
   };
@@ -97,7 +109,7 @@ describe('enviarNotificaciones', () => {
       titulo: DUNE,
       plataformas: ['Netflix', 'Prime Video'],
       enlace: 'https://streamly.app/titulos/pelicula/42',
-      idempotencyKey: 'aviso-disponibilidad/1-2',
+      idempotencyKey: `aviso-disponibilidad/${ANA}/17/AR/${LOTE}`,
     });
     expect(notificacionRepository.marcarEnviadas).toHaveBeenCalledWith([1, 2], expect.any(String));
     expect(notificacionRepository.marcarEnviadas).toHaveBeenCalledWith([3], expect.any(String));
@@ -134,16 +146,41 @@ describe('enviarNotificaciones', () => {
       intentos: 2,
       error: 'HTTP 500: rechazado',
     });
-    // El aviso 1 ya tenía un intento: la clave no cambia para que Resend no lo mande dos veces.
-    expect(emailService.enviarAvisoDisponibilidad).toHaveBeenCalledWith(
-      'ana@mail.com',
-      expect.objectContaining({ idempotencyKey: 'aviso-disponibilidad/1' }),
-    );
     expect(emailService.enviarAvisoDisponibilidad).toHaveBeenLastCalledWith(
       'luis@mail.com',
-      expect.objectContaining({ idempotencyKey: 'aviso-disponibilidad/2' }),
+      expect.objectContaining({ idempotencyKey: `aviso-disponibilidad/${LUIS}/17/AR/${LOTE}` }),
     );
     expect(notificacionRepository.marcarEnviadas).toHaveBeenCalledWith([2], expect.any(String));
+  });
+
+  it('reintenta un aviso con la misma clave aunque se hayan generado avisos nuevos del título', async () => {
+    const creadaDespues = '2026-10-27T09:00:00.000000+00:00';
+    notificacionRepository.listarPorEnviar.mockResolvedValue([
+      aviso(1, { plataforma: 'Netflix', intentos: 1 }),
+      aviso(5, { plataforma: 'Prime Video', creadaEn: creadaDespues }),
+    ]);
+
+    const resultado = await enviarNotificaciones();
+
+    // Cada lote sale en su propio mail: el reintento del primero conserva su clave y,
+    // si Resend ya lo había aceptado, no lo vuelve a mandar.
+    expect(resultado).toMatchObject({ enviados: 2, fallidos: 0 });
+    expect(emailService.enviarAvisoDisponibilidad).toHaveBeenNthCalledWith(1, 'ana@mail.com', {
+      titulo: DUNE,
+      plataformas: ['Netflix'],
+      enlace: 'https://streamly.app/titulos/pelicula/42',
+      idempotencyKey: `aviso-disponibilidad/${ANA}/17/AR/${LOTE}`,
+    });
+    expect(emailService.enviarAvisoDisponibilidad).toHaveBeenNthCalledWith(
+      2,
+      'ana@mail.com',
+      expect.objectContaining({
+        plataformas: ['Prime Video'],
+        idempotencyKey: `aviso-disponibilidad/${ANA}/17/AR/${new Date(creadaDespues).getTime()}`,
+      }),
+    );
+    expect(notificacionRepository.marcarEnviadas).toHaveBeenCalledWith([1], expect.any(String));
+    expect(notificacionRepository.marcarEnviadas).toHaveBeenCalledWith([5], expect.any(String));
   });
 
   it('frena sin contar intentos si Resend llegó a su límite de envíos', async () => {

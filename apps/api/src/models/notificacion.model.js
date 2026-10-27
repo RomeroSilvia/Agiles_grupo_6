@@ -3,13 +3,14 @@ import { TIPOS_TITULO } from '@buscador/shared/constants';
 import { regionSchema } from '@buscador/shared/schemas';
 
 export const NOTIFICACION_POR_ENVIAR_COLUMNS =
-  'id, usuario_id, region, intentos, titulo!inner(id, tmdb_id, tipo, nombre, anio), plataforma!inner(id, nombre)';
+  'id, usuario_id, region, intentos, creada_en, titulo!inner(id, tmdb_id, tipo, nombre, anio), plataforma!inner(id, nombre)';
 
 const notificacionRowSchema = z.object({
   id: z.number().int().positive(),
   usuario_id: z.uuid(),
   region: regionSchema,
   intentos: z.number().int().nonnegative(),
+  creada_en: z.string(),
   titulo: z.object({
     id: z.number().int().positive(),
     tmdb_id: z.number().int().positive(),
@@ -28,6 +29,7 @@ export function fromRow(row) {
     usuarioId: data.usuario_id,
     region: data.region,
     intentos: data.intentos,
+    creadaEn: data.creada_en,
     titulo: {
       id: data.titulo.id,
       tmdbId: data.titulo.tmdb_id,

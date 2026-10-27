@@ -13,6 +13,7 @@ const FILA = {
   usuario_id: USUARIO_ID,
   region: 'AR',
   intentos: 1,
+  creada_en: '2026-10-27T06:00:00.123456+00:00',
   titulo: { id: 17, tmdb_id: 42, tipo: 'pelicula', nombre: 'Dune', anio: 2021 },
   plataforma: { id: 10, nombre: 'Netflix' },
 };
@@ -31,6 +32,7 @@ describe('listarPorEnviar', () => {
         usuarioId: USUARIO_ID,
         region: 'AR',
         intentos: 1,
+        creadaEn: '2026-10-27T06:00:00.123456+00:00',
         titulo: { id: 17, tmdbId: 42, tipo: 'pelicula', nombre: 'Dune', anio: 2021 },
         plataforma: { id: 10, nombre: 'Netflix' },
       },

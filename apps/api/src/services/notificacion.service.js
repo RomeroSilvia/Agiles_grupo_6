@@ -12,13 +12,17 @@ const HTTP_DEMASIADAS_SOLICITUDES = 429;
 const LARGO_MAXIMO_ERROR = 1000;
 
 // La sincronización deja un aviso por plataforma; el usuario recibe un solo mail por título
-// con todas las plataformas donde llegó.
+// con todas las plataformas donde llegó. Los avisos de un mismo cambio de disponibilidad se
+// crean en una sola sentencia y comparten creada_en: eso identifica el lote. Agrupar por lote
+// hace que las filas de un mail no cambien entre reintentos aunque se generen avisos nuevos.
 function agruparPorMail(notificaciones) {
   const grupos = new Map();
 
   for (const notificacion of notificaciones) {
-    const clave = `${notificacion.usuarioId}:${notificacion.titulo.id}:${notificacion.region}`;
+    const lote = new Date(notificacion.creadaEn).getTime();
+    const clave = `${notificacion.usuarioId}/${notificacion.titulo.id}/${notificacion.region}/${lote}`;
     const grupo = grupos.get(clave) ?? {
+      clave,
       usuarioId: notificacion.usuarioId,
       titulo: notificacion.titulo,
       ids: [],
@@ -91,7 +95,7 @@ export async function enviarNotificaciones() {
         enlace: crearEnlaceDetalle(grupo.titulo),
         // Es la misma en cada intento: si Resend aceptó el mail pero la respuesta no llegó
         // (timeout, corte de conexión), el reintento no lo vuelve a mandar.
-        idempotencyKey: `aviso-disponibilidad/${grupo.ids.join('-')}`,
+        idempotencyKey: `aviso-disponibilidad/${grupo.clave}`,
       });
     } catch (error) {
       if (!(error instanceof ExternalServiceError)) {

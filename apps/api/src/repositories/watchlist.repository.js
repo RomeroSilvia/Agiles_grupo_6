@@ -81,6 +81,21 @@ export async function existe(usuarioId, tituloId) {
   return data !== null;
 }
 
+export async function tieneAvisoActivo(usuarioId, tituloId) {
+  const { data, error } = await supabaseAdmin
+    .from('watchlist_item')
+    .select('id')
+    .eq('usuario_id', usuarioId)
+    .eq('titulo_id', tituloId)
+    .eq('aviso_activo', true)
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseError(error);
+  }
+  return data !== null;
+}
+
 export async function agregar(usuarioId, tituloId) {
   const { error } = await supabaseAdmin
     .from('watchlist_item')

@@ -12,7 +12,10 @@ vi.mock('../config/supabase.config.js', () => {
   };
   return {
     supabaseAdmin: {
-      auth: { getUser: vi.fn(), admin: { signOut: vi.fn(), generateLink: vi.fn() } },
+      auth: {
+        getUser: vi.fn(),
+        admin: { signOut: vi.fn(), generateLink: vi.fn(), getUserById: vi.fn() },
+      },
     },
     createAuthClient: () => authClient,
   };
@@ -182,6 +185,32 @@ describe('generarEnlace', () => {
       email: 'a@mail.com',
       newEmail: 'b@mail.com',
     });
+  });
+});
+
+describe('obtenerEmail', () => {
+  it('devuelve el mail del usuario', async () => {
+    supabaseAdmin.auth.admin.getUserById.mockResolvedValue({
+      data: { user: { id: 'u1', email: 'ana@mail.com' } },
+      error: null,
+    });
+
+    await expect(authRepository.obtenerEmail('u1')).resolves.toBe('ana@mail.com');
+    expect(supabaseAdmin.auth.admin.getUserById).toHaveBeenCalledWith('u1');
+  });
+
+  it('devuelve null si el usuario ya no existe', async () => {
+    supabaseAdmin.auth.admin.getUserById.mockResolvedValue(
+      fallo(new AuthApiError('User not found', 404, 'user_not_found')),
+    );
+
+    await expect(authRepository.obtenerEmail('u1')).resolves.toBeNull();
+  });
+
+  it('lanza ExternalServiceError si Supabase Auth falla', async () => {
+    supabaseAdmin.auth.admin.getUserById.mockResolvedValue(fallo(CAIDO));
+
+    await expect(authRepository.obtenerEmail('u1')).rejects.toBeInstanceOf(ExternalServiceError);
   });
 });
 

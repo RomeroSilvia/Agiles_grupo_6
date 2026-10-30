@@ -16,18 +16,12 @@ export async function obtenerDetalleTitulo({ tipo, tmdbId }) {
   return validateExternalResponse(tituloSchema, respuesta);
 }
 
-export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REGION }) {
-  const codigoRegion = String(region).toUpperCase();
-  const [ofertas, plataformasActivas] = await Promise.all([
-    tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
-    plataformaRepository.listarActivas(),
-  ]);
-
-  const ofertasDeRegion = ofertas[codigoRegion] ?? { enlaceTmdb: null, ofertas: [] };
-  const ofertasConDeepLinks = await deepLinkService.agregarDeepLinks({
+async function armarDisponibilidad({ tipo, tmdbId, region, ofertasPorRegion, plataformasActivas }) {
+  const ofertasDeRegion = ofertasPorRegion[region] ?? { enlaceTmdb: null, ofertas: [] };
+  const ofertas = await deepLinkService.agregarDeepLinks({
     tipo,
     tmdbId,
-    region: codigoRegion,
+    region,
     ofertas: plataformaService.agruparPlataformasPorTipoOferta(
       ofertasDeRegion.ofertas,
       plataformasActivas,
@@ -35,56 +29,40 @@ export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REG
   });
 
   return validateExternalResponse(disponibilidadSchema, {
-    region: codigoRegion,
-    ofertas: ofertasConDeepLinks,
+    region,
+    ofertas,
     enlaceTmdb: ofertasDeRegion.enlaceTmdb,
   });
 }
 
-function armarDisponibilidadDeRegion({ codigoRegion, ofertasPorRegion, plataformasActivas }) {
-  const datosRegion = ofertasPorRegion?.[codigoRegion];
-  if (datosRegion instanceof Error) {
-    throw datosRegion;
-  }
-  if (
-    datosRegion !== undefined &&
-    (!datosRegion || typeof datosRegion !== 'object' || !Array.isArray(datosRegion.ofertas))
-  ) {
-    throw new ExternalServiceError(
-      'TMDB',
-      new Error(`Datos de disponibilidad inválidos para la región ${codigoRegion}`),
-    );
-  }
+export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REGION }) {
+  const codigoRegion = String(region).toUpperCase();
+  const [ofertasPorRegion, plataformasActivas] = await Promise.all([
+    tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
+    plataformaRepository.listarActivas(),
+  ]);
 
-  const regionData = datosRegion ?? { enlaceTmdb: null, ofertas: [] };
-  const ofertasAgrupadas = plataformaService
-    .agruparPlataformasPorTipoOferta(regionData.ofertas, plataformasActivas)
-    .map(({ tipoOferta, plataformas }) => ({
-      tipoOferta,
-      plataformas: plataformas.map((plataforma) => ({
-        ...plataforma,
-        deepLink: plataforma.deepLink ?? null,
-      })),
-    }));
-
-  return validateExternalResponse(disponibilidadSchema, {
+  return armarDisponibilidad({
+    tipo,
+    tmdbId,
     region: codigoRegion,
-    ofertas: ofertasAgrupadas,
-    enlaceTmdb: regionData.enlaceTmdb,
+    ofertasPorRegion,
+    plataformasActivas,
   });
 }
 
 export async function compararDisponibilidad({ tipo, tmdbId, regiones }) {
-  const codigosUnicos = [...new Set(regiones.map((region) => String(region).toUpperCase()))];
   const [ofertasPorRegion, plataformasActivas] = await Promise.all([
     tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
     plataformaRepository.listarActivas(),
   ]);
 
   const resultados = await Promise.allSettled(
-    codigosUnicos.map(async (codigoRegion) =>
-      armarDisponibilidadDeRegion({
-        codigoRegion,
+    regiones.map((region) =>
+      armarDisponibilidad({
+        tipo,
+        tmdbId,
+        region,
         ofertasPorRegion,
         plataformasActivas,
       }),
@@ -98,11 +76,11 @@ export async function compararDisponibilidad({ tipo, tmdbId, regiones }) {
     if (resultado.status === 'fulfilled') {
       regionesConfirmadas.push(resultado.value);
     } else {
-      regionesFallidas.push(codigosUnicos[indice]);
+      regionesFallidas.push(regiones[indice]);
     }
   });
 
-  if (codigosUnicos.length > 0 && regionesConfirmadas.length === 0) {
+  if (regionesConfirmadas.length === 0) {
     throw new ExternalServiceError(
       'TMDB',
       new Error('No se pudo consultar la disponibilidad en las regiones solicitadas'),

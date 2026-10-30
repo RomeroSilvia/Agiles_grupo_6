@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { rutaDisponibilidad } from '../../app/rutas.js';
 import { ApiError, request } from '../../services/api.service.js';
 
 export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false } = {}) {
@@ -24,10 +25,9 @@ export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false 
     }
 
     const queryRegion = region ? `?region=${encodeURIComponent(region)}` : '';
-    request(
-      `/titulos/${encodeURIComponent(tipo)}/${encodeURIComponent(tmdbId)}/disponibilidad${queryRegion}`,
-      { signal: controller.signal },
-    )
+    request(`${rutaDisponibilidad(tipo, tmdbId)}${queryRegion}`, {
+      signal: controller.signal,
+    })
       .then((data) => {
         if (!controller.signal.aborted) {
           setOfertas(Array.isArray(data?.ofertas) ? data.ofertas : []);

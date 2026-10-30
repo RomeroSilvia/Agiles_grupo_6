@@ -75,3 +75,9 @@ export const comparacionDisponibilidadSchema = z.object({
   regiones: z.array(disponibilidadSchema),
   regionesFallidas: z.array(regionSchema),
 });
+
+export const regionesAlternativasSchema = z.object({
+  region: regionSchema,
+  disponibleEnRegionActual: z.boolean(),
+  alternativas: z.array(disponibilidadSchema),
+});

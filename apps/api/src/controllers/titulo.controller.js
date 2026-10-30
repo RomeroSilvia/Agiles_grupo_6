@@ -18,3 +18,10 @@ export async function compararDisponibilidad(req, res) {
   const data = await tituloService.compararDisponibilidad({ tipo, tmdbId, regiones });
   res.json({ data });
 }
+
+export async function obtenerRegionesAlternativas(req, res) {
+  const { tipo, tmdbId } = req.validated.params;
+  const region = req.validated.query?.region ?? req.region;
+  const data = await tituloService.obtenerRegionesAlternativas({ tipo, tmdbId, region });
+  res.json({ data });
+}

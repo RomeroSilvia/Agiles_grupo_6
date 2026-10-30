@@ -17,6 +17,7 @@ import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
 import { ComparadorRegiones } from './ComparadorRegiones.jsx';
 import { marcarPlataformasPropias } from './detalle.constants.js';
 import { ListaOfertas } from './ListaOfertas.jsx';
+import { SugerenciaRegionesAlternativas } from './SugerenciaRegionesAlternativas.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 import { RUTAS } from '../../app/rutas.js';
@@ -229,9 +230,18 @@ export function PaginaDetalleTitulo() {
             {!cargandoDisponibilidad &&
               !errorDisponibilidad &&
               ofertasConPropiedad.length === 0 && (
-                <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
-                  No encontramos disponibilidad en plataformas de streaming para tu región.
-                </p>
+                <>
+                  <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
+                    No encontramos disponibilidad en plataformas de streaming para tu región.
+                  </p>
+                  <SugerenciaRegionesAlternativas
+                    tipo={tipo}
+                    tmdbId={tmdbId}
+                    regionActual={region}
+                    nombreTitulo={titulo.nombre}
+                    activo={!regionLoading}
+                  />
+                </>
               )}
 
             {!cargandoDisponibilidad && !errorDisponibilidad && ofertasConPropiedad.length > 0 && (

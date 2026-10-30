@@ -171,3 +171,120 @@ describe('tituloService.compararDisponibilidad', () => {
     ).rejects.toBeInstanceOf(ExternalServiceError);
   });
 });
+
+describe('tituloService.obtenerRegionesAlternativas', () => {
+  it('no devuelve alternativas cuando el título ya está disponible en la región actual (Escenario 3)', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValue({
+      AR: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' }],
+      },
+      US: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: '/disney.jpg' }],
+      },
+    });
+
+    const resultado = await tituloService.obtenerRegionesAlternativas({
+      tipo: 'pelicula',
+      tmdbId: 1,
+      region: 'AR',
+    });
+
+    expect(resultado).toEqual({
+      region: 'AR',
+      disponibleEnRegionActual: true,
+      alternativas: [],
+    });
+  });
+
+  it('devuelve las regiones alternativas con ofertas confirmadas cuando no está en la región actual (Escenario 1)', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValue({
+      US: {
+        enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+        ofertas: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: '/disney.jpg' }],
+      },
+      ES: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' }],
+      },
+    });
+
+    const resultado = await tituloService.obtenerRegionesAlternativas({
+      tipo: 'pelicula',
+      tmdbId: 1,
+      region: 'AR',
+    });
+
+    expect(resultado).toEqual({
+      region: 'AR',
+      disponibleEnRegionActual: false,
+      alternativas: [
+        {
+          region: 'US',
+          enlaceTmdb: 'https://www.themoviedb.org/movie/1/watch',
+          ofertas: [
+            {
+              tipoOferta: 'suscripcion',
+              plataformas: [
+                expect.objectContaining({ id: 3, nombre: 'Disney Plus', deepLink: null }),
+              ],
+            },
+          ],
+        },
+        {
+          region: 'ES',
+          enlaceTmdb: null,
+          ofertas: [
+            {
+              tipoOferta: 'suscripcion',
+              plataformas: [expect.objectContaining({ id: 1, nombre: 'Netflix', deepLink: null })],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('devuelve lista vacía de alternativas cuando no hay ofertas en ninguna otra región (Escenario 2)', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValue({});
+
+    const resultado = await tituloService.obtenerRegionesAlternativas({
+      tipo: 'pelicula',
+      tmdbId: 1,
+      region: 'AR',
+    });
+
+    expect(resultado).toEqual({
+      region: 'AR',
+      disponibleEnRegionActual: false,
+      alternativas: [],
+    });
+  });
+
+  it('lanza ExternalServiceError si no puede confirmar alternativas por un fallo en una región candidata (Escenario 6)', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValue({
+      US: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' }],
+      },
+    });
+    deepLinkService.agregarDeepLinks.mockImplementation(async ({ region, ofertas }) => {
+      if (region === 'US') {
+        throw new DatabaseError(new Error('Fallo al consultar deep links en US'));
+      }
+      return ofertas.map(({ tipoOferta, plataformas }) => ({
+        tipoOferta,
+        plataformas: plataformas.map((plataforma) => ({ ...plataforma, deepLink: null })),
+      }));
+    });
+
+    await expect(
+      tituloService.obtenerRegionesAlternativas({
+        tipo: 'pelicula',
+        tmdbId: 1,
+        region: 'AR',
+      }),
+    ).rejects.toBeInstanceOf(ExternalServiceError);
+  });
+});

@@ -21,6 +21,7 @@ export const tituloRoutes = Router();
 
 const limitarDisponibilidad = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_DISPONIBILIDAD);
 const limitarComparacion = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_COMPARACION);
+const limitarAlternativas = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_ALTERNATIVAS);
 
 tituloRoutes.get(
   '/:tipo/:tmdbId/disponibilidad/comparacion',
@@ -28,6 +29,14 @@ tituloRoutes.get(
   requireSession,
   validate({ params: tituloParamsSchema, query: comparacionDisponibilidadQuerySchema }),
   tituloController.compararDisponibilidad,
+);
+
+tituloRoutes.get(
+  '/:tipo/:tmdbId/disponibilidad/alternativas',
+  limitarAlternativas,
+  requireSession,
+  validate({ params: tituloParamsSchema, query: tituloQuerySchema }),
+  tituloController.obtenerRegionesAlternativas,
 );
 
 tituloRoutes.get(

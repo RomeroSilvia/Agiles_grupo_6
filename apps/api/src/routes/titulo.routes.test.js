@@ -549,3 +549,48 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad/comparacion', () => {
     expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad/alternativas', () => {
+  it('responde 401 sin sesión (Escenario 4)', async () => {
+    const response = await request(createApp()).get(
+      '/api/titulos/pelicula/1/disponibilidad/alternativas?region=ES',
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe('UNAUTHENTICATED');
+    expect(tmdbIntegration.obtenerOfertas).not.toHaveBeenCalled();
+  });
+
+  it('devuelve las regiones alternativas disponibles cuando no hay ofertas en la región consultada (Escenario 1)', async () => {
+    const response = await request(createApp())
+      .get('/api/titulos/pelicula/1/disponibilidad/alternativas?region=ES')
+      .set('Cookie', COOKIE_SESION);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      data: {
+        region: 'ES',
+        disponibleEnRegionActual: false,
+        alternativas: [
+          expect.objectContaining({ region: 'AR' }),
+          expect.objectContaining({ region: 'US' }),
+        ],
+      },
+    });
+  });
+
+  it('devuelve alternativas vacías si el título ya está disponible en la región actual (Escenario 3)', async () => {
+    const response = await request(createApp())
+      .get('/api/titulos/pelicula/1/disponibilidad/alternativas?region=AR')
+      .set('Cookie', COOKIE_SESION);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      data: {
+        region: 'AR',
+        disponibleEnRegionActual: true,
+        alternativas: [],
+      },
+    });
+  });
+});

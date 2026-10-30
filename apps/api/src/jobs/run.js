@@ -3,7 +3,7 @@ import { runJob } from './index.js';
 const nombre = process.argv[2];
 
 if (!nombre) {
-  console.error('Indicá el nombre del job. Disponible: syncAvailability');
+  console.error('Indicá el nombre del job. Disponibles: syncAvailability, sendNotifications');
   process.exitCode = 1;
 } else {
   try {

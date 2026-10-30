@@ -74,15 +74,16 @@ Todas las rutas empiezan con `/api`. Las respuestas exitosas tienen la forma `{ 
 
 La pantalla de detalle también muestra la disponibilidad de TMDB/JustWatch para la región del usuario.
 La API expone `GET /api/region`, que consulta la IP desde el backend y devuelve
-`{ data: { region, source } }`. Para usuarios autenticados reutiliza `perfil.region`; si aún está
-vacío, guarda el país detectado. El servicio de país usado es `https://api.country.is` y no
-requiere una clave nueva. Si no se puede detectar, devuelve `DEFAULT_REGION` con
-`source: "default"` y la pantalla lo indica. En desarrollo local, la IP suele ser local y se
-aplica ese respaldo. Si la API corre detrás de un proxy, configurar `TRUST_PROXY` en
-`apps/api/.env` con las IPs o subredes CIDR de los proxies de confianza, separadas por comas.
-Debe configurarse antes de registrar usuarios: la primera región detectada se guarda en el perfil.
-Las IPs privadas o reservadas no se envían al servicio de país. `true` y `1` no son valores
-válidos para `TRUST_PROXY`.
+`{ data: { region, source } }`. Con sesión también se usa la región de la IP, y si cambió se
+guarda en `perfil.region`, que es la que usan los avisos de la watchlist. El servicio de país usado
+es `https://api.country.is` y no requiere una clave nueva. Si no se puede detectar, usa la última
+región guardada en el perfil (`source: "profile"`) o, sin sesión o sin región guardada,
+`DEFAULT_REGION` con `source: "default"`, y la pantalla lo indica. En desarrollo local, la IP
+suele ser local y se aplica ese respaldo. Si la API corre detrás de un proxy, configurar
+`TRUST_PROXY` en `apps/api/.env` con las IPs o subredes CIDR de los proxies de confianza,
+separadas por comas. Sin esa variable se detecta el país del proxy y no el del usuario. Las IPs
+privadas o reservadas no se envían al servicio de país. `true` y `1` no son valores válidos para
+`TRUST_PROXY`.
 
 `GET /api/titulos/:tipo/:tmdbId/disponibilidad?region=BR` consulta la disponibilidad del país
 indicado por el contexto de región y devuelve `{ region, ofertas, enlaceTmdb }`. Cada oferta agrupa

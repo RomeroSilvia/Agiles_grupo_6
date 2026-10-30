@@ -186,6 +186,32 @@ describe('existe', () => {
   });
 });
 
+describe('tieneAvisoActivo', () => {
+  it('busca el título en la watchlist del usuario con el aviso activo', async () => {
+    const builder = mockearConsulta(supabaseAdmin.from, { data: { id: 4 }, error: null });
+
+    await expect(watchlistRepository.tieneAvisoActivo(USUARIO_ID, TITULO_ID)).resolves.toBe(true);
+
+    expect(builder.eq).toHaveBeenCalledWith('usuario_id', USUARIO_ID);
+    expect(builder.eq).toHaveBeenCalledWith('titulo_id', TITULO_ID);
+    expect(builder.eq).toHaveBeenCalledWith('aviso_activo', true);
+  });
+
+  it('devuelve false si el usuario quitó el título o desactivó el aviso', async () => {
+    mockearConsulta(supabaseAdmin.from, SIN_DATOS);
+
+    await expect(watchlistRepository.tieneAvisoActivo(USUARIO_ID, TITULO_ID)).resolves.toBe(false);
+  });
+
+  it('lanza DatabaseError si falla la consulta', async () => {
+    mockearConsulta(supabaseAdmin.from, FALLO);
+
+    await expect(
+      watchlistRepository.tieneAvisoActivo(USUARIO_ID, TITULO_ID),
+    ).rejects.toBeInstanceOf(DatabaseError);
+  });
+});
+
 describe('agregar', () => {
   it('guarda el usuario y título y no duplica una entrada existente', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, SIN_DATOS);

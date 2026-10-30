@@ -31,11 +31,12 @@ export async function reservarConsultaDisponibilidad(sincronizacionId, { inicio,
   return data;
 }
 
-export async function finalizar(id, { finalizadaEn, error: mensajeError }) {
+export async function finalizar(id, { finalizadaEn, avisosGenerados, error: mensajeError }) {
   const { error } = await supabaseAdmin
     .from('sincronizacion')
     .update({
       finalizada_en: finalizadaEn,
+      avisos_generados: avisosGenerados,
       error: mensajeError,
     })
     .eq('id', id);

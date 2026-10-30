@@ -105,6 +105,15 @@ describe('Perfil', () => {
     expect(within(datos).queryByText('Región detectada')).not.toBeInTheDocument();
   });
 
+  it('si no pudo detectar la IP y usa la del perfil, la muestra como la última detectada', async () => {
+    mockApi({ region: { region: 'BR', source: 'profile' } });
+    renderRoute('/perfil');
+
+    const datos = await screen.findByRole('region', { name: 'Datos de la cuenta' });
+    expect(await within(datos).findByText('Última región detectada')).toBeInTheDocument();
+    expect(within(datos).getByText('BR')).toBeInTheDocument();
+  });
+
   it('sin sesión lleva a iniciar sesión y no muestra datos privados', async () => {
     mockApi({ session: null });
     renderRoute('/perfil');

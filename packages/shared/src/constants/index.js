@@ -135,4 +135,5 @@ export const CONFIRMACION_ELIMINAR = 'ELIMINAR';
 export const RUTAS_ENLACE_MAIL = Object.freeze({
   RESTABLECER_PASSWORD: '/restablecer-contrasena',
   CONFIRMAR_MAIL: '/confirmar-mail',
+  DETALLE_TITULO: '/titulos/:tipo/:tmdbId',
 });

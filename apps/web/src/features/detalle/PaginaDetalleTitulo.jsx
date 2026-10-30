@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { REGION_SOURCE, TIPO_OFERTA } from '@buscador/shared/constants';
+import { REGION_SOURCE } from '@buscador/shared/constants';
 import { Link, useParams } from 'react-router';
 import { NotFoundPage } from '../../app/NotFoundPage.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
@@ -14,19 +14,13 @@ import { useSession } from '../../contexts/session/SessionContext.js';
 import { ETIQUETAS_TIPO_TITULO_SINGULAR } from '../busqueda/busqueda.constants.js';
 import { useDetalleTitulo } from './useDetalleTitulo.js';
 import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
-import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
+import { ComparadorRegiones } from './ComparadorRegiones.jsx';
+import { marcarPlataformasPropias } from './detalle.constants.js';
+import { ListaOfertas } from './ListaOfertas.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 import { RUTAS } from '../../app/rutas.js';
 import { useWatchlistTitle } from '../watchlist/useWatchlistTitle.js';
-
-const ETIQUETAS_OFERTA = Object.freeze({
-  [TIPO_OFERTA.SUSCRIPCION]: 'Suscripción',
-  [TIPO_OFERTA.GRATIS]: 'Gratis',
-  [TIPO_OFERTA.CON_ANUNCIOS]: 'Gratis con anuncios',
-  [TIPO_OFERTA.ALQUILER]: 'Alquiler',
-  [TIPO_OFERTA.COMPRA]: 'Compra',
-});
 
 export function PaginaDetalleTitulo() {
   const { tipo, tmdbId } = useParams();
@@ -53,16 +47,7 @@ export function PaginaDetalleTitulo() {
   const distinguirPropias = Boolean(user) && !cargandoSesion && !cargandoPropias;
 
   const ofertasConPropiedad = useMemo(
-    () =>
-      ofertas.map(({ tipoOferta, plataformas }) => ({
-        tipoOferta,
-        plataformas: plataformas
-          .map((plataforma) => ({
-            plataforma,
-            esPropia: !distinguirPropias || seleccionadas.has(plataforma.id),
-          }))
-          .sort((a, b) => Number(b.esPropia) - Number(a.esPropia)),
-      })),
+    () => marcarPlataformasPropias(ofertas, { distinguirPropias, seleccionadas }),
     [ofertas, distinguirPropias, seleccionadas],
   );
 
@@ -250,31 +235,20 @@ export function PaginaDetalleTitulo() {
               )}
 
             {!cargandoDisponibilidad && !errorDisponibilidad && ofertasConPropiedad.length > 0 && (
-              <div className="space-y-4">
-                {ofertasConPropiedad.map(({ tipoOferta, plataformas }) => {
-                  const etiquetaOferta = ETIQUETAS_OFERTA[tipoOferta] ?? tipoOferta;
+              <ListaOfertas
+                ofertas={ofertasConPropiedad}
+                nombreTitulo={titulo.nombre}
+                etiquetaLista="Plataformas disponibles"
+              />
+            )}
 
-                  return (
-                    <section key={tipoOferta} aria-label={etiquetaOferta} className="space-y-2">
-                      <h3 className="text-sm font-semibold text-muted">{etiquetaOferta}</h3>
-                      <ul
-                        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                        aria-label={`Plataformas disponibles: ${etiquetaOferta}`}
-                      >
-                        {plataformas.map(({ plataforma, esPropia }) => (
-                          <li key={plataforma.id}>
-                            <TarjetaDisponibilidad
-                              plataforma={plataforma}
-                              esPropia={esPropia}
-                              nombreTitulo={titulo.nombre}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  );
-                })}
-              </div>
+            {!regionLoading && (
+              <ComparadorRegiones
+                tipo={tipo}
+                tmdbId={tmdbId}
+                regionActual={region}
+                nombreTitulo={titulo.nombre}
+              />
             )}
 
             <div className="pt-2">

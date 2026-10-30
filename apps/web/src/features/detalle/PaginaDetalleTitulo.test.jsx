@@ -816,4 +816,268 @@ describe('PaginaDetalleTitulo', () => {
       );
     });
   });
+
+  describe('Comparación de disponibilidad entre regiones (E2HU2)', () => {
+    it('solicita iniciar sesión cuando la persona no está autenticada', async () => {
+      configurarFetch();
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: SIN_SESION });
+
+      expect(
+        await screen.findByText(/Iniciá sesión para comparar la disponibilidad en otras regiones/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Iniciar sesión para comparar regiones' }),
+      ).toHaveAttribute('href', '/iniciar-sesion');
+    });
+
+    it('muestra las regiones y plataformas cuando el título está disponible en otra región (Escenario 1)', async () => {
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/comparacion')) {
+          return Promise.resolve(
+            respuestaHttp({
+              data: {
+                regiones: [
+                  {
+                    region: 'US',
+                    enlaceTmdb: null,
+                    ofertas: [
+                      {
+                        tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+                        plataformas: [
+                          {
+                            id: 3,
+                            tmdbProviderId: 337,
+                            nombre: 'Disney Plus',
+                            logoPath: '/disney.jpg',
+                            urlHome: 'https://www.disneyplus.com',
+                            deepLink: null,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+                regionesFallidas: [],
+              },
+            }),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      const botonUs = await screen.findByRole('button', { name: /Estados Unidos \(US\)/i });
+      fireEvent.click(botonUs);
+      fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
+
+      const resultados = await screen.findByLabelText('Resultados de comparación por región');
+      expect(within(resultados).getByText('Estados Unidos (US)')).toBeInTheDocument();
+      expect(within(resultados).getByText('Disney Plus')).toBeInTheDocument();
+    });
+
+    it('informa cuando no se encontró disponibilidad en las regiones comparadas (Escenario 2)', async () => {
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/comparacion')) {
+          return Promise.resolve(
+            respuestaHttp({
+              data: {
+                regiones: [
+                  { region: 'ES', ofertas: [], enlaceTmdb: null },
+                  { region: 'MX', ofertas: [], enlaceTmdb: null },
+                ],
+                regionesFallidas: [],
+              },
+            }),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      fireEvent.click(await screen.findByRole('button', { name: /España \(ES\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: /México \(MX\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
+
+      expect(
+        await screen.findByText(
+          /No se encontró disponibilidad para este título en las regiones consultadas \(España \(ES\), México \(MX\)\)\./i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('muestra resultados confirmados e identifica la región fallida ante un fallo parcial (Escenario 5)', async () => {
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/comparacion')) {
+          return Promise.resolve(
+            respuestaHttp({
+              data: {
+                regiones: [
+                  {
+                    region: 'US',
+                    enlaceTmdb: null,
+                    ofertas: [
+                      {
+                        tipoOferta: TIPO_OFERTA.SUSCRIPCION,
+                        plataformas: [
+                          {
+                            id: 1,
+                            tmdbProviderId: 8,
+                            nombre: 'Netflix',
+                            logoPath: '/netflix.jpg',
+                            urlHome: 'https://www.netflix.com',
+                            deepLink: null,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+                regionesFallidas: ['BR'],
+              },
+            }),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      fireEvent.click(await screen.findByRole('button', { name: /Estados Unidos \(US\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Brasil \(BR\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
+
+      expect(
+        await screen.findByText(/No se pudo obtener la disponibilidad para: Brasil \(BR\)\./i),
+      ).toBeInTheDocument();
+      const resultados = screen.getByLabelText('Resultados de comparación por región');
+      expect(within(resultados).getByText('Netflix')).toBeInTheDocument();
+    });
+
+    it('abre el acordeón de comparación al presionar su botón', async () => {
+      configurarFetch();
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      const botonAcordeon = await screen.findByRole('button', {
+        name: /Comparar disponibilidad en otras regiones/i,
+      });
+      expect(botonAcordeon).toHaveAttribute('aria-expanded', 'false');
+
+      fireEvent.click(botonAcordeon);
+      expect(botonAcordeon).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('deshabilita las demás regiones al seleccionar el máximo de 5 regiones', async () => {
+      configurarFetch();
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      const regionesASeleccionar = [
+        /Brasil \(BR\)/i,
+        /Chile \(CL\)/i,
+        /Colombia \(CO\)/i,
+        /México \(MX\)/i,
+        /Estados Unidos \(US\)/i,
+      ];
+
+      for (const patron of regionesASeleccionar) {
+        fireEvent.click(await screen.findByRole('button', { name: patron }));
+      }
+
+      expect(screen.getByRole('button', { name: /España \(ES\)/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Estados Unidos \(US\)/i })).toBeEnabled();
+    });
+
+    it('muestra el error total (502) y permite reintentar la comparación', async () => {
+      let intento = 0;
+      const fetchMock = vi.fn((url) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/api/watchlist/')) {
+          return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+        }
+        if (urlStr.includes('/disponibilidad/comparacion')) {
+          intento += 1;
+          if (intento === 1) {
+            return Promise.resolve(
+              respuestaHttp(
+                {
+                  error: {
+                    code: 'EXTERNAL_SERVICE',
+                    message: 'No se pudo consultar TMDB',
+                  },
+                },
+                502,
+              ),
+            );
+          }
+          return Promise.resolve(
+            respuestaHttp({
+              data: {
+                regiones: [{ region: 'US', ofertas: [], enlaceTmdb: null }],
+                regionesFallidas: [],
+              },
+            }),
+          );
+        }
+        if (urlStr.includes('/disponibilidad')) {
+          return Promise.resolve(respuestaHttp({ data: respuestaDisponibilidad('AR') }));
+        }
+        if (urlStr.includes('/region')) {
+          return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+        }
+        return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      fireEvent.click(await screen.findByRole('button', { name: /Estados Unidos \(US\)/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
+
+      expect(await screen.findByText('No se pudo consultar TMDB')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+      expect(
+        await screen.findByText(
+          /No se encontró disponibilidad para este título en las regiones consultadas \(Estados Unidos \(US\)\)\./i,
+        ),
+      ).toBeInTheDocument();
+    });
+  });
 });

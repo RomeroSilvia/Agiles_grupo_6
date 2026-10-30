@@ -28,6 +28,10 @@ export function rutaDetalle(tipo, tmdbId) {
   return `${RUTAS.DETALLE_TITULO.replace(':tipo', encodeURIComponent(tipo)).replace(':tmdbId', encodeURIComponent(tmdbId))}`;
 }
 
+export function rutaDisponibilidad(tipo, tmdbId) {
+  return `${rutaDetalle(tipo, tmdbId)}/disponibilidad`;
+}
+
 export function rutaWatchlistTitulo(tipo, tmdbId) {
   return `/watchlist/${encodeURIComponent(tipo)}/${encodeURIComponent(tmdbId)}`;
 }

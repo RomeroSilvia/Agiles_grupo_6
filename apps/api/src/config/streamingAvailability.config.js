@@ -33,6 +33,7 @@ export const STREAMING_AVAILABILITY_CONFIG = Object.freeze({
   // La disponibilidad se obtiene de JustWatch; Streaming Availability completa el enlace.
   FUENTE_DISPONIBILIDAD: 'JustWatch',
   RATE_LIMIT_DISPONIBILIDAD: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
+  RATE_LIMIT_COMPARACION: Object.freeze({ maxRequests: 15, windowMs: 60_000 }),
 });
 
 // Servicios y dominios válidos según el tmdb_provider_id de supabase/seed.sql.

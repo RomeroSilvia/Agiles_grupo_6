@@ -1,7 +1,7 @@
 import { ListaPlataformas } from '../plataformas/ListaPlataformas.jsx';
 import { DESCRIPCION_MIS_PLATAFORMAS } from '../plataformas/plataformas.constants.js';
+import { SeccionPlegable } from '../../components/ui/SeccionPlegable.jsx';
 import { AccionesCuenta } from './AccionesCuenta.jsx';
-import { SeccionPerfil } from './SeccionPerfil.jsx';
 import { TarjetaIdentidad } from './TarjetaIdentidad.jsx';
 
 export function PaginaPerfil() {
@@ -12,22 +12,22 @@ export function PaginaPerfil() {
       <div className="grid gap-4 lg:grid-cols-3 lg:grid-rows-[auto_1fr] lg:gap-8">
         <TarjetaIdentidad className="lg:col-start-1 lg:row-start-1" />
 
-        <SeccionPerfil
+        <SeccionPlegable
           titulo="Mis plataformas"
           resumen="Elegí las que tenés contratadas"
           descripcion={DESCRIPCION_MIS_PLATAFORMAS}
           className="lg:col-span-2 lg:col-start-2 lg:row-span-2 lg:row-start-1"
         >
           <ListaPlataformas />
-        </SeccionPerfil>
+        </SeccionPlegable>
 
-        <SeccionPerfil
+        <SeccionPlegable
           titulo="Cuenta"
           resumen="Mail, contraseña y eliminar cuenta"
           className="lg:col-start-1 lg:row-start-2 lg:self-start"
         >
           <AccionesCuenta />
-        </SeccionPerfil>
+        </SeccionPlegable>
       </div>
     </section>
   );

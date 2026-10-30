@@ -15,12 +15,12 @@ export async function obtenerRegion(usuarioId) {
   return data ? fromRow(data).region : null;
 }
 
-export async function guardarRegionSiVacia(usuarioId, region) {
+export async function actualizarRegion(usuarioId, region) {
   const { data, error } = await supabaseAdmin
     .from('perfil')
     .update({ region })
     .eq('id', usuarioId)
-    .is('region', null)
+    .or(`region.is.null,region.neq.${region}`)
     .select(PERFIL_COLUMNS)
     .maybeSingle();
 

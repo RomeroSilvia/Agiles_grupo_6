@@ -1,48 +1,32 @@
-import { NOMBRES_REGION, TIPO_OFERTA } from '@buscador/shared/constants';
 import { APP_NAME } from '../../config/app.config.js';
 import { TextButton } from '../../components/ui/TextButton.jsx';
-import { TarjetaDisponibilidad } from './TarjetaDisponibilidad.jsx';
+import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
+import { useSession } from '../../contexts/session/SessionContext.js';
+import { formatearNombreRegion, marcarPlataformasPropias } from './detalle.constants.js';
+import { ListaOfertas } from './ListaOfertas.jsx';
 import { useRegionesAlternativas } from './useRegionesAlternativas.js';
-
-const ETIQUETAS_OFERTA = Object.freeze({
-  [TIPO_OFERTA.SUSCRIPCION]: 'Suscripción',
-  [TIPO_OFERTA.GRATIS]: 'Gratis',
-  [TIPO_OFERTA.CON_ANUNCIOS]: 'Gratis con anuncios',
-  [TIPO_OFERTA.ALQUILER]: 'Alquiler',
-  [TIPO_OFERTA.COMPRA]: 'Compra',
-});
-
-function formatearNombreRegion(codigo) {
-  const nombre = NOMBRES_REGION[codigo];
-  return nombre ? `${nombre} (${codigo})` : codigo;
-}
-
-function ordenarPlataformas(plataformas, distinguirPropias, seleccionadas) {
-  return plataformas
-    .map((plataforma) => ({
-      plataforma,
-      esPropia: !distinguirPropias || seleccionadas.has(plataforma.id),
-    }))
-    .sort((a, b) => Number(b.esPropia) - Number(a.esPropia));
-}
 
 export function SugerenciaRegionesAlternativas({
   tipo,
   tmdbId,
   regionActual,
   nombreTitulo,
-  distinguirPropias = false,
-  seleccionadas = new Set(),
   activo = false,
 }) {
+  const { user, loading: cargandoSesion } = useSession();
+  const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
+  const tieneSesion = Boolean(user) && !cargandoSesion;
+  const distinguirPropias = tieneSesion && !cargandoPropias;
+  const habilitado = activo && tieneSesion;
+
   const { alternativas, isLoading, error, reintentar } = useRegionesAlternativas({
     tipo,
     tmdbId,
     region: regionActual,
-    activo,
+    activo: habilitado,
   });
 
-  if (!activo) {
+  if (!habilitado) {
     return null;
   }
 
@@ -99,36 +83,11 @@ export function SugerenciaRegionesAlternativas({
               </span>
             </div>
 
-            <div className="space-y-3">
-              {ofertas.map(({ tipoOferta, plataformas }) => {
-                const etiquetaOferta = ETIQUETAS_OFERTA[tipoOferta] ?? tipoOferta;
-                const plataformasOrdenadas = ordenarPlataformas(
-                  plataformas,
-                  distinguirPropias,
-                  seleccionadas,
-                );
-
-                return (
-                  <div key={tipoOferta} className="space-y-2">
-                    <p className="text-xs font-semibold text-muted">{etiquetaOferta}</p>
-                    <ul
-                      className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
-                      aria-label={`Plataformas sugeridas en ${region}: ${etiquetaOferta}`}
-                    >
-                      {plataformasOrdenadas.map(({ plataforma, esPropia }) => (
-                        <li key={plataforma.id}>
-                          <TarjetaDisponibilidad
-                            plataforma={plataforma}
-                            esPropia={esPropia}
-                            nombreTitulo={nombreTitulo}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
+            <ListaOfertas
+              ofertas={marcarPlataformasPropias(ofertas, { distinguirPropias, seleccionadas })}
+              nombreTitulo={nombreTitulo}
+              etiquetaLista={`Plataformas sugeridas en ${region}`}
+            />
           </div>
         ))}
       </div>

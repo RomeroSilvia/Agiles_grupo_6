@@ -516,11 +516,20 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad/comparacion', () => {
   it('conserva los resultados confirmados e identifica la región fallida ante un fallo parcial (Escenario 5)', async () => {
     tmdbIntegration.obtenerOfertas.mockResolvedValueOnce({
       US: ofertasTmdb.US,
-      BR: { enlaceTmdb: null, ofertas: null },
+      BR: ofertasTmdb.AR,
     });
+    tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue({ id: 10 });
+    disponibilidadRepository.listarPorTituloYRegion.mockImplementation(
+      async (_tituloId, region) => {
+        if (region === 'BR') {
+          throw new Error('Fallo al leer disponibilidad en BR');
+        }
+        return [];
+      },
+    );
 
     const response = await request(createApp())
-      .get('/api/titulos/pelicula/1/disponibilidad/comparacion?regiones=US,BR')
+      .get('/api/titulos/pelicula/55/disponibilidad/comparacion?regiones=US,BR')
       .set('Cookie', COOKIE_SESION);
 
     expect(response.status).toBe(200);

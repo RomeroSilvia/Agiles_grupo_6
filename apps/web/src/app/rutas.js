@@ -2,7 +2,7 @@ import { RUTAS_ENLACE_MAIL } from '@buscador/shared/constants';
 
 export const RUTAS = Object.freeze({
   BUSQUEDA: '/',
-  DETALLE_TITULO: 'titulos/:tipo/:tmdbId',
+  DETALLE_TITULO: RUTAS_ENLACE_MAIL.DETALLE_TITULO,
   WATCHLIST: '/watchlist',
   MIS_PLATAFORMAS: '/mis-plataformas',
   PERFIL: '/perfil',
@@ -25,7 +25,11 @@ export function rutaSeccionCuenta(seccion) {
 }
 
 export function rutaDetalle(tipo, tmdbId) {
-  return `/${RUTAS.DETALLE_TITULO.replace(':tipo', encodeURIComponent(tipo)).replace(':tmdbId', encodeURIComponent(tmdbId))}`;
+  return `${RUTAS.DETALLE_TITULO.replace(':tipo', encodeURIComponent(tipo)).replace(':tmdbId', encodeURIComponent(tmdbId))}`;
+}
+
+export function rutaDisponibilidad(tipo, tmdbId) {
+  return `${rutaDetalle(tipo, tmdbId)}/disponibilidad`;
 }
 
 export function rutaWatchlistTitulo(tipo, tmdbId) {

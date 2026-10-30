@@ -20,8 +20,8 @@ const tituloQuerySchema = z.object({
 export const tituloRoutes = Router();
 
 const limitarDisponibilidad = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_DISPONIBILIDAD);
-const limitarComparacion = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_DISPONIBILIDAD);
-const limitarAlternativas = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_DISPONIBILIDAD);
+const limitarComparacion = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_COMPARACION);
+const limitarAlternativas = rateLimit(STREAMING_AVAILABILITY_CONFIG.RATE_LIMIT_ALTERNATIVAS);
 
 tituloRoutes.get(
   '/:tipo/:tmdbId/disponibilidad/comparacion',

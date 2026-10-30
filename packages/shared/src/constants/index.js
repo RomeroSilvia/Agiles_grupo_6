@@ -96,26 +96,30 @@ export const REGION_SOURCES = Object.values(REGION_SOURCE);
 // Código de país ISO 3166-1 alfa-2, igual que el CHECK de perfil.region
 export const REGION_PATTERN = /^[A-Z]{2}$/;
 
-export const REGIONES_SOPORTADAS = Object.freeze([
-  { codigo: 'AR', nombre: 'Argentina' },
-  { codigo: 'BR', nombre: 'Brasil' },
-  { codigo: 'CL', nombre: 'Chile' },
-  { codigo: 'CO', nombre: 'Colombia' },
-  { codigo: 'MX', nombre: 'México' },
-  { codigo: 'PE', nombre: 'Perú' },
-  { codigo: 'UY', nombre: 'Uruguay' },
-  { codigo: 'US', nombre: 'Estados Unidos' },
-  { codigo: 'CA', nombre: 'Canadá' },
-  { codigo: 'ES', nombre: 'España' },
-  { codigo: 'GB', nombre: 'Reino Unido' },
-  { codigo: 'FR', nombre: 'Francia' },
-  { codigo: 'DE', nombre: 'Alemania' },
-  { codigo: 'IT', nombre: 'Italia' },
-  { codigo: 'JP', nombre: 'Japón' },
+export const CODIGOS_REGION_SOPORTADOS = Object.freeze([
+  'AR',
+  'BR',
+  'CL',
+  'CO',
+  'MX',
+  'PE',
+  'UY',
+  'US',
+  'CA',
+  'ES',
+  'GB',
+  'FR',
+  'DE',
+  'IT',
+  'JP',
 ]);
 
-export const CODIGOS_REGION_SOPORTADOS = Object.freeze(
-  REGIONES_SOPORTADAS.map(({ codigo }) => codigo),
+const nombresRegionEnEspanol = new Intl.DisplayNames(['es'], { type: 'region' });
+
+export const REGIONES_SOPORTADAS = Object.freeze(
+  CODIGOS_REGION_SOPORTADOS.map((codigo) =>
+    Object.freeze({ codigo, nombre: nombresRegionEnEspanol.of(codigo) ?? codigo }),
+  ),
 );
 
 export const NOMBRES_REGION = Object.freeze(
@@ -136,4 +140,5 @@ export const CONFIRMACION_ELIMINAR = 'ELIMINAR';
 export const RUTAS_ENLACE_MAIL = Object.freeze({
   RESTABLECER_PASSWORD: '/restablecer-contrasena',
   CONFIRMAR_MAIL: '/confirmar-mail',
+  DETALLE_TITULO: '/titulos/:tipo/:tmdbId',
 });

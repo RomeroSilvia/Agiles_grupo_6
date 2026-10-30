@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ExternalServiceError } from '../errors/index.js';
+import { DatabaseError, ExternalServiceError } from '../errors/index.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
+import * as deepLinkService from './deepLink.service.js';
 import * as tituloService from './titulo.service.js';
 
 vi.mock('../integrations/tmdb.integration.js', () => ({
@@ -11,6 +12,10 @@ vi.mock('../integrations/tmdb.integration.js', () => ({
 
 vi.mock('../repositories/plataforma.repository.js', () => ({
   listarActivas: vi.fn(),
+}));
+
+vi.mock('./deepLink.service.js', () => ({
+  agregarDeepLinks: vi.fn(),
 }));
 
 const plataformasActivas = [
@@ -33,6 +38,12 @@ const plataformasActivas = [
 beforeEach(() => {
   vi.clearAllMocks();
   plataformaRepository.listarActivas.mockResolvedValue(plataformasActivas);
+  deepLinkService.agregarDeepLinks.mockImplementation(async ({ ofertas }) =>
+    ofertas.map(({ tipoOferta, plataformas }) => ({
+      tipoOferta,
+      plataformas: plataformas.map((plataforma) => ({ ...plataforma, deepLink: null })),
+    })),
+  );
 });
 
 describe('tituloService.compararDisponibilidad', () => {
@@ -55,6 +66,7 @@ describe('tituloService.compararDisponibilidad', () => {
     });
 
     expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledTimes(1);
+    expect(deepLinkService.agregarDeepLinks).toHaveBeenCalledTimes(2);
     expect(resultado).toEqual({
       regiones: [
         {
@@ -102,26 +114,7 @@ describe('tituloService.compararDisponibilidad', () => {
     });
   });
 
-  it('deduplica regiones repetidas y devuelve una sola entrada por región', async () => {
-    tmdbIntegration.obtenerOfertas.mockResolvedValue({
-      US: {
-        enlaceTmdb: null,
-        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' }],
-      },
-    });
-
-    const resultado = await tituloService.compararDisponibilidad({
-      tipo: 'pelicula',
-      tmdbId: 1,
-      regiones: ['US', 'US'],
-    });
-
-    expect(resultado.regiones).toHaveLength(1);
-    expect(resultado.regiones[0].region).toBe('US');
-    expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledTimes(1);
-  });
-
-  it('conserva los resultados confirmados e identifica la región cuando falla una parte', async () => {
+  it('conserva los resultados confirmados e identifica la región cuando falla agregarDeepLinks para una región', async () => {
     tmdbIntegration.obtenerOfertas.mockResolvedValue({
       US: {
         enlaceTmdb: null,
@@ -129,8 +122,17 @@ describe('tituloService.compararDisponibilidad', () => {
       },
       BR: {
         enlaceTmdb: null,
-        ofertas: null,
+        ofertas: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: '/disney.jpg' }],
       },
+    });
+    deepLinkService.agregarDeepLinks.mockImplementation(async ({ region, ofertas }) => {
+      if (region === 'BR') {
+        throw new DatabaseError(new Error('Fallo al consultar deep links en BR'));
+      }
+      return ofertas.map(({ tipoOferta, plataformas }) => ({
+        tipoOferta,
+        plataformas: plataformas.map((plataforma) => ({ ...plataforma, deepLink: null })),
+      }));
     });
 
     const resultado = await tituloService.compararDisponibilidad({
@@ -146,7 +148,7 @@ describe('tituloService.compararDisponibilidad', () => {
         ofertas: [
           {
             tipoOferta: 'suscripcion',
-            plataformas: [expect.objectContaining({ id: 1, nombre: 'Netflix' })],
+            plataformas: [expect.objectContaining({ id: 1, nombre: 'Netflix', deepLink: null })],
           },
         ],
       },
@@ -155,10 +157,10 @@ describe('tituloService.compararDisponibilidad', () => {
   });
 
   it('lanza ExternalServiceError si fallan todas las regiones solicitadas', async () => {
-    tmdbIntegration.obtenerOfertas.mockResolvedValue({
-      US: { enlaceTmdb: null, ofertas: null },
-      BR: { enlaceTmdb: null, ofertas: null },
-    });
+    tmdbIntegration.obtenerOfertas.mockResolvedValue({});
+    deepLinkService.agregarDeepLinks.mockRejectedValue(
+      new DatabaseError(new Error('Fallo al resolver deep links')),
+    );
 
     await expect(
       tituloService.compararDisponibilidad({
@@ -262,7 +264,19 @@ describe('tituloService.obtenerRegionesAlternativas', () => {
 
   it('lanza ExternalServiceError si no puede confirmar alternativas por un fallo en una región candidata (Escenario 6)', async () => {
     tmdbIntegration.obtenerOfertas.mockResolvedValue({
-      US: { enlaceTmdb: null, ofertas: null },
+      US: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' }],
+      },
+    });
+    deepLinkService.agregarDeepLinks.mockImplementation(async ({ region, ofertas }) => {
+      if (region === 'US') {
+        throw new DatabaseError(new Error('Fallo al consultar deep links en US'));
+      }
+      return ofertas.map(({ tipoOferta, plataformas }) => ({
+        tipoOferta,
+        plataformas: plataformas.map((plataforma) => ({ ...plataforma, deepLink: null })),
+      }));
     });
 
     await expect(

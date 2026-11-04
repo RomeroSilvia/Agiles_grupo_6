@@ -1,18 +1,19 @@
 import { NOMBRES_REGION } from '@buscador/shared/constants';
+import { Card } from '../../components/ui/Card.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
 import { columnasComparacion, plataformasPorTipo } from './comparacion.js';
 import { ETIQUETAS_OFERTA } from './detalle.constants.js';
-import { ListaPlataformasOferta } from './ListaOfertas.jsx';
+import { ListaPlataformasOferta } from './ListaPlataformasOferta.jsx';
 
-const CELDA_CLASS_NAME = 'md:px-4 md:py-3 md:align-middle';
+const CELDA_CLASS_NAME = 'lg:px-4 lg:py-3 lg:align-middle';
 
 export function TablaComparacion({ filas, nombreTitulo }) {
   const columnas = columnasComparacion(filas);
 
   return (
-    <div className="overflow-hidden rounded-card border border-border">
+    <Card padding="none">
       <table aria-label="Resultados de comparación por región" className="w-full text-sm">
-        <thead className="max-md:sr-only">
+        <thead className="sr-only lg:not-sr-only">
           <tr className="border-b border-border text-left font-mono text-xs text-muted uppercase">
             <th scope="col" className={`${CELDA_CLASS_NAME} font-medium`}>
               Región
@@ -28,7 +29,7 @@ export function TablaComparacion({ filas, nombreTitulo }) {
           {filas.map(({ region, ofertas, esActual }) => (
             <tr
               key={region}
-              className={`grid gap-3 p-4 md:table-row md:p-0 ${esActual ? 'bg-chip/50' : ''}`}
+              className={`grid gap-3 p-4 first:rounded-t-card lg:table-row lg:p-0 ${esActual ? 'bg-chip/50' : ''}`}
             >
               <th scope="row" className={`${CELDA_CLASS_NAME} text-left font-semibold`}>
                 <span className="flex flex-wrap items-center gap-2">
@@ -42,7 +43,7 @@ export function TablaComparacion({ filas, nombreTitulo }) {
 
                 return (
                   <td key={tipo} className={CELDA_CLASS_NAME}>
-                    <span className="mb-1.5 block text-xs text-muted md:hidden">
+                    <span className="mb-1.5 block text-xs text-muted lg:hidden">
                       {ETIQUETAS_OFERTA[tipo]}
                     </span>
                     {plataformas.length > 0 ? (
@@ -62,6 +63,6 @@ export function TablaComparacion({ filas, nombreTitulo }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }

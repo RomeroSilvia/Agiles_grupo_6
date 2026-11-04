@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { ROL_PERSONA } from '@buscador/shared/constants';
 import { tieneFiltrosAvanzados } from '@buscador/shared/schemas';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
+import { erroresPorCampo } from '../../hooks/useZodForm.js';
 import { useBusqueda } from './useBusqueda.js';
 import { FILTROS_INICIALES, convertirFiltros, validarFiltros } from './busquedaReducer.js';
 import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
@@ -77,6 +78,7 @@ function sinCriteriosBusqueda(filtros) {
 export function PaginaBusqueda() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [busquedaInicial] = useState(() => obtenerBusquedaInicial(searchParams));
+  const [envioIntentado, setEnvioIntentado] = useState(false);
   const {
     filtros,
     setFiltros,
@@ -190,12 +192,22 @@ export function PaginaBusqueda() {
     const titulo = filtros.q.trim();
     if (ultimaBusqueda && titulo && titulo !== ultimaBusqueda.q) {
       const filtrosReiniciados = { ...FILTROS_INICIALES, q: titulo };
+      setEnvioIntentado(false);
       setFiltros(filtrosReiniciados);
       buscar(conFiltroDisponible(filtrosReiniciados));
-      return;
+      return undefined;
     }
 
-    buscar(conFiltroDisponible(filtros));
+    const filtrosConsulta = conFiltroDisponible(filtros);
+    const validacion = validarFiltros(filtrosConsulta);
+    if (!validacion.success) {
+      setEnvioIntentado(true);
+      return erroresPorCampo(validacion);
+    }
+
+    setEnvioIntentado(false);
+    buscar(filtrosConsulta);
+    return undefined;
   }
 
   function handleChange(event) {
@@ -235,6 +247,7 @@ export function PaginaBusqueda() {
     busquedaInicialProcesadaRef.current = true;
     busquedaInicialCanceladaRef.current = true;
     limpiezaUrlPendienteRef.current = true;
+    setEnvioIntentado(false);
     reiniciarBusqueda();
     setSearchParams({}, { replace: true, preventScrollReset: true });
   }
@@ -247,6 +260,7 @@ export function PaginaBusqueda() {
     }
 
     const filtrosBase = { ...FILTROS_INICIALES, q: consulta };
+    setEnvioIntentado(false);
     setFiltros(filtrosBase);
     buscar(conFiltroDisponible(filtrosBase));
   }
@@ -279,6 +293,10 @@ export function PaginaBusqueda() {
     }
   }, [seleccionDesactualizada, ultimaBusqueda, filtroPropias.firma, buscar]);
 
+  const erroresFiltros = envioIntentado
+    ? erroresPorCampo(validarFiltros(conFiltroDisponible(filtros)))
+    : {};
+
   return (
     <>
       <PageHeader
@@ -290,6 +308,7 @@ export function PaginaBusqueda() {
 
       <FormularioBusqueda
         filtros={filtros}
+        erroresFiltros={erroresFiltros}
         isLoading={isLoading}
         onChange={handleChange}
         onSubmit={handleSubmit}

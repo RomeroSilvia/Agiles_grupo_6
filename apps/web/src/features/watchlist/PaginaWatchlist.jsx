@@ -5,14 +5,15 @@ import { ButtonLink } from '../../components/ui/ButtonLink.jsx';
 import { Card } from '../../components/ui/Card.jsx';
 import { IconBadge } from '../../components/ui/IconBadge.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
-import { Skeleton } from '../../components/ui/Skeleton.jsx';
+import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { BookmarkIcon } from '../../components/ui/icons.jsx';
 import { useSession } from '../../contexts/session/SessionContext.js';
 import { TarjetaWatchlist } from './TarjetaWatchlist.jsx';
+import { TarjetaWatchlistCargando } from './TarjetaWatchlistCargando.jsx';
 import { useWatchlist } from './useWatchlist.js';
 
 const GRILLA_CLASS_NAME = 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4';
-const TARJETAS_CARGANDO = Array.from({ length: 8 }, (_, indice) => indice);
+const TARJETAS_CARGANDO = 8;
 
 export function PaginaWatchlist() {
   const { user, loading: cargandoSesion } = useSession();
@@ -72,15 +73,8 @@ export function PaginaWatchlist() {
             Cargando tu watchlist…
           </p>
           <ul aria-hidden="true" className={GRILLA_CLASS_NAME}>
-            {TARJETAS_CARGANDO.map((indice) => (
-              <Card as="li" key={indice} padding="none" className="overflow-hidden">
-                <Skeleton shape="fill" className="aspect-2/3" />
-                <div className="space-y-3 p-4">
-                  <Skeleton shape="pill" className="h-6 w-16" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              </Card>
+            {Array.from({ length: TARJETAS_CARGANDO }, (_, indice) => (
+              <TarjetaWatchlistCargando key={indice} />
             ))}
           </ul>
         </>
@@ -89,7 +83,7 @@ export function PaginaWatchlist() {
       {!cargando && !error && titulos.length === 0 && (
         <Card padding="none" className="flex flex-col items-center gap-3 px-6 py-10 text-center">
           <IconBadge icon={BookmarkIcon} />
-          <h2 className="font-sans text-xl font-semibold">Todavía no agregaste títulos</h2>
+          <SectionTitle>Todavía no agregaste títulos</SectionTitle>
           <p className="text-muted">Cuando encuentres algo para ver, guardalo desde su detalle.</p>
           <ButtonLink to={RUTAS.BUSQUEDA} size="compact" fullWidth={false} className="mt-2">
             Buscar títulos

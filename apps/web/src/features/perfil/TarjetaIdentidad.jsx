@@ -4,6 +4,7 @@ import { getRegionLabel } from '../../contexts/region/regionLabel.js';
 import { Avatar } from '../../components/ui/Avatar.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
 import { Card } from '../../components/ui/Card.jsx';
+import { Skeleton } from '../../components/ui/Skeleton.jsx';
 
 export function TarjetaIdentidad({ className = '' }) {
   const { user } = useSession();
@@ -18,7 +19,9 @@ export function TarjetaIdentidad({ className = '' }) {
           <dd className="truncate font-semibold">{user.email}</dd>
         </dl>
       </div>
-      {!loading && (
+      {loading ? (
+        <Skeleton className="mt-5 h-6 w-40" />
+      ) : (
         <p className="mt-5 flex items-center gap-2 text-sm text-muted">
           {getRegionLabel(source)}
           <Chip>{region}</Chip>

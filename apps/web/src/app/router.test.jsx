@@ -128,6 +128,7 @@ describe('router de la aplicación', () => {
 
     expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
     expect(screen.getByLabelText('Título')).toHaveValue('Dune');
+    await user.click(screen.getByRole('button', { name: /^Filtros/ }));
     expect(screen.getByRole('radio', { name: 'Películas' })).toBeChecked();
     expect(screen.getByLabelText('Año')).toHaveValue(2021);
     expect(screen.getByText('Mostrando 1 de 1 título')).toBeInTheDocument();

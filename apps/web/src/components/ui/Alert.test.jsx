@@ -23,4 +23,11 @@ describe('Alert', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
+
+  it('el tono highlight también es un estado y no un error', () => {
+    render(<Alert tone="highlight">Todavía no elegiste nada</Alert>);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Todavía no elegiste nada');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

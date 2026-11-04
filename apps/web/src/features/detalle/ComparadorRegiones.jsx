@@ -8,23 +8,23 @@ import { Card } from '../../components/ui/Card.jsx';
 import { SeccionPlegable } from '../../components/ui/SeccionPlegable.jsx';
 import { CheckIcon, GlobeIcon } from '../../components/ui/icons.jsx';
 import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
-import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
 import { contarRegionesConPropias } from './comparacion.js';
 import { formatearNombreRegion, marcarPlataformasPropias } from './detalle.constants.js';
 import { SelectorRegiones } from './SelectorRegiones.jsx';
 import { TablaComparacion } from './TablaComparacion.jsx';
 import { useComparacionRegiones } from './useComparacionRegiones.js';
+import { useDistincionPropias } from './useDistincionPropias.js';
 
 export function ComparadorRegiones({
   tipo,
   tmdbId,
   regionActual,
-  ofertasRegionActual = [],
+  ofertasRegionActual = null,
   nombreTitulo,
 }) {
   const { user, loading: cargandoSesion } = useSession();
-  const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
+  const { seleccionadas, distinguirPropias } = useDistincionPropias();
   const [seleccion, setSeleccion] = useState([]);
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const { regiones, regionesFallidas, error, consultado, isLoading, comparar, reintentar } =
@@ -47,7 +47,6 @@ export function ComparadorRegiones({
     );
   }
 
-  const distinguirPropias = !cargandoPropias;
   const opcionesRegiones = REGIONES_SOPORTADAS.filter(({ codigo }) => codigo !== regionActual);
   const seleccionActiva = seleccion.filter((codigo) => codigo !== regionActual);
 
@@ -81,7 +80,9 @@ export function ComparadorRegiones({
   const marcar = (ofertas) =>
     marcarPlataformasPropias(ofertas, { distinguirPropias, seleccionadas });
   const filas = [
-    { region: regionActual, ofertas: marcar(ofertasRegionActual), esActual: true },
+    ...(ofertasRegionActual
+      ? [{ region: regionActual, ofertas: marcar(ofertasRegionActual), esActual: true }]
+      : []),
     ...regiones.map(({ region, ofertas }) => ({ region, ofertas: marcar(ofertas) })),
   ];
   const regionesConPropias = contarRegionesConPropias(filas);
@@ -100,7 +101,7 @@ export function ComparadorRegiones({
             opciones={opcionesRegiones}
             seleccion={seleccionActiva}
             abierto={selectorAbierto}
-            onAlternarAbierto={() => setSelectorAbierto((abierto) => !abierto)}
+            onAbiertoChange={setSelectorAbierto}
             onAlternar={alternarRegion}
           />
           <Button
@@ -135,10 +136,11 @@ export function ComparadorRegiones({
 
         {mostrarResultados && (
           <>
-            {distinguirPropias && (
+            {distinguirPropias && regionesConPropias > 0 && (
               <p className="flex items-center gap-2 text-sm font-medium text-success">
                 <CheckIcon className="size-4" />
-                Lo podés ver con tus plataformas en {regionesConPropias} de {filas.length} regiones.
+                Lo podés ver con tus plataformas en {regionesConPropias} de {filas.length}{' '}
+                {filas.length === 1 ? 'región' : 'regiones'}.
               </p>
             )}
             <TablaComparacion filas={filas} nombreTitulo={nombreTitulo} />

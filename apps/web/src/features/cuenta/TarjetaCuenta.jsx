@@ -1,4 +1,5 @@
 import { Card } from '../../components/ui/Card.jsx';
+import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 
 export function TarjetaCuenta({ id, titulo, descripcion, peligro = false, children }) {
   const tituloId = `${id}-titulo`;
@@ -12,12 +13,9 @@ export function TarjetaCuenta({ id, titulo, descripcion, peligro = false, childr
       padding="lg"
       className="scroll-mt-6"
     >
-      <h2
-        id={tituloId}
-        className={`font-sans text-xl font-semibold ${peligro ? 'text-danger' : ''}`}
-      >
+      <SectionTitle id={tituloId} className={peligro ? 'text-danger' : ''}>
         {titulo}
-      </h2>
+      </SectionTitle>
       {descripcion && <div className="mt-1 leading-relaxed text-muted">{descripcion}</div>}
       <div className="mt-4">{children}</div>
     </Card>

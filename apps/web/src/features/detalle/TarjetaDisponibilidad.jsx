@@ -11,7 +11,7 @@ const TAMANIOS_LOGO = {
   sm: 'small',
 };
 
-const tileClassName = `${TOOLTIP_TRIGGER_CLASS_NAME} inline-flex rounded-xl border border-border bg-surface p-1 ${FOCUS_RING_CLASS_NAME}`;
+const tileClassName = `${TOOLTIP_TRIGGER_CLASS_NAME} inline-flex rounded-field border border-border bg-surface p-1 ${FOCUS_RING_CLASS_NAME}`;
 
 function ContenidoTile({ plataforma, size, inactiva = false }) {
   return (
@@ -48,8 +48,9 @@ export function TarjetaDisponibilidad({ plataforma, esPropia, nombreTitulo, size
 
   if (!destino) {
     return (
-      <div className={tileClassName}>
+      <div role="group" tabIndex={0} aria-label={plataforma.nombre} className={tileClassName}>
         <ContenidoTile plataforma={plataforma} size={size} />
+        <Tooltip decorative>Disponible en {plataforma.nombre}</Tooltip>
       </div>
     );
   }

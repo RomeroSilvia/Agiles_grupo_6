@@ -3,6 +3,7 @@ import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
 import { Card } from '../../components/ui/Card.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
 import { Poster } from '../../components/ui/Poster.jsx';
+import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { rutaDetalle } from '../../app/rutas.js';
 import { ETIQUETAS_TIPO_TITULO_SINGULAR, MAX_LOGOS_POR_CARD } from './busqueda.constants.js';
@@ -42,9 +43,9 @@ export function ResultadoCard({ resultado }) {
         />
         <div className="flex flex-1 flex-col gap-2 p-4">
           <Chip className="self-start">{ETIQUETAS_TIPO_TITULO_SINGULAR[resultado.tipo]}</Chip>
-          <h3 className="line-clamp-2 font-sans text-base font-semibold text-foreground">
+          <SectionTitle as="h3" size="card" className="line-clamp-2 text-foreground">
             {nombre}
-          </h3>
+          </SectionTitle>
           <DatosTitulo anio={resultado.anio} puntuacion={resultado.puntuacion} />
           {visibles.length > 0 && (
             <div className="mt-auto flex items-center gap-1.5 border-t border-border pt-3">

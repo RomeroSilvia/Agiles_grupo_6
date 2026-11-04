@@ -4,7 +4,8 @@ import { Button } from '../../components/ui/Button.jsx';
 import { Card } from '../../components/ui/Card.jsx';
 import { SegmentedControl } from '../../components/ui/SegmentedControl.jsx';
 import { Select } from '../../components/ui/Select.jsx';
-import { FIELD_LABEL_CLASS_NAME, fieldClassName } from '../../components/ui/fieldClassName.js';
+import { TextField } from '../../components/ui/TextField.jsx';
+import { FIELD_LABEL_CLASS_NAME } from '../../components/ui/fieldClassName.js';
 import { ETIQUETAS_TIPO_TITULO } from './busqueda.constants.js';
 import { SelectorPersona } from './SelectorPersona.jsx';
 
@@ -24,14 +25,16 @@ export function PanelFiltros({
   id,
   abierto,
   filtros,
+  errorAnio,
   generos,
   isLoading,
   onChange,
   onCambiarPersona,
   onCambiarNombrePersona,
+  onErrorPersona,
 }) {
   return (
-    <Card id={id} padding="lg" className={abierto ? 'space-y-5' : 'hidden'}>
+    <Card id={id} hidden={!abierto} padding="lg" className="space-y-5">
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         <div className="md:col-span-2">
           <SegmentedControl
@@ -43,22 +46,18 @@ export function PanelFiltros({
           />
         </div>
 
-        <div className="space-y-1.5">
-          <label htmlFor="anio" className={FIELD_LABEL_CLASS_NAME}>
-            Año
-          </label>
-          <input
-            id="anio"
-            name="anio"
-            type="number"
-            min={ANIO_MINIMO}
-            max={ANIO_MAXIMO}
-            value={filtros.anio}
-            onChange={onChange}
-            placeholder="Cualquier año"
-            className={fieldClassName()}
-          />
-        </div>
+        <TextField
+          id="anio"
+          label="Año"
+          name="anio"
+          type="number"
+          min={ANIO_MINIMO}
+          max={ANIO_MAXIMO}
+          value={filtros.anio}
+          onChange={onChange}
+          placeholder="Cualquier año"
+          error={errorAnio}
+        />
 
         <div className="space-y-1.5">
           <label htmlFor="genero" className={FIELD_LABEL_CLASS_NAME}>
@@ -95,6 +94,7 @@ export function PanelFiltros({
           onNombreCargado={(personaId, nombre) =>
             onCambiarNombrePersona(ROL_PERSONA.ACTOR, personaId, nombre)
           }
+          onErrorPersona={onErrorPersona}
         />
         <SelectorPersona
           rol={ROL_PERSONA.DIRECTOR}
@@ -108,6 +108,7 @@ export function PanelFiltros({
           onNombreCargado={(personaId, nombre) =>
             onCambiarNombrePersona(ROL_PERSONA.DIRECTOR, personaId, nombre)
           }
+          onErrorPersona={onErrorPersona}
         />
       </div>
 

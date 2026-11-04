@@ -73,8 +73,14 @@ describe('Mis plataformas', () => {
     mockApi({ catalogo: () => new Promise(() => {}) });
     renderRoute('/mis-plataformas');
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Cargando plataformas');
+    expect(await screen.findByText('Cargando plataformas')).toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  });
+
+  it('ofrece volver al perfil', async () => {
+    renderRoute('/mis-plataformas');
+
+    expect(await screen.findByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/perfil');
   });
 
   it('guarda al activar una plataforma', async () => {

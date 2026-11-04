@@ -5,8 +5,8 @@ export function Select({ children, ...props }) {
   return (
     <div className="relative">
       <select
-        className={`${fieldClassName({ trailing: true })} cursor-pointer appearance-none`}
         {...props}
+        className={`${fieldClassName({ trailing: true })} cursor-pointer appearance-none`}
       >
         {children}
       </select>

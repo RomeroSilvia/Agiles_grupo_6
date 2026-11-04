@@ -4,6 +4,7 @@ import { TextButton } from './TextButton.jsx';
 const TONES = {
   danger: 'border-danger/30 bg-danger-surface text-danger',
   info: 'border-border bg-surface text-muted',
+  highlight: 'border-transparent bg-chip text-chip-foreground',
 };
 
 export function Alert({

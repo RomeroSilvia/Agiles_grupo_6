@@ -1,5 +1,4 @@
-import { Button } from '../../components/ui/Button.jsx';
-import { FormError } from '../../components/ui/FormError.jsx';
+import { Alert } from '../../components/ui/Alert.jsx';
 import { TarjetaPlataforma } from './TarjetaPlataforma.jsx';
 import { TarjetaPlataformaCargando } from './TarjetaPlataformaCargando.jsx';
 import { usePlataformas } from './usePlataformas.js';
@@ -22,19 +21,13 @@ export function ListaPlataformas() {
 
   return (
     <div className="space-y-5">
-      <FormError>{error}</FormError>
-
-      {cargaFallida && !loading && (
-        <Button onClick={reintentar} className="md:w-auto">
-          Reintentar
-        </Button>
-      )}
+      {error && <Alert onRetry={cargaFallida && !loading ? reintentar : undefined}>{error}</Alert>}
 
       {sinSeleccion && (
-        <p className="rounded-xl bg-chip px-4 py-3 text-sm font-medium text-chip-foreground">
+        <Alert tone="highlight">
           Todavía no elegiste ninguna plataforma. Activá las que tenés contratadas para ver primero
           dónde podés mirar cada título.
-        </p>
+        </Alert>
       )}
 
       {loading && (

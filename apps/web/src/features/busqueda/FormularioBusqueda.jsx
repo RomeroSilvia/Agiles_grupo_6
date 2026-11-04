@@ -1,5 +1,6 @@
-import { useId, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { tieneFiltrosAvanzados } from '@buscador/shared/schemas';
+import { FormError } from '../../components/ui/FormError.jsx';
 import { BarraBusqueda } from './BarraBusqueda.jsx';
 import { FiltrosActivos } from './FiltrosActivos.jsx';
 import { listarFiltrosActivos } from './filtrosActivos.js';
@@ -7,6 +8,7 @@ import { PanelFiltros } from './PanelFiltros.jsx';
 
 export function FormularioBusqueda({
   filtros,
+  erroresFiltros = {},
   isLoading,
   onChange,
   onSubmit,
@@ -22,8 +24,12 @@ export function FormularioBusqueda({
   onReintentarGeneros,
 }) {
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  const [errorGenerosAnterior, setErrorGenerosAnterior] = useState(errorGeneros);
   const panelFiltrosId = useId();
+  const abrirFiltros = useCallback(() => setFiltrosAbiertos(true), []);
   const filtrosActivos = listarFiltrosActivos(filtros, generos);
+  const { anio: errorAnio, ...erroresGenerales } = erroresFiltros;
+  const [errorGeneral] = Object.values(erroresGenerales);
   const hayFiltrosAvanzados = tieneFiltrosAvanzados(filtros);
   const hayFiltrosParaLimpiar = Boolean(
     filtros.tipo ||
@@ -37,6 +43,20 @@ export function FormularioBusqueda({
     filtros.tipo || filtros.anio || filtros.soloPropias || hayFiltrosAvanzados,
   );
 
+  if (errorGeneros !== errorGenerosAnterior) {
+    setErrorGenerosAnterior(errorGeneros);
+    if (errorGeneros) {
+      setFiltrosAbiertos(true);
+    }
+  }
+
+  function enviar(event) {
+    const errores = onSubmit(event);
+    if (errores?.anio) {
+      abrirFiltros();
+    }
+  }
+
   function quitarFiltro({ clave, esPersona }) {
     if (esPersona) {
       onCambiarPersona(clave, null, '');
@@ -47,7 +67,7 @@ export function FormularioBusqueda({
 
   return (
     <div className="mb-10 space-y-4">
-      <form aria-label="Buscar títulos" className="space-y-3" onSubmit={onSubmit}>
+      <form noValidate aria-label="Buscar títulos" className="space-y-3" onSubmit={enviar}>
         <BarraBusqueda
           titulo={filtros.q}
           tituloRequerido={!hayFiltrosSinTitulo}
@@ -58,6 +78,7 @@ export function FormularioBusqueda({
           panelFiltrosId={panelFiltrosId}
           onAlternarFiltros={() => setFiltrosAbiertos((abiertos) => !abiertos)}
         />
+        <FormError>{errorGeneral}</FormError>
         {hayFiltrosParaLimpiar && (
           <FiltrosActivos
             filtros={filtrosActivos}
@@ -69,6 +90,7 @@ export function FormularioBusqueda({
           id={panelFiltrosId}
           abierto={filtrosAbiertos}
           filtros={filtros}
+          errorAnio={errorAnio}
           generos={{
             lista: generos,
             isLoading: isLoadingGeneros,
@@ -81,6 +103,7 @@ export function FormularioBusqueda({
           onChange={onChange}
           onCambiarPersona={onCambiarPersona}
           onCambiarNombrePersona={onCambiarNombrePersona}
+          onErrorPersona={abrirFiltros}
         />
       </form>
     </div>

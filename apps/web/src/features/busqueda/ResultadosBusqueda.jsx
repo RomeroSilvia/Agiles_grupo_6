@@ -1,6 +1,7 @@
 import { Alert } from '../../components/ui/Alert.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Card } from '../../components/ui/Card.jsx';
+import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { CARDS_CARGANDO } from './busqueda.constants.js';
 import { EstadoSinResultadosPropios } from './EstadoSinResultadosPropios.jsx';
 import { ResultadoCard } from './ResultadoCard.jsx';
@@ -93,11 +94,11 @@ export function ResultadosBusqueda({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           {hayResultados ? (
             <div className="space-y-1">
-              <h2 className="font-sans text-xl font-semibold">
+              <SectionTitle>
                 {tituloBuscado
                   ? `Resultados para "${tituloBuscado}"`
                   : 'Resultados con los filtros seleccionados'}
-              </h2>
+              </SectionTitle>
               <p role="status" aria-live="polite" className="text-sm text-muted">
                 {busquedaFiltrada
                   ? 'Resultados encontrados para tus plataformas'

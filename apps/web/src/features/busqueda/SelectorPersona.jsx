@@ -18,6 +18,7 @@ export function SelectorPersona({
   onConsultaChange,
   onSeleccionar,
   onNombreCargado,
+  onErrorPersona,
 }) {
   const inputId = useId();
   const listId = useId();
@@ -48,6 +49,14 @@ export function SelectorPersona({
       onNombreCargado?.(persona.id, respuestaPersona.datos.nombre);
     }
   }, [onNombreCargado, persona?.id, persona?.nombre, respuestaPersona.datos?.nombre]);
+
+  const fallaronDatosPersona = Boolean(persona?.id && respuestaPersona.error);
+
+  useEffect(() => {
+    if (fallaronDatosPersona) {
+      onErrorPersona?.();
+    }
+  }, [fallaronDatosPersona, onErrorPersona]);
 
   const consultaValida = personaBusquedaSchema.safeParse({ q: texto, rol });
   const mostrarOpciones =

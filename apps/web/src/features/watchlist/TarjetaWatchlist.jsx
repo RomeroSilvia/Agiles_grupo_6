@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button.jsx';
 import { Card } from '../../components/ui/Card.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
 import { Poster } from '../../components/ui/Poster.jsx';
+import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { TrashIcon } from '../../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { rutaDetalle } from '../../app/rutas.js';
@@ -23,9 +24,9 @@ export function TarjetaWatchlist({ item, quitando, deshabilitado = false, onQuit
         <Poster posterUrl={titulo.posterUrl} nombre={nombre} className="aspect-2/3" />
         <div className="space-y-2 p-4">
           <Chip>{ETIQUETAS_TIPO_TITULO_SINGULAR[titulo.tipo]}</Chip>
-          <h2 className="line-clamp-2 font-sans text-base font-semibold group-hover:underline">
+          <SectionTitle size="card" className="line-clamp-2 group-hover:underline">
             {nombre}
-          </h2>
+          </SectionTitle>
           <DatosTitulo anio={titulo.anio} puntuacion={titulo.puntuacion} />
         </div>
       </Link>

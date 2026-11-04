@@ -9,10 +9,10 @@ import { Chip } from '../../components/ui/Chip.jsx';
 import { ExternalLink } from '../../components/ui/ExternalLink.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { Poster } from '../../components/ui/Poster.jsx';
+import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { ArrowUpRightIcon, BookmarkIcon, StarIcon } from '../../components/ui/icons.jsx';
 import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { formatearPuntuacion } from '../../utils/formatearPuntuacion.js';
-import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
 import { ETIQUETAS_TIPO_TITULO_SINGULAR } from '../busqueda/busqueda.constants.js';
@@ -25,6 +25,7 @@ import { marcarPlataformasPropias } from './detalle.constants.js';
 import { ListaOfertas } from './ListaOfertas.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
+import { useDistincionPropias } from './useDistincionPropias.js';
 import { RUTAS } from '../../app/rutas.js';
 import { useWatchlistTitle } from '../watchlist/useWatchlistTitle.js';
 
@@ -49,8 +50,7 @@ export function PaginaDetalleTitulo() {
     alternar: alternarWatchlist,
     reintentar: reintentarWatchlist,
   } = useWatchlistTitle({ tipo, tmdbId });
-  const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
-  const distinguirPropias = Boolean(user) && !cargandoSesion && !cargandoPropias;
+  const { seleccionadas, distinguirPropias } = useDistincionPropias();
 
   const ofertasConPropiedad = useMemo(
     () => marcarPlataformasPropias(ofertas, { distinguirPropias, seleccionadas }),
@@ -163,7 +163,7 @@ export function PaginaDetalleTitulo() {
           </dl>
 
           <div className="space-y-2">
-            <h2 className="font-sans text-xl font-semibold">Sinopsis</h2>
+            <SectionTitle>Sinopsis</SectionTitle>
             <p className="max-w-3xl leading-7 text-muted">
               {titulo.sinopsis ?? 'Sinopsis no disponible'}
             </p>
@@ -171,9 +171,7 @@ export function PaginaDetalleTitulo() {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <h2 id="seccion-disponibilidad" className="font-sans text-xl font-semibold">
-                Plataformas disponibles
-              </h2>
+              <SectionTitle id="seccion-disponibilidad">Plataformas disponibles</SectionTitle>
               {!regionLoading && region && (
                 <span aria-label={`Región de disponibilidad: ${region}`}>
                   <Chip>{region}</Chip>
@@ -237,7 +235,9 @@ export function PaginaDetalleTitulo() {
                   tipo={tipo}
                   tmdbId={tmdbId}
                   regionActual={region}
-                  ofertasRegionActual={cargandoDisponibilidad || errorDisponibilidad ? [] : ofertas}
+                  ofertasRegionActual={
+                    cargandoDisponibilidad || errorDisponibilidad ? null : ofertas
+                  }
                   nombreTitulo={titulo.nombre}
                 />
               </div>

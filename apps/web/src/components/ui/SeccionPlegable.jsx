@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { ChevronDownIcon } from './icons.jsx';
+import { IconBadge } from './IconBadge.jsx';
 import { FOCUS_RING_CLASS_NAME } from './focusRing.js';
 import { CARD_CLASS_NAME } from './surface.js';
 
@@ -9,6 +10,7 @@ export function SeccionPlegable({
   descripcion,
   nivelTitulo: NivelTitulo = 'h2',
   plegableEnEscritorio = false,
+  icono,
   className = '',
   children,
 }) {
@@ -25,8 +27,13 @@ export function SeccionPlegable({
           onClick={() => setAbierta((actual) => !actual)}
           className={`flex w-full cursor-pointer items-center gap-3 px-4.5 py-4 text-left ${CARD_CLASS_NAME} ${FOCUS_RING_CLASS_NAME}`}
         >
+          {icono && <IconBadge icon={icono} size="sm" />}
           <span className="flex-1">
-            <span className="block text-xl font-bold">{titulo}</span>
+            <span
+              className={`block ${icono ? 'font-sans text-base font-semibold' : 'text-xl font-bold'}`}
+            >
+              {titulo}
+            </span>
             <span className="block font-sans text-sm text-muted">{resumen}</span>
           </span>
           <ChevronDownIcon

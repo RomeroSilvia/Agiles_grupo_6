@@ -14,7 +14,7 @@ export function Switch({ id, checked, onChange, label, disabled = false }) {
     >
       <span
         aria-hidden="true"
-        className={`size-5 rounded-full bg-white shadow-sm transition-transform duration-150 ${checked ? 'translate-x-4.5' : 'translate-x-0'}`}
+        className={`size-5 rounded-full bg-switch-knob shadow-sm transition-transform duration-150 ${checked ? 'translate-x-4.5' : 'translate-x-0'}`}
       />
     </button>
   );

@@ -1,7 +1,7 @@
 export function Poster({ posterUrl, nombre, className = '', loading = 'lazy' }) {
   return (
     <div
-      className={`relative flex w-full items-center justify-center overflow-hidden bg-background ${className}`}
+      className={`relative flex items-center justify-center overflow-hidden bg-background ${className}`}
     >
       {posterUrl ? (
         <img

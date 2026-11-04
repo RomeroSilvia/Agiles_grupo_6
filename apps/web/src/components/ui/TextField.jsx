@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { AlertIcon } from './icons.jsx';
+import { FIELD_LABEL_CLASS_NAME, fieldClassName } from './fieldClassName.js';
 
 /**
  * Campo de texto con label visible, ayuda opcional y error debajo del campo.
@@ -21,7 +22,7 @@ export function TextField({ label, error, hint, trailing, id: idProp, ...inputPr
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-foreground">
+      <label htmlFor={id} className={FIELD_LABEL_CLASS_NAME}>
         {label}
       </label>
 
@@ -30,9 +31,7 @@ export function TextField({ label, error, hint, trailing, id: idProp, ...inputPr
           id={id}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={`block min-h-12 w-full rounded-lg border bg-surface px-3.5 text-base text-foreground transition-colors duration-150 placeholder:text-muted focus:border-primary focus:outline-2 focus:-outline-offset-1 focus:outline-primary ${
-            error ? 'border-danger' : 'border-border-strong hover:border-muted'
-          } ${trailing ? 'pr-12' : ''}`}
+          className={fieldClassName({ invalid: Boolean(error), trailing: Boolean(trailing) })}
           {...inputProps}
         />
         {trailing && (

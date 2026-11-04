@@ -32,6 +32,12 @@
   --panel-foreground: #f4f6f5;
   --panel-muted: #a7b4ae;
   --panel-accent: #6fd3a8;
+
+  --rating: #e6a100;
+  --switch-knob: #ffffff;
+  --skeleton: #e4e9e6;
+  --plataforma-inactiva: #8a9590;
+  --plataforma-inactiva-foreground: #ffffff;
 }
 
 .dark {
@@ -62,6 +68,12 @@
   --panel-foreground: #f4f6f5;
   --panel-muted: #a7b4ae;
   --panel-accent: #72d9ad;
+
+  --rating: #f5b82e;
+  --switch-knob: #ffffff;
+  --skeleton: #22302a;
+  --plataforma-inactiva: #4d5c55;
+  --plataforma-inactiva-foreground: #d5ddd9;
 }
 
 /*
@@ -152,6 +164,14 @@
   --color-panel-accent: var(--panel-accent);
   --color-plataforma: var(--plataforma);
   --color-plataforma-foreground: var(--plataforma-foreground);
+  --color-plataforma-inactiva: var(--plataforma-inactiva);
+  --color-plataforma-inactiva-foreground: var(--plataforma-inactiva-foreground);
+  --color-rating: var(--rating);
+  --color-switch-knob: var(--switch-knob);
+  --color-skeleton: var(--skeleton);
+
+  --radius-card: 1rem;
+  --radius-field: 0.75rem;
 }
 
 @layer base {

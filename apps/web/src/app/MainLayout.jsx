@@ -7,6 +7,7 @@ import { Chip } from '../components/ui/Chip.jsx';
 import { LogoInicio } from '../components/ui/LogoInicio.jsx';
 import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
+import { ButtonLink } from '../components/ui/ButtonLink.jsx';
 import { IconButton } from '../components/ui/IconButton.jsx';
 import { BookmarkIcon, MenuIcon, XIcon } from '../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../components/ui/focusRing.js';
@@ -55,12 +56,11 @@ function AccionesDeSesion() {
         <span className="sm:hidden">Ingresar</span>
         <span className="hidden sm:inline">Iniciar sesión</span>
       </Link>
-      <Link
-        to={RUTAS.REGISTRO}
-        className={`hidden min-h-11 items-center rounded-full bg-accent px-4 text-sm font-semibold whitespace-nowrap text-accent-foreground transition-colors duration-150 hover:bg-accent-hover sm:inline-flex ${FOCUS_RING_CLASS_NAME}`}
-      >
-        Crear cuenta
-      </Link>
+      <span className="hidden sm:inline-flex">
+        <ButtonLink to={RUTAS.REGISTRO} variant="accent" size="sm" fullWidth={false}>
+          Crear cuenta
+        </ButtonLink>
+      </span>
     </div>
   );
 }

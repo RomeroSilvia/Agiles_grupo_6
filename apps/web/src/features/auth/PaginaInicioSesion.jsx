@@ -6,6 +6,7 @@ import { useZodForm } from '../../hooks/useZodForm.js';
 import { Button } from '../../components/ui/Button.jsx';
 import { TextField } from '../../components/ui/TextField.jsx';
 import { PasswordField } from '../../components/ui/PasswordField.jsx';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
 import { MensajeAside } from './MensajeAside.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
@@ -47,8 +48,10 @@ export function PaginaInicioSesion() {
         />
       }
     >
-      <h1 className="text-3xl font-extrabold tracking-tight">Iniciar sesión</h1>
-      <p className="mt-2 text-muted">Accedé a tu cuenta para seguir donde dejaste.</p>
+      <PageHeader
+        titulo="Iniciar sesión"
+        descripcion="Accedé a tu cuenta para seguir donde dejaste."
+      />
 
       <form noValidate onSubmit={handleSubmit} className="mt-8 space-y-5">
         <TextField

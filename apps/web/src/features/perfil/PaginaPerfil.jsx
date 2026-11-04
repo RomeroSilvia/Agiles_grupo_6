@@ -1,5 +1,6 @@
 import { ListaPlataformas } from '../plataformas/ListaPlataformas.jsx';
 import { DESCRIPCION_MIS_PLATAFORMAS } from '../plataformas/plataformas.constants.js';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { SeccionPlegable } from '../../components/ui/SeccionPlegable.jsx';
 import { AccionesCuenta } from './AccionesCuenta.jsx';
 import { TarjetaIdentidad } from './TarjetaIdentidad.jsx';
@@ -7,7 +8,7 @@ import { TarjetaIdentidad } from './TarjetaIdentidad.jsx';
 export function PaginaPerfil() {
   return (
     <section className="space-y-6">
-      <h1 className="text-3xl font-extrabold tracking-tight">Mi perfil</h1>
+      <PageHeader titulo="Mi perfil" />
 
       <div className="grid gap-4 lg:grid-cols-3 lg:grid-rows-[auto_1fr] lg:gap-8">
         <TarjetaIdentidad className="lg:col-start-1 lg:row-start-1" />

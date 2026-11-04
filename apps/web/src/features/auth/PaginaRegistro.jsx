@@ -6,7 +6,9 @@ import { useZodForm } from '../../hooks/useZodForm.js';
 import { Button } from '../../components/ui/Button.jsx';
 import { TextField } from '../../components/ui/TextField.jsx';
 import { CheckIcon } from '../../components/ui/icons.jsx';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { AuthLayout } from './AuthLayout.jsx';
+import { MensajeAside } from './MensajeAside.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
 import { CamposPasswordNueva } from './CamposPasswordNueva.jsx';
 import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
@@ -51,10 +53,7 @@ export function PaginaRegistro() {
   return (
     <AuthLayout
       aside={
-        <>
-          <p className="text-5xl leading-[1.05] font-extrabold tracking-tight text-balance xl:text-6xl">
-            Gratis, para empezar hoy
-          </p>
+        <MensajeAside titulo="Gratis, para empezar hoy">
           <ul className="mt-8 space-y-4 text-lg">
             {BENEFICIOS.map((beneficio) => (
               <li key={beneficio} className="flex items-start gap-3">
@@ -63,11 +62,10 @@ export function PaginaRegistro() {
               </li>
             ))}
           </ul>
-        </>
+        </MensajeAside>
       }
     >
-      <h1 className="text-3xl font-extrabold tracking-tight">Creá tu cuenta</h1>
-      <p className="mt-2 text-muted">Tarda menos de un minuto.</p>
+      <PageHeader titulo="Creá tu cuenta" descripcion="Tarda menos de un minuto." />
 
       <form noValidate onSubmit={handleSubmit} className="mt-8 space-y-5">
         <TextField

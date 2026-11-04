@@ -143,6 +143,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+async function abrirSelectorRegiones() {
+  fireEvent.click(await screen.findByRole('button', { name: /Agregar región/ }));
+}
+
 describe('PaginaDetalleTitulo', () => {
   it('agrega y quita el título de la watchlist desde el detalle', async () => {
     const fetchMock = configurarFetchWatchlist();
@@ -879,12 +883,13 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      const botonUs = await screen.findByRole('button', { name: /Estados Unidos \(US\)/i });
-      fireEvent.click(botonUs);
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
 
       const resultados = await screen.findByLabelText('Resultados de comparación por región');
-      expect(within(resultados).getByText('Estados Unidos (US)')).toBeInTheDocument();
+      expect(within(resultados).getByText('Estados Unidos')).toBeInTheDocument();
+      expect(within(resultados).getByText('Tu región')).toBeInTheDocument();
       expect(within(resultados).getByText('Disney Plus')).toBeInTheDocument();
     });
 
@@ -919,8 +924,9 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      fireEvent.click(await screen.findByRole('button', { name: /España \(ES\)/i }));
-      fireEvent.click(screen.getByRole('button', { name: /México \(MX\)/i }));
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /España \(ES\)/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /México \(MX\)/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
 
       expect(
@@ -978,8 +984,9 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      fireEvent.click(await screen.findByRole('button', { name: /Estados Unidos \(US\)/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Brasil \(BR\)/i }));
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /Brasil \(BR\)/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
 
       expect(
@@ -994,13 +1001,30 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      const botonAcordeon = await screen.findByRole('button', {
-        name: /Comparar disponibilidad en otras regiones/i,
-      });
+      const botonAcordeon = await screen.findByRole('button', { name: /^Comparar regiones/ });
       expect(botonAcordeon).toHaveAttribute('aria-expanded', 'false');
 
       fireEvent.click(botonAcordeon);
       expect(botonAcordeon).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('permite marcar varias regiones seguidas sin cerrar la lista', async () => {
+      configurarFetch();
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /Brasil \(BR\)/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /Chile \(CL\)/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /Uruguay \(UY\)/i }));
+
+      expect(screen.getByRole('button', { name: /Agregar región 3\/5/ })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      );
+      expect(screen.getByRole('button', { name: 'Quitar Brasil' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Quitar Chile' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Quitar Uruguay' })).toBeInTheDocument();
     });
 
     it('deshabilita las demás regiones al seleccionar el máximo de 5 regiones', async () => {
@@ -1016,12 +1040,14 @@ describe('PaginaDetalleTitulo', () => {
         /Estados Unidos \(US\)/i,
       ];
 
+      await abrirSelectorRegiones();
       for (const patron of regionesASeleccionar) {
-        fireEvent.click(await screen.findByRole('button', { name: patron }));
+        fireEvent.click(screen.getByRole('checkbox', { name: patron }));
       }
 
-      expect(screen.getByRole('button', { name: /España \(ES\)/i })).toBeDisabled();
-      expect(screen.getByRole('button', { name: /Estados Unidos \(US\)/i })).toBeEnabled();
+      expect(screen.getByRole('checkbox', { name: /España \(ES\)/i })).toBeDisabled();
+      expect(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /Agregar región 5\/5/ })).toBeInTheDocument();
     });
 
     it('muestra el error total (502) y permite reintentar la comparación', async () => {
@@ -1067,7 +1093,8 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      fireEvent.click(await screen.findByRole('button', { name: /Estados Unidos \(US\)/i }));
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
 
       expect(await screen.findByText('No se pudo consultar TMDB')).toBeInTheDocument();

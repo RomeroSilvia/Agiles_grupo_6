@@ -1,21 +1,28 @@
 import { useId } from 'react';
+import { ExternalLink } from '../../components/ui/ExternalLink.jsx';
+import { TOOLTIP_TRIGGER_CLASS_NAME, Tooltip } from '../../components/ui/Tooltip.jsx';
+import { ArrowUpRightIcon } from '../../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
 import { obtenerDestinoPlataforma } from './destinoPlataforma.js';
 
-const tarjetaClassName =
-  'flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3';
+const TAMANIOS_LOGO = {
+  md: 'medium',
+  sm: 'small',
+};
 
-function ContenidoTarjeta({ plataforma }) {
+const tileClassName = `${TOOLTIP_TRIGGER_CLASS_NAME} inline-flex rounded-xl border border-border bg-surface p-1 ${FOCUS_RING_CLASS_NAME}`;
+
+function ContenidoTile({ plataforma, size, inactiva = false }) {
   return (
     <>
-      <LogoPlataforma plataforma={plataforma} />
-      <span className="font-semibold text-foreground">{plataforma.nombre}</span>
+      <LogoPlataforma plataforma={plataforma} size={TAMANIOS_LOGO[size]} inactiva={inactiva} />
+      <span className="sr-only">{plataforma.nombre}</span>
     </>
   );
 }
 
-function TarjetaNoPropia({ plataforma }) {
+function TarjetaNoPropia({ plataforma, size }) {
   const tooltipId = useId();
 
   return (
@@ -24,33 +31,25 @@ function TarjetaNoPropia({ plataforma }) {
       tabIndex={0}
       aria-label={`${plataforma.nombre} (no está en tus plataformas)`}
       aria-describedby={tooltipId}
-      className={`${tarjetaClassName} group relative cursor-not-allowed ${FOCUS_RING_CLASS_NAME}`}
+      className={`${tileClassName} cursor-not-allowed`}
     >
-      <div aria-hidden="true" className="flex items-center gap-3.5 opacity-60 blur-[2px]">
-        <ContenidoTarjeta plataforma={plataforma} />
-      </div>
-      <span
-        id={tooltipId}
-        role="tooltip"
-        className="pointer-events-none invisible absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-xl bg-foreground px-3 py-2 text-center text-sm font-medium text-background opacity-0 shadow-md transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100"
-      >
-        No tenés {plataforma.nombre} en tus plataformas
-      </span>
+      <ContenidoTile plataforma={plataforma} size={size} inactiva />
+      <Tooltip id={tooltipId}>No tenés {plataforma.nombre} en tus plataformas</Tooltip>
     </div>
   );
 }
 
-export function TarjetaDisponibilidad({ plataforma, esPropia, nombreTitulo }) {
+export function TarjetaDisponibilidad({ plataforma, esPropia, nombreTitulo, size = 'md' }) {
   if (!esPropia) {
-    return <TarjetaNoPropia plataforma={plataforma} />;
+    return <TarjetaNoPropia plataforma={plataforma} size={size} />;
   }
 
   const destino = obtenerDestinoPlataforma(plataforma);
 
   if (!destino) {
     return (
-      <div className={tarjetaClassName}>
-        <ContenidoTarjeta plataforma={plataforma} />
+      <div className={tileClassName}>
+        <ContenidoTile plataforma={plataforma} size={size} />
       </div>
     );
   }
@@ -61,15 +60,19 @@ export function TarjetaDisponibilidad({ plataforma, esPropia, nombreTitulo }) {
       : `Ir a ${plataforma.nombre}`;
 
   return (
-    <a
+    <ExternalLink
       href={destino.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`${tarjetaClassName} transition-colors duration-150 hover:border-primary/50 ${FOCUS_RING_CLASS_NAME}`}
       aria-label={etiqueta}
-      title={etiqueta}
+      className={`${tileClassName} transition-colors duration-150 hover:border-primary`}
     >
-      <ContenidoTarjeta plataforma={plataforma} />
-    </a>
+      <ContenidoTile plataforma={plataforma} size={size} />
+      <span
+        aria-hidden="true"
+        className="absolute -top-1.5 -right-1.5 inline-flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-surface"
+      >
+        <ArrowUpRightIcon className="size-3" />
+      </span>
+      <Tooltip decorative>{etiqueta}</Tooltip>
+    </ExternalLink>
   );
 }

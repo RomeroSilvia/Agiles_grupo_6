@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import { personaBusquedaSchema, personaIdBusquedaSchema } from '@buscador/shared/schemas';
+import { Alert } from '../../components/ui/Alert.jsx';
+import { SearchField } from '../../components/ui/SearchField.jsx';
+import { FIELD_LABEL_CLASS_NAME } from '../../components/ui/fieldClassName.js';
+import { cardClassName } from '../../components/ui/surface.js';
 import { useRemoteOptions } from '../../hooks/useRemoteOptions.js';
 import { obtenerPersonaBusqueda } from './busqueda.api.js';
-import { CAMPO_BUSQUEDA_CLASS_NAME, ETIQUETA_BUSQUEDA_CLASS_NAME } from './busqueda.styles.js';
 import { usePersonasBusqueda } from './usePersonasBusqueda.js';
 
 const MENSAJE_ERROR_PERSONA = 'No se pudieron cargar los datos de la persona. Probá de nuevo.';
@@ -94,12 +97,12 @@ export function SelectorPersona({
   }
 
   return (
-    <div className="relative space-y-2" onBlur={handleBlur}>
-      <label htmlFor={inputId} className={ETIQUETA_BUSQUEDA_CLASS_NAME}>
+    <div className="relative space-y-1.5" onBlur={handleBlur}>
+      <label htmlFor={inputId} className={FIELD_LABEL_CLASS_NAME}>
         {etiqueta}
       </label>
       <div className="relative">
-        <input
+        <SearchField
           id={inputId}
           type="text"
           role="combobox"
@@ -117,8 +120,7 @@ export function SelectorPersona({
           onKeyDown={handleKeyDown}
           onFocus={() => setPopupAbierto(true)}
           autoComplete="off"
-          placeholder={`Buscá ${etiqueta.toLocaleLowerCase('es')}`}
-          className={`${CAMPO_BUSQUEDA_CLASS_NAME} placeholder:text-muted`}
+          placeholder={`Buscar ${etiqueta.toLocaleLowerCase('es')}...`}
         />
       </div>
       {persona?.id && respuestaPersona.isLoading && (
@@ -127,26 +129,14 @@ export function SelectorPersona({
         </p>
       )}
       {persona?.id && respuestaPersona.error && (
-        <div role="alert" className="space-y-2 text-sm text-danger">
-          <p>{respuestaPersona.error}</p>
-          <button type="button" onClick={respuestaPersona.reintentar} className="underline">
-            Reintentar
-          </button>
-        </div>
+        <Alert onRetry={respuestaPersona.reintentar}>{respuestaPersona.error}</Alert>
       )}
       {!persona?.id && isLoading && (
         <p role="status" className="text-sm text-muted">
           Buscando personas...
         </p>
       )}
-      {!persona?.id && error && (
-        <div role="alert" className="space-y-2 text-sm text-danger">
-          <p>{error}</p>
-          <button type="button" onClick={reintentar} className="underline">
-            Reintentar
-          </button>
-        </div>
-      )}
+      {!persona?.id && error && <Alert onRetry={reintentar}>{error}</Alert>}
       {!persona?.id && !isLoading && !error && consultaValida.success && personas.length === 0 && (
         <p role="status" className="text-sm text-muted">
           No encontramos personas con ese nombre.
@@ -157,7 +147,10 @@ export function SelectorPersona({
           id={listId}
           role="listbox"
           aria-label={`Opciones de ${etiqueta.toLocaleLowerCase('es')}`}
-          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-border bg-surface p-1 shadow-lg"
+          className={cardClassName({
+            padding: 'none',
+            className: 'absolute z-10 mt-1 max-h-60 w-full overflow-auto p-1 shadow-lg',
+          })}
         >
           {personas.map((opcion, indice) => (
             <li

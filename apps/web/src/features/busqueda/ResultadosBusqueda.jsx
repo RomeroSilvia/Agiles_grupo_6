@@ -1,4 +1,6 @@
+import { Alert } from '../../components/ui/Alert.jsx';
 import { Button } from '../../components/ui/Button.jsx';
+import { Card } from '../../components/ui/Card.jsx';
 import { CARDS_CARGANDO } from './busqueda.constants.js';
 import { EstadoSinResultadosPropios } from './EstadoSinResultadosPropios.jsx';
 import { ResultadoCard } from './ResultadoCard.jsx';
@@ -44,7 +46,9 @@ function obtenerVista({
 }
 
 function GrillaResultados({ children }) {
-  return <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{children}</div>;
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{children}</div>
+  );
 }
 
 function CardsCargando() {
@@ -67,6 +71,7 @@ export function ResultadosBusqueda({
   onReintentar,
   onCargarMas,
   onVerTodos,
+  acciones,
 }) {
   const vista = obtenerVista({
     isLoading,
@@ -80,8 +85,34 @@ export function ResultadosBusqueda({
   const hayMasPaginas = pagina < totalPaginas;
   const mostrarVerificacionIncompleta = busquedaFiltrada && verificacionIncompleta;
 
+  const hayResultados = vista === VISTAS_RESULTADOS.RESULTADOS;
+
   return (
-    <section>
+    <section className="space-y-5">
+      {(hayResultados || acciones) && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          {hayResultados ? (
+            <div className="space-y-1">
+              <h2 className="font-sans text-xl font-semibold">
+                {tituloBuscado
+                  ? `Resultados para "${tituloBuscado}"`
+                  : 'Resultados con los filtros seleccionados'}
+              </h2>
+              <p role="status" aria-live="polite" className="text-sm text-muted">
+                {busquedaFiltrada
+                  ? 'Resultados encontrados para tus plataformas'
+                  : hayFiltrosAvanzados
+                    ? `Mostrando ${resultados.length} ${resultados.length === 1 ? 'resultado' : 'resultados'}`
+                    : `Mostrando ${resultados.length} de ${totalResultados} ${totalResultados === 1 ? 'título' : 'títulos'}`}
+              </p>
+            </div>
+          ) : (
+            <span />
+          )}
+          {acciones}
+        </div>
+      )}
+
       {vista === VISTAS_RESULTADOS.CARGANDO && (
         <>
           <p role="status" aria-live="polite" className="sr-only">
@@ -94,17 +125,9 @@ export function ResultadosBusqueda({
       )}
 
       {vista === VISTAS_RESULTADOS.ERROR && (
-        <div
-          role="alert"
-          className="space-y-4 rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
-        >
-          <p>{error}</p>
-          {(busquedaFiltrada || hayFiltrosAvanzados) && (
-            <Button variant="outlineDanger" size="compact" fullWidth={false} onClick={onReintentar}>
-              Reintentar
-            </Button>
-          )}
-        </div>
+        <Alert onRetry={busquedaFiltrada || hayFiltrosAvanzados ? onReintentar : undefined}>
+          {error}
+        </Alert>
       )}
 
       {vista === VISTAS_RESULTADOS.SIN_RESULTADOS_PROPIOS && (
@@ -119,7 +142,7 @@ export function ResultadosBusqueda({
       )}
 
       {vista === VISTAS_RESULTADOS.SIN_RESULTADOS && (
-        <div className="space-y-4 rounded-2xl border border-border bg-surface p-5 text-muted">
+        <Card padding="lg" className="space-y-4 text-muted">
           <p role="status" aria-live="polite">
             {hayFiltrosAvanzados && hayMasPaginas
               ? 'Todavía no encontramos coincidencias en estas páginas.'
@@ -141,45 +164,16 @@ export function ResultadosBusqueda({
               Seguir buscando
             </Button>
           )}
-        </div>
+        </Card>
       )}
 
-      {vista === VISTAS_RESULTADOS.RESULTADOS && (
+      {hayResultados && (
         <>
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold">
-              {tituloBuscado
-                ? `Resultados para "${tituloBuscado}"`
-                : 'Resultados con los filtros seleccionados'}
-            </h2>
-            <p role="status" aria-live="polite" className="text-sm text-muted">
-              {busquedaFiltrada
-                ? 'Resultados encontrados para tus plataformas'
-                : hayFiltrosAvanzados
-                  ? `Mostrando ${resultados.length} ${resultados.length === 1 ? 'resultado' : 'resultados'}`
-                  : `Mostrando ${resultados.length} de ${totalResultados} ${totalResultados === 1 ? 'título' : 'títulos'}`}
-            </p>
-          </div>
           {mostrarVerificacionIncompleta && (
-            <div
-              role="status"
-              className="mb-5 flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between"
-            >
-              <p>
-                No pudimos verificar todos los títulos. Puede haber más disponibles en tus
-                plataformas.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                fullWidth={false}
-                onClick={onReintentar}
-                disabled={isLoading}
-                className="shrink-0"
-              >
-                Reintentar
-              </Button>
-            </div>
+            <Alert tone="info" onRetry={onReintentar} retryDisabled={isLoading}>
+              No pudimos verificar todos los títulos. Puede haber más disponibles en tus
+              plataformas.
+            </Alert>
           )}
           <GrillaResultados>
             {resultados.map((resultado) => (
@@ -189,7 +183,7 @@ export function ResultadosBusqueda({
           </GrillaResultados>
           {hayMasPaginas && (
             <>
-              <div className="mt-8 flex justify-center">
+              <div className="mt-3 flex justify-center">
                 <Button
                   variant="outline"
                   size="compact"
@@ -202,14 +196,7 @@ export function ResultadosBusqueda({
                   Cargar más
                 </Button>
               </div>
-              {error && (
-                <p
-                  role="alert"
-                  className="mx-auto mt-4 max-w-md rounded-2xl border border-danger/30 bg-danger-surface p-4 text-center text-danger"
-                >
-                  {error}
-                </p>
-              )}
+              {error && <Alert className="mx-auto max-w-md">{error}</Alert>}
             </>
           )}
         </>

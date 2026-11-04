@@ -104,6 +104,28 @@ describe('PaginaBusqueda', () => {
     expect(screen.queryByText(/Datos de títulos provistos por/)).not.toBeInTheDocument();
   });
 
+  it('despliega el panel de filtros y muestra cuántos filtros hay activos', () => {
+    render(<PaginaBusqueda />, { initialEntries: ['/?q=Dune&tipo=serie&anio=2021&pagina=1'] });
+
+    const botonFiltros = screen.getByRole('button', { name: /^Filtros/ });
+    expect(botonFiltros).toHaveAttribute('aria-expanded', 'false');
+    expect(botonFiltros).toHaveAccessibleName('Filtros, 2 activos');
+    expect(screen.getByRole('group', { name: 'Filtros activos' })).toBeInTheDocument();
+
+    fireEvent.click(botonFiltros);
+
+    expect(botonFiltros).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('group', { name: 'Filtros activos' })).toHaveTextContent('Series');
+    expect(screen.getAllByRole('button', { name: 'Limpiar filtros' })).toHaveLength(1);
+  });
+
+  it('el botón de filtros no muestra contador si no hay filtros elegidos', () => {
+    render(<PaginaBusqueda />);
+
+    expect(screen.getByRole('button', { name: /^Filtros/ })).toHaveAccessibleName('Filtros');
+    expect(screen.queryByRole('group', { name: 'Filtros activos' })).not.toBeInTheDocument();
+  });
+
   it('restaura en orden las páginas guardadas en los parámetros de la URL', async () => {
     const fetchMock = vi.fn(async (input) => {
       const url = new URL(input.toString());
@@ -135,7 +157,7 @@ describe('PaginaBusqueda', () => {
     expect(await screen.findByRole('heading', { level: 3, name: 'Dune 2' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: 'Dune 1' })).toBeInTheDocument();
     expect(screen.getByLabelText('Título')).toHaveValue('Dune');
-    expect(screen.getByLabelText('Tipo')).toHaveValue('pelicula');
+    expect(screen.getByRole('radio', { name: 'Películas' })).toBeChecked();
     expect(screen.getByLabelText('Año')).toHaveValue(2021);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -339,7 +361,7 @@ describe('PaginaBusqueda', () => {
     const campoAnio = screen.getByLabelText('Año');
 
     fireEvent.change(campoAnio, { target: { value: '202' } });
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'serie' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Series' }));
 
     expect(fetch).toHaveBeenCalledTimes(1);
 
@@ -356,7 +378,7 @@ describe('PaginaBusqueda', () => {
     render(<PaginaBusqueda />);
 
     await ejecutarBusqueda();
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'serie' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Series' }));
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     const [url] = fetch.mock.calls[1];
@@ -395,7 +417,7 @@ describe('PaginaBusqueda', () => {
 
     await ejecutarBusqueda();
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Matrix' } });
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'serie' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Series' }));
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     const [url] = fetch.mock.calls[1];
@@ -871,7 +893,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     );
 
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Dune' } });
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'pelicula' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Películas' }));
     fireEvent.change(screen.getByLabelText('Año'), { target: { value: '2021' } });
     fireEvent.focus(screen.getByLabelText('Género'));
     await screen.findByRole('option', { name: 'Drama' });
@@ -892,7 +914,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText('Título')).toHaveValue('Dune');
-      expect(screen.getByLabelText('Tipo')).toHaveValue('');
+      expect(screen.getByRole('radio', { name: 'Todos' })).toBeChecked();
       expect(screen.getByLabelText('Año')).toHaveValue(null);
       expect(screen.getByLabelText('Género')).toHaveValue('');
       expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');
@@ -1023,7 +1045,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     );
     await ejecutarBusqueda();
 
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'pelicula' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Películas' }));
     fireEvent.change(screen.getByLabelText('Año'), { target: { value: '2021' } });
 
     const campoGenero = screen.getByLabelText('Género');
@@ -1087,7 +1109,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
     });
     await ejecutarBusqueda();
 
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'pelicula' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Películas' }));
     fireEvent.change(screen.getByLabelText('Año'), { target: { value: '2021' } });
 
     const campoGenero = screen.getByLabelText('Género');
@@ -1123,7 +1145,7 @@ describe('PaginaBusqueda: filtros de género, actor y director', () => {
       expect(url.searchParams.has('actor')).toBe(false);
       expect(url.searchParams.has('director')).toBe(false);
     });
-    expect(screen.getByLabelText('Tipo')).toHaveValue('');
+    expect(screen.getByRole('radio', { name: 'Todos' })).toBeChecked();
     expect(screen.getByLabelText('Año')).toHaveValue(null);
     expect(screen.getByLabelText('Género')).toHaveValue('');
     expect(screen.getByRole('combobox', { name: 'Actor' })).toHaveValue('');

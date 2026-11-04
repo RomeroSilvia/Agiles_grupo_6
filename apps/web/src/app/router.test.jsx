@@ -110,7 +110,8 @@ describe('router de la aplicación', () => {
     const router = renderRoute('/');
 
     await user.type(screen.getByLabelText('Título'), 'Dune');
-    await user.selectOptions(screen.getByLabelText('Tipo'), 'pelicula');
+    await user.click(screen.getByRole('button', { name: 'Filtros' }));
+    await user.click(screen.getByRole('radio', { name: 'Películas' }));
     await user.type(screen.getByLabelText('Año'), '2021');
     await user.click(screen.getByRole('button', { name: 'Buscar' }));
     expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
@@ -127,7 +128,7 @@ describe('router de la aplicación', () => {
 
     expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
     expect(screen.getByLabelText('Título')).toHaveValue('Dune');
-    expect(screen.getByLabelText('Tipo')).toHaveValue('pelicula');
+    expect(screen.getByRole('radio', { name: 'Películas' })).toBeChecked();
     expect(screen.getByLabelText('Año')).toHaveValue(2021);
     expect(screen.getByText('Mostrando 1 de 1 título')).toBeInTheDocument();
     await waitFor(() => expect(scrollPosition).toBe(640));

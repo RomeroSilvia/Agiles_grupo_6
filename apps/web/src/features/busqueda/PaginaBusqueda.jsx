@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { ROL_PERSONA } from '@buscador/shared/constants';
 import { tieneFiltrosAvanzados } from '@buscador/shared/schemas';
-import { APP_NAME } from '../../config/app.config.js';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { useBusqueda } from './useBusqueda.js';
 import { FILTROS_INICIALES, convertirFiltros, validarFiltros } from './busquedaReducer.js';
 import { useFiltroPlataformasPropias } from './useFiltroPlataformasPropias.js';
 import { useGenerosBusqueda } from './useGenerosBusqueda.js';
+import { FiltroPlataformasPropias } from './FiltroPlataformasPropias.jsx';
 import { FormularioBusqueda } from './FormularioBusqueda.jsx';
 import { ResultadosBusqueda } from './ResultadosBusqueda.jsx';
 
@@ -280,25 +281,18 @@ export function PaginaBusqueda() {
 
   return (
     <>
-      <header className="mb-12 max-w-2xl space-y-3">
-        <p className="font-mono text-xs font-medium tracking-[0.2em] text-primary uppercase">
-          {APP_NAME}
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">
-          Una búsqueda. Todas tus plataformas.
-        </h1>
-        <p className="text-base leading-7 text-muted sm:text-lg">
-          Buscá películas y series por título, género, actor o director.
-        </p>
-      </header>
+      <PageHeader
+        size="hero"
+        titulo="Una búsqueda. Todas tus plataformas."
+        descripcion="Buscá una película o serie y mirá en cuál plataforma la podés ver."
+        className="mb-8"
+      />
 
       <FormularioBusqueda
         filtros={filtros}
-        filtroPropias={filtroPropias}
         isLoading={isLoading}
         onChange={handleChange}
         onSubmit={handleSubmit}
-        onCambiarSoloPropias={(activo) => actualizarFiltro('soloPropias', activo)}
         onCambiarPersona={cambiarPersona}
         onCambiarNombrePersona={actualizarNombrePersona}
         onLimpiarFiltros={limpiarFiltrosBusqueda}
@@ -327,6 +321,15 @@ export function PaginaBusqueda() {
         onReintentar={() => buscar(ultimaBusqueda)}
         onCargarMas={cargarMas}
         onVerTodos={() => actualizarFiltro('soloPropias', false)}
+        acciones={
+          filtroPropias.visible ? (
+            <FiltroPlataformasPropias
+              filtro={filtroPropias}
+              activo={filtros.soloPropias}
+              onChange={(activo) => actualizarFiltro('soloPropias', activo)}
+            />
+          ) : null
+        }
       />
     </>
   );

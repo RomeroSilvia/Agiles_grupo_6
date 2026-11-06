@@ -1,4 +1,5 @@
 import { Button } from '../../components/ui/Button.jsx';
+import { Card } from '../../components/ui/Card.jsx';
 
 export function EstadoSinResultadosPropios({
   verificacionIncompleta,
@@ -9,11 +10,7 @@ export function EstadoSinResultadosPropios({
   onVerTodos,
 }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="space-y-4 rounded-2xl border border-border bg-surface p-5 text-muted"
-    >
+    <Card role="status" aria-live="polite" padding="lg" className="space-y-4 text-muted">
       <p>
         {verificacionIncompleta
           ? 'No encontramos títulos en tus plataformas, pero no pudimos confirmar la disponibilidad de algunos.'
@@ -47,6 +44,6 @@ export function EstadoSinResultadosPropios({
           </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

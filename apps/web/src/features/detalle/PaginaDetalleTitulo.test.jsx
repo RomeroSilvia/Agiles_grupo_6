@@ -143,6 +143,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+async function abrirSelectorRegiones() {
+  fireEvent.click(await screen.findByRole('button', { name: /Agregar región/ }));
+}
+
 describe('PaginaDetalleTitulo', () => {
   it('agrega y quita el título de la watchlist desde el detalle', async () => {
     const fetchMock = configurarFetchWatchlist();
@@ -762,6 +766,44 @@ describe('PaginaDetalleTitulo', () => {
       ).toHaveAccessibleDescription('No tenés Netflix en tus plataformas');
     });
 
+    it('si no se pudieron cargar las plataformas propias, no marca ninguna como ajena', async () => {
+      configurarDisponibilidad();
+
+      renderDetalle('/titulos/pelicula/1', undefined, {
+        sesion: CON_SESION,
+        propias: plataformasPropias([], { error: 'No se pudieron cargar tus plataformas' }),
+      });
+
+      expect(await screen.findByRole('link', { name: /Netflix/ })).toHaveAttribute(
+        'href',
+        NETFLIX.urlHome,
+      );
+      expect(screen.getByRole('link', { name: /Amazon Prime Video/ })).toHaveAttribute(
+        'href',
+        PRIME.urlHome,
+      );
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      expect(screen.queryByText('Gris: no la tenés')).not.toBeInTheDocument();
+    });
+
+    it('con sesión explica los colores de los logos y sin sesión no', async () => {
+      configurarDisponibilidad();
+
+      const { unmount } = renderDetalle('/titulos/pelicula/1', undefined, {
+        sesion: CON_SESION,
+        propias: plataformasPropias([PRIME.id]),
+      });
+
+      expect(await screen.findByText('A color: está en tus plataformas')).toBeInTheDocument();
+      expect(screen.getByText('Gris: no la tenés')).toBeInTheDocument();
+
+      unmount();
+      renderDetalle();
+
+      await screen.findByRole('link', { name: /Netflix/ });
+      expect(screen.queryByText('Gris: no la tenés')).not.toBeInTheDocument();
+    });
+
     it('con sesión muestra primero las plataformas propias', async () => {
       configurarDisponibilidad();
 
@@ -879,12 +921,13 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      const botonUs = await screen.findByRole('button', { name: /Estados Unidos \(US\)/i });
-      fireEvent.click(botonUs);
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
 
       const resultados = await screen.findByLabelText('Resultados de comparación por región');
-      expect(within(resultados).getByText('Estados Unidos (US)')).toBeInTheDocument();
+      expect(within(resultados).getByText('Estados Unidos')).toBeInTheDocument();
+      expect(within(resultados).getByText('Tu región')).toBeInTheDocument();
       expect(within(resultados).getByText('Disney Plus')).toBeInTheDocument();
     });
 
@@ -919,8 +962,9 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      fireEvent.click(await screen.findByRole('button', { name: /España \(ES\)/i }));
-      fireEvent.click(screen.getByRole('button', { name: /México \(MX\)/i }));
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /España \(ES\)/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /México \(MX\)/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
 
       expect(
@@ -978,8 +1022,9 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      fireEvent.click(await screen.findByRole('button', { name: /Estados Unidos \(US\)/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Brasil \(BR\)/i }));
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /Brasil \(BR\)/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
 
       expect(
@@ -994,13 +1039,141 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      const botonAcordeon = await screen.findByRole('button', {
-        name: /Comparar disponibilidad en otras regiones/i,
-      });
+      const botonAcordeon = await screen.findByRole('button', { name: /^Comparar regiones/ });
       expect(botonAcordeon).toHaveAttribute('aria-expanded', 'false');
 
       fireEvent.click(botonAcordeon);
       expect(botonAcordeon).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('permite marcar varias regiones seguidas sin cerrar la lista', async () => {
+      configurarFetch();
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /Brasil \(BR\)/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /Chile \(CL\)/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /Uruguay \(UY\)/i }));
+
+      expect(screen.getByRole('button', { name: /Agregar región 3\/5/ })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      );
+      expect(screen.getByRole('button', { name: 'Quitar Brasil' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Quitar Chile' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Quitar Uruguay' })).toBeInTheDocument();
+    });
+
+    it('cierra la lista de regiones con Escape', async () => {
+      configurarFetch();
+
+      renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+      await abrirSelectorRegiones();
+      const boton = screen.getByRole('button', { name: /Agregar región/ });
+      expect(boton).toHaveAttribute('aria-expanded', 'true');
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      expect(boton).toHaveAttribute('aria-expanded', 'false');
+      expect(boton).toHaveFocus();
+    });
+
+    describe('resultados junto a la región actual', () => {
+      const DISNEY = {
+        id: 3,
+        tmdbProviderId: 337,
+        nombre: 'Disney Plus',
+        logoPath: null,
+        urlHome: 'https://www.disneyplus.com',
+        deepLink: null,
+      };
+
+      function configurarComparacion({ fallaDisponibilidad = false } = {}) {
+        vi.stubGlobal(
+          'fetch',
+          vi.fn((url) => {
+            const urlStr = url.toString();
+            if (urlStr.includes('/api/watchlist/')) {
+              return Promise.resolve(respuestaHttp({ data: { agregado: false } }));
+            }
+            if (urlStr.includes('/disponibilidad/comparacion')) {
+              return Promise.resolve(
+                respuestaHttp({
+                  data: {
+                    regiones: [respuestaDisponibilidad('US', [DISNEY])],
+                    regionesFallidas: [],
+                  },
+                }),
+              );
+            }
+            if (urlStr.includes('/disponibilidad')) {
+              return Promise.resolve(
+                fallaDisponibilidad
+                  ? respuestaHttp(
+                      { error: { code: 'EXTERNAL_SERVICE', message: 'No se pudo consultar' } },
+                      502,
+                    )
+                  : respuestaHttp({ data: respuestaDisponibilidad('AR') }),
+              );
+            }
+            if (urlStr.includes('/region')) {
+              return Promise.resolve(respuestaHttp({ data: { region: 'AR', source: 'profile' } }));
+            }
+            return Promise.resolve(respuestaHttp({ data: detallePelicula }));
+          }),
+        );
+      }
+
+      async function compararConEstadosUnidos() {
+        await abrirSelectorRegiones();
+        fireEvent.click(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i }));
+        fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
+        return screen.findByLabelText('Resultados de comparación por región');
+      }
+
+      it('resume en cuántas regiones se puede ver con las plataformas propias', async () => {
+        configurarComparacion();
+
+        renderDetalle('/titulos/pelicula/1', undefined, {
+          sesion: CON_SESION,
+          propias: plataformasPropias([DISNEY.id]),
+        });
+
+        await compararConEstadosUnidos();
+
+        expect(
+          screen.getByText('Lo podés ver con tus plataformas en 1 de 2 regiones.'),
+        ).toBeInTheDocument();
+      });
+
+      it('no muestra el resumen si ninguna región tiene plataformas propias', async () => {
+        configurarComparacion();
+
+        renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
+
+        await compararConEstadosUnidos();
+
+        expect(screen.queryByText(/Lo podés ver con tus plataformas/)).not.toBeInTheDocument();
+      });
+
+      it('omite la región actual si falló su disponibilidad', async () => {
+        configurarComparacion({ fallaDisponibilidad: true });
+
+        renderDetalle('/titulos/pelicula/1', undefined, {
+          sesion: CON_SESION,
+          propias: plataformasPropias([DISNEY.id]),
+        });
+
+        const resultados = await compararConEstadosUnidos();
+
+        expect(within(resultados).getByText('Estados Unidos')).toBeInTheDocument();
+        expect(within(resultados).queryByText('Tu región')).not.toBeInTheDocument();
+        expect(
+          screen.getByText('Lo podés ver con tus plataformas en 1 de 1 región.'),
+        ).toBeInTheDocument();
+      });
     });
 
     it('deshabilita las demás regiones al seleccionar el máximo de 5 regiones', async () => {
@@ -1016,12 +1189,14 @@ describe('PaginaDetalleTitulo', () => {
         /Estados Unidos \(US\)/i,
       ];
 
+      await abrirSelectorRegiones();
       for (const patron of regionesASeleccionar) {
-        fireEvent.click(await screen.findByRole('button', { name: patron }));
+        fireEvent.click(screen.getByRole('checkbox', { name: patron }));
       }
 
-      expect(screen.getByRole('button', { name: /España \(ES\)/i })).toBeDisabled();
-      expect(screen.getByRole('button', { name: /Estados Unidos \(US\)/i })).toBeEnabled();
+      expect(screen.getByRole('checkbox', { name: /España \(ES\)/i })).toBeDisabled();
+      expect(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /Agregar región 5\/5/ })).toBeInTheDocument();
     });
 
     it('muestra el error total (502) y permite reintentar la comparación', async () => {
@@ -1067,7 +1242,8 @@ describe('PaginaDetalleTitulo', () => {
 
       renderDetalle('/titulos/pelicula/1', undefined, { sesion: CON_SESION });
 
-      fireEvent.click(await screen.findByRole('button', { name: /Estados Unidos \(US\)/i }));
+      await abrirSelectorRegiones();
+      fireEvent.click(screen.getByRole('checkbox', { name: /Estados Unidos \(US\)/i }));
       fireEvent.click(screen.getByRole('button', { name: 'Comparar disponibilidad' }));
 
       expect(await screen.findByText('No se pudo consultar TMDB')).toBeInTheDocument();

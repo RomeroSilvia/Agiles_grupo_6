@@ -9,6 +9,7 @@ import { API_ERROR_CODES } from '../../services/api.service.js';
 import { Button } from '../../components/ui/Button.jsx';
 import { ButtonLink } from '../../components/ui/ButtonLink.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { CheckIcon } from '../../components/ui/icons.jsx';
 import { RUTAS } from '../../app/rutas.js';
 import { AuthLayout } from './AuthLayout.jsx';
@@ -64,11 +65,10 @@ export function PaginaRestablecerPassword() {
     }
     return (
       <>
-        <h1 className="text-3xl font-extrabold tracking-tight">Contraseña nueva</h1>
-        <p className="mt-2 text-muted">
-          Este enlace vence a los {MINUTOS_VENCIMIENTO_ENLACE} minutos desde que lo pediste y se usa
-          una sola vez.
-        </p>
+        <PageHeader
+          titulo="Contraseña nueva"
+          descripcion={`Este enlace vence a los ${MINUTOS_VENCIMIENTO_ENLACE} minutos desde que lo pediste y se usa una sola vez.`}
+        />
 
         <form noValidate onSubmit={handleSubmit} className="mt-8 space-y-5">
           <CamposPasswordNueva

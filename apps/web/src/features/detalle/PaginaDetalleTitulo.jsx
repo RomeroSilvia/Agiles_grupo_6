@@ -2,23 +2,30 @@ import { useMemo } from 'react';
 import { REGION_SOURCE } from '@buscador/shared/constants';
 import { Link, useParams } from 'react-router';
 import { NotFoundPage } from '../../app/NotFoundPage.jsx';
-import { Chip } from '../../components/ui/Chip.jsx';
+import { Alert } from '../../components/ui/Alert.jsx';
 import { Button } from '../../components/ui/Button.jsx';
+import { Card } from '../../components/ui/Card.jsx';
+import { Chip } from '../../components/ui/Chip.jsx';
+import { ExternalLink } from '../../components/ui/ExternalLink.jsx';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { Poster } from '../../components/ui/Poster.jsx';
-import { TextButton } from '../../components/ui/TextButton.jsx';
+import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
+import { ArrowUpRightIcon, BookmarkIcon, StarIcon } from '../../components/ui/icons.jsx';
 import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { formatearPuntuacion } from '../../utils/formatearPuntuacion.js';
-import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useRegion } from '../../contexts/region/RegionContext.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
 import { ETIQUETAS_TIPO_TITULO_SINGULAR } from '../busqueda/busqueda.constants.js';
 import { useDetalleTitulo } from './useDetalleTitulo.js';
 import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
 import { ComparadorRegiones } from './ComparadorRegiones.jsx';
+import { DetalleTituloCargando } from './DetalleTituloCargando.jsx';
+import { LeyendaDisponibilidad } from './LeyendaDisponibilidad.jsx';
 import { marcarPlataformasPropias } from './detalle.constants.js';
 import { ListaOfertas } from './ListaOfertas.jsx';
 import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
+import { useDistincionPropias } from './useDistincionPropias.js';
 import { RUTAS } from '../../app/rutas.js';
 import { useWatchlistTitle } from '../watchlist/useWatchlistTitle.js';
 
@@ -43,8 +50,7 @@ export function PaginaDetalleTitulo() {
     alternar: alternarWatchlist,
     reintentar: reintentarWatchlist,
   } = useWatchlistTitle({ tipo, tmdbId });
-  const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
-  const distinguirPropias = Boolean(user) && !cargandoSesion && !cargandoPropias;
+  const { seleccionadas, distinguirPropias } = useDistincionPropias();
 
   const ofertasConPropiedad = useMemo(
     () => marcarPlataformasPropias(ofertas, { distinguirPropias, seleccionadas }),
@@ -52,15 +58,7 @@ export function PaginaDetalleTitulo() {
   );
 
   if (isLoading) {
-    return (
-      <p
-        role="status"
-        aria-live="polite"
-        className="rounded-2xl border border-primary/30 bg-primary/10 p-5 text-primary"
-      >
-        Cargando detalle del título...
-      </p>
-    );
+    return <DetalleTituloCargando />;
   }
 
   if (error) {
@@ -71,12 +69,7 @@ export function PaginaDetalleTitulo() {
     return (
       <section className="space-y-6">
         <VolverBusqueda />
-        <p
-          role="alert"
-          className="rounded-2xl border border-danger/30 bg-danger-surface p-5 text-danger"
-        >
-          {error}
-        </p>
+        <Alert>{error}</Alert>
       </section>
     );
   }
@@ -86,24 +79,29 @@ export function PaginaDetalleTitulo() {
   }
 
   const nombre = titulo.nombre ?? 'Título no disponible';
-  const puntuacion = formatearPuntuacion(titulo.puntuacion) ?? 'Puntuación no disponible';
+  const puntuacion = formatearPuntuacion(titulo.puntuacion);
 
   return (
     <section className="space-y-8">
       <VolverBusqueda />
 
-      <article className="grid gap-8 rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-8 md:grid-cols-[minmax(12rem,18rem)_1fr]">
+      <Card
+        as="article"
+        padding="lg"
+        elevated
+        className="grid gap-8 md:grid-cols-[minmax(12rem,18rem)_1fr]"
+      >
         <Poster
           posterUrl={titulo.posterUrl}
           nombre={nombre}
           loading="eager"
-          className="mx-auto aspect-2/3 max-w-xs rounded-2xl"
+          className="mx-auto aspect-2/3 w-full max-w-xs self-start rounded-card"
         />
 
-        <div className="flex flex-col justify-center gap-6">
+        <div className="flex flex-col gap-6">
           <div className="space-y-3">
             <Chip>{ETIQUETAS_TIPO_TITULO_SINGULAR[titulo.tipo] ?? 'Título'}</Chip>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">{nombre}</h1>
+            <PageHeader titulo={nombre} size="hero" />
           </div>
 
           <div className="space-y-2">
@@ -117,7 +115,7 @@ export function PaginaDetalleTitulo() {
                 <span className="text-muted">Iniciá sesión para guardar este título.</span>
                 <Link
                   to={RUTAS.INICIAR_SESION}
-                  className={`${LINK_CLASS_NAME} rounded-sm font-semibold text-link underline underline-offset-4`}
+                  className={`${LINK_CLASS_NAME} rounded-sm underline`}
                 >
                   Iniciar sesión
                 </Link>
@@ -133,59 +131,55 @@ export function PaginaDetalleTitulo() {
                 onClick={alternarWatchlist}
                 loading={actualizandoWatchlist}
                 loadingText="Guardando…"
-                variant={agregado ? 'accent' : 'primary'}
-                className="sm:w-auto"
+                variant={agregado ? 'outline' : 'primary'}
+                size="compact"
+                fullWidth={false}
               >
+                <BookmarkIcon className={`size-4 ${agregado ? 'fill-current' : ''}`} />
                 {agregado ? 'Quitar de mi watchlist' : 'Agregar a mi watchlist'}
               </Button>
             )}
             {user && errorWatchlist && (
-              <div
-                role="alert"
-                className="flex flex-col gap-2 rounded-xl border border-danger/30 bg-danger-surface p-3 text-sm text-danger sm:flex-row sm:items-center sm:justify-between"
-              >
-                <span>
-                  {errorWatchlist}
-                  {estadoWatchlistCargado &&
-                    ` Estado guardado: ${agregado ? 'está en tu watchlist.' : 'no está en tu watchlist.'}`}
-                </span>
-                <TextButton onClick={reintentarWatchlist}>Reintentar</TextButton>
-              </div>
+              <Alert onRetry={reintentarWatchlist}>
+                {errorWatchlist}
+                {estadoWatchlistCargado &&
+                  ` Estado guardado: ${agregado ? 'está en tu watchlist.' : 'no está en tu watchlist.'}`}
+              </Alert>
             )}
           </div>
 
           <dl className="grid grid-cols-2 gap-4 sm:max-w-md">
-            <div className="rounded-2xl border border-border bg-background p-4">
-              <dt className="text-sm text-muted">Año</dt>
-              <dd className="mt-1 font-semibold">{titulo.anio ?? 'Año no disponible'}</dd>
-            </div>
-            <div className="rounded-2xl border border-border bg-background p-4">
-              <dt className="text-sm text-muted">Puntuación</dt>
-              <dd className="mt-1 font-semibold">{puntuacion}</dd>
-            </div>
+            <DatoTitulo etiqueta="Año">{titulo.anio ?? 'Año no disponible'}</DatoTitulo>
+            <DatoTitulo etiqueta="Puntuación">
+              {puntuacion ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <StarIcon className="size-4 fill-rating text-rating" />
+                  {puntuacion}
+                </span>
+              ) : (
+                'Puntuación no disponible'
+              )}
+            </DatoTitulo>
           </dl>
 
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold">Sinopsis</h2>
+            <SectionTitle>Sinopsis</SectionTitle>
             <p className="max-w-3xl leading-7 text-muted">
               {titulo.sinopsis ?? 'Sinopsis no disponible'}
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <h2 id="seccion-disponibilidad" className="text-xl font-semibold">
-                Plataformas disponibles
-              </h2>
+              <SectionTitle id="seccion-disponibilidad">Plataformas disponibles</SectionTitle>
               {!regionLoading && region && (
-                <span
-                  aria-label={`Región de disponibilidad: ${region}`}
-                  className="rounded-full bg-chip px-2.5 py-0.5 font-mono text-xs font-medium text-chip-foreground"
-                >
-                  {region}
+                <span aria-label={`Región de disponibilidad: ${region}`}>
+                  <Chip>{region}</Chip>
                 </span>
               )}
             </div>
+
+            {distinguirPropias && ofertasConPropiedad.length > 0 && <LeyendaDisponibilidad />}
 
             {regionLoading && (
               <p role="status" aria-live="polite" className="text-sm text-muted">
@@ -206,32 +200,15 @@ export function PaginaDetalleTitulo() {
             )}
 
             {!cargandoDisponibilidad && errorDisponibilidad && (
-              <div
-                role="alert"
-                className="flex flex-col gap-2 rounded-2xl border border-danger/30 bg-danger-surface p-4 text-sm text-danger sm:flex-row sm:items-center sm:justify-between"
-              >
-                <span>{errorDisponibilidad}</span>
-                <TextButton onClick={reintentarDisponibilidad}>Reintentar</TextButton>
-              </div>
-            )}
-
-            {!cargandoDisponibilidad && !errorDisponibilidad && enlaceTmdb && (
-              <a
-                href={enlaceTmdb}
-                target="_blank"
-                rel="noreferrer"
-                className={`${LINK_CLASS_NAME} underline`}
-              >
-                Ver disponibilidad en TMDB
-              </a>
+              <Alert onRetry={reintentarDisponibilidad}>{errorDisponibilidad}</Alert>
             )}
 
             {!cargandoDisponibilidad &&
               !errorDisponibilidad &&
               ofertasConPropiedad.length === 0 && (
-                <p className="rounded-2xl border border-border bg-background p-4 text-sm text-muted">
+                <Card tone="inset" padding="sm" className="text-sm text-muted">
                   No encontramos disponibilidad en plataformas de streaming para tu región.
-                </p>
+                </Card>
               )}
 
             {!cargandoDisponibilidad && !errorDisponibilidad && ofertasConPropiedad.length > 0 && (
@@ -242,21 +219,43 @@ export function PaginaDetalleTitulo() {
               />
             )}
 
-            {!regionLoading && (
-              <ComparadorRegiones
-                tipo={tipo}
-                tmdbId={tmdbId}
-                regionActual={region}
-                nombreTitulo={titulo.nombre}
-              />
+            {!cargandoDisponibilidad && !errorDisponibilidad && enlaceTmdb && (
+              <ExternalLink
+                href={enlaceTmdb}
+                className={`${LINK_CLASS_NAME} inline-flex items-center gap-1.5 rounded-sm text-sm`}
+              >
+                Ver disponibilidad en TMDB
+                <ArrowUpRightIcon className="size-4" />
+              </ExternalLink>
             )}
 
-            <div className="pt-2">
-              <AttributionDisponibilidad />
-            </div>
+            {!regionLoading && (
+              <div className="border-t border-border pt-6">
+                <ComparadorRegiones
+                  tipo={tipo}
+                  tmdbId={tmdbId}
+                  regionActual={region}
+                  ofertasRegionActual={
+                    cargandoDisponibilidad || errorDisponibilidad ? null : ofertas
+                  }
+                  nombreTitulo={titulo.nombre}
+                />
+              </div>
+            )}
+
+            <AttributionDisponibilidad />
           </div>
         </div>
-      </article>
+      </Card>
     </section>
+  );
+}
+
+function DatoTitulo({ etiqueta, children }) {
+  return (
+    <Card tone="inset" padding="sm">
+      <dt className="text-sm text-muted">{etiqueta}</dt>
+      <dd className="mt-1 font-semibold">{children}</dd>
+    </Card>
   );
 }

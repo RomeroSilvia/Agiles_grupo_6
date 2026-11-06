@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { httpUrlSchema } from '@buscador/shared/schemas';
 import { rutaDisponibilidad } from '../../app/rutas.js';
 import { ApiError, request } from '../../services/api.service.js';
 
@@ -31,7 +32,7 @@ export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false 
       .then((data) => {
         if (!controller.signal.aborted) {
           setOfertas(Array.isArray(data?.ofertas) ? data.ofertas : []);
-          setEnlaceTmdb(typeof data?.enlaceTmdb === 'string' ? data.enlaceTmdb : null);
+          setEnlaceTmdb(httpUrlSchema.safeParse(data?.enlaceTmdb).success ? data.enlaceTmdb : null);
           setError(null);
           setClaveCargada(claveParametros);
         }

@@ -1,4 +1,6 @@
 import {
+  ArrowLeft,
+  ArrowUpRight,
   Bookmark,
   Check,
   ChevronDown,
@@ -8,6 +10,7 @@ import {
   CircleAlert,
   Eye,
   EyeOff,
+  Globe,
   Key,
   LoaderCircle,
   Lock,
@@ -15,7 +18,10 @@ import {
   MailCheck,
   Menu,
   Moon,
+  Plus,
   Search,
+  SlidersHorizontal,
+  Star,
   Sun,
   Trash,
   X,
@@ -64,3 +70,9 @@ export const MailCheckIcon = createIcon(MailCheck);
 export const MailIcon = createIcon(Mail);
 export const KeyIcon = createIcon(Key);
 export const TrashIcon = createIcon(Trash);
+export const ArrowLeftIcon = createIcon(ArrowLeft);
+export const ArrowUpRightIcon = createIcon(ArrowUpRight);
+export const FiltersIcon = createIcon(SlidersHorizontal);
+export const GlobeIcon = createIcon(Globe);
+export const PlusIcon = createIcon(Plus);
+export const StarIcon = createIcon(Star);

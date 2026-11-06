@@ -39,4 +39,16 @@ describe('LogoPlataforma', () => {
     fireEvent.error(logo);
     expect(screen.getByText('N')).toHaveClass('size-6');
   });
+
+  it('inactiva muestra el logo en gris y la inicial sin el color de la plataforma', () => {
+    const { rerender } = render(
+      <LogoPlataforma plataforma={{ ...NETFLIX, logoPath: '/netflix.jpg' }} inactiva />,
+    );
+
+    expect(screen.getByRole('img', { name: 'Logo de Netflix' })).toHaveClass('grayscale');
+
+    rerender(<LogoPlataforma plataforma={NETFLIX} inactiva />);
+
+    expect(screen.getByText('N')).not.toHaveAttribute('data-plataforma');
+  });
 });

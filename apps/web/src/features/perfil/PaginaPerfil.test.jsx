@@ -253,6 +253,24 @@ describe('Menú de la cuenta del header', () => {
     );
   });
 
+  it('mientras carga la sesión anuncia la carga en lugar de quedar en blanco', async () => {
+    request.mockImplementation(() => new Promise(() => {}));
+    renderRoute('/perfil');
+
+    expect(await screen.findByText('Cargando tu cuenta…')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Mi perfil' })).not.toBeInTheDocument();
+  });
+
+  it('mientras carga la región muestra el mail y todavía no la región', async () => {
+    mockApi({ region: new Promise(() => {}) });
+    renderRoute('/perfil');
+
+    const tarjeta = await screen.findByRole('region', { name: 'Datos de la cuenta' });
+
+    expect(within(tarjeta).getByText(USUARIO.email)).toBeInTheDocument();
+    expect(within(tarjeta).queryByText('AR')).not.toBeInTheDocument();
+  });
+
   it('cierra la sesión desde el perfil y lleva a iniciar sesión', async () => {
     const user = userEvent.setup();
     renderRoute('/perfil');

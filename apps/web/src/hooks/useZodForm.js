@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
-function erroresPorCampo(result) {
+export function erroresPorCampo(result) {
   if (result.success) {
     return {};
   }

@@ -9,12 +9,12 @@ describe('Attribution (E6HU3)', () => {
     const linkTmdb = screen.getByRole('link', { name: 'TMDB' });
     expect(linkTmdb).toHaveAttribute('href', 'https://www.themoviedb.org');
     expect(linkTmdb).toHaveAttribute('target', '_blank');
-    expect(linkTmdb).toHaveAttribute('rel', 'noreferrer');
+    expect(linkTmdb).toHaveAttribute('rel', 'noopener noreferrer');
 
     const linkJustWatch = screen.getByRole('link', { name: 'JustWatch' });
     expect(linkJustWatch).toHaveAttribute('href', 'https://www.justwatch.com');
     expect(linkJustWatch).toHaveAttribute('target', '_blank');
-    expect(linkJustWatch).toHaveAttribute('rel', 'noreferrer');
+    expect(linkJustWatch).toHaveAttribute('rel', 'noopener noreferrer');
 
     expect(screen.getByText(/Datos de títulos provistos por/i)).toBeInTheDocument();
     expect(screen.getByText(/datos de disponibilidad provistos por/i)).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe('AttributionDisponibilidad (E6HU3)', () => {
     const linkJustWatch = screen.getByRole('link', { name: 'JustWatch' });
     expect(linkJustWatch).toHaveAttribute('href', 'https://www.justwatch.com');
     expect(linkJustWatch).toHaveAttribute('target', '_blank');
-    expect(linkJustWatch).toHaveAttribute('rel', 'noreferrer');
+    expect(linkJustWatch).toHaveAttribute('rel', 'noopener noreferrer');
 
     expect(screen.getByText(/Datos de disponibilidad provistos por/i)).toBeInTheDocument();
   });

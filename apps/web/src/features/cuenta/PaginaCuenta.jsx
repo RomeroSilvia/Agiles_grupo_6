@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Link, useLocation } from 'react-router';
-import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
+import { useLocation } from 'react-router';
+import { BackLink } from '../../components/ui/BackLink.jsx';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { RUTAS } from '../../app/rutas.js';
 import { SeccionCambioMail } from './SeccionCambioMail.jsx';
 import { SeccionCambioPassword } from './SeccionCambioPassword.jsx';
@@ -17,10 +18,8 @@ export function PaginaCuenta() {
 
   return (
     <section className="max-w-2xl space-y-6">
-      <Link to={RUTAS.PERFIL} className={`${LINK_CLASS_NAME} inline-block rounded-sm underline`}>
-        Volver al perfil
-      </Link>
-      <h1 className="text-3xl font-extrabold tracking-tight">Cuenta</h1>
+      <BackLink to={RUTAS.PERFIL}>Volver al perfil</BackLink>
+      <PageHeader titulo="Cuenta" />
 
       <SeccionCambioMail />
       <SeccionCambioPassword />

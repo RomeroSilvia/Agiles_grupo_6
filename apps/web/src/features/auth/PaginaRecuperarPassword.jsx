@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { MINUTOS_VENCIMIENTO_ENLACE } from '@buscador/shared/constants';
 import { passwordRecoverySchema } from '@buscador/shared/schemas';
 import { useZodForm } from '../../hooks/useZodForm.js';
 import { useFormSubmit } from '../../hooks/useFormSubmit.js';
+import { BackLink } from '../../components/ui/BackLink.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { ButtonLink } from '../../components/ui/ButtonLink.jsx';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { TextField } from '../../components/ui/TextField.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
-import { ChevronLeftIcon, MailCheckIcon } from '../../components/ui/icons.jsx';
+import { MailCheckIcon } from '../../components/ui/icons.jsx';
 import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { RUTAS } from '../../app/rutas.js';
 import { AuthLayout } from './AuthLayout.jsx';
@@ -62,17 +63,12 @@ export function PaginaRecuperarPassword() {
         </MensajeAuth>
       ) : (
         <>
-          <Link
-            to={RUTAS.INICIAR_SESION}
-            className={`${LINK_CLASS_NAME} inline-flex items-center gap-1 rounded-sm text-sm hover:underline`}
-          >
-            <ChevronLeftIcon className="size-4" />
-            Volver a iniciar sesión
-          </Link>
-          <h1 className="mt-6 text-3xl font-extrabold tracking-tight">Recuperar contraseña</h1>
-          <p className="mt-2 text-muted">
-            Ingresá tu mail y te enviamos un enlace para elegir una contraseña nueva.
-          </p>
+          <BackLink to={RUTAS.INICIAR_SESION}>Volver a iniciar sesión</BackLink>
+          <PageHeader
+            titulo="Recuperar contraseña"
+            descripcion="Ingresá tu mail y te enviamos un enlace para elegir una contraseña nueva."
+            className="mt-6"
+          />
 
           <form noValidate onSubmit={handleSubmit} className="mt-8 space-y-5">
             <TextField

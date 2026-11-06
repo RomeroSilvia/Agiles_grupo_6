@@ -44,6 +44,29 @@ describe('useDisponibilidad', () => {
     expect(result.current.error).toBeNull();
   });
 
+  it.each(['javascript:alert(1)', 'ftp://www.themoviedb.org/movie/1', 'no es una url'])(
+    'descarta el enlace de TMDB si no es una URL http(s): %s',
+    async (enlaceTmdb) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({ data: { region: 'AR', ofertas: [], enlaceTmdb } }),
+        }),
+      );
+
+      const { result } = renderHook(() =>
+        useDisponibilidad({ tipo: 'pelicula', tmdbId: 1, region: 'AR' }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+      expect(result.current.enlaceTmdb).toBeNull();
+      expect(result.current.error).toBeNull();
+    },
+  );
+
   it('maneja errores de la API y permite reintentar', async () => {
     let llamadas = 0;
     vi.stubGlobal(

@@ -2,21 +2,31 @@ import { useState } from 'react';
 import { MAX_REGIONES_COMPARACION, REGIONES_SOPORTADAS } from '@buscador/shared/constants';
 import { Link } from 'react-router';
 import { RUTAS } from '../../app/rutas.js';
+import { Alert } from '../../components/ui/Alert.jsx';
 import { Button } from '../../components/ui/Button.jsx';
+import { Card } from '../../components/ui/Card.jsx';
 import { SeccionPlegable } from '../../components/ui/SeccionPlegable.jsx';
-import { TextButton } from '../../components/ui/TextButton.jsx';
-import { ToggleChip } from '../../components/ui/ToggleChip.jsx';
+import { CheckIcon, GlobeIcon } from '../../components/ui/icons.jsx';
 import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
-import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
+import { contarRegionesConPropias } from './comparacion.js';
 import { formatearNombreRegion, marcarPlataformasPropias } from './detalle.constants.js';
-import { ListaOfertas } from './ListaOfertas.jsx';
+import { SelectorRegiones } from './SelectorRegiones.jsx';
+import { TablaComparacion } from './TablaComparacion.jsx';
 import { useComparacionRegiones } from './useComparacionRegiones.js';
+import { useDistincionPropias } from './useDistincionPropias.js';
 
-export function ComparadorRegiones({ tipo, tmdbId, regionActual, nombreTitulo }) {
+export function ComparadorRegiones({
+  tipo,
+  tmdbId,
+  regionActual,
+  ofertasRegionActual = null,
+  nombreTitulo,
+}) {
   const { user, loading: cargandoSesion } = useSession();
-  const { seleccionadas, loading: cargandoPropias } = usePlataformasPropias();
+  const { seleccionadas, distinguirPropias } = useDistincionPropias();
   const [seleccion, setSeleccion] = useState([]);
+  const [selectorAbierto, setSelectorAbierto] = useState(false);
   const { regiones, regionesFallidas, error, consultado, isLoading, comparar, reintentar } =
     useComparacionRegiones({ tipo, tmdbId });
 
@@ -24,28 +34,21 @@ export function ComparadorRegiones({ tipo, tmdbId, regionActual, nombreTitulo })
     return null;
   }
 
-  const tieneSesion = Boolean(user);
-  const distinguirPropias = tieneSesion && !cargandoPropias;
-
-  if (!tieneSesion) {
+  if (!user) {
     return (
-      <div className="rounded-2xl border border-border bg-background p-4 text-sm">
+      <Card tone="inset" padding="sm" className="text-sm">
         <span className="text-muted">
           Iniciá sesión para comparar la disponibilidad en otras regiones.{' '}
         </span>
-        <Link
-          to={RUTAS.INICIAR_SESION}
-          className={`${LINK_CLASS_NAME} rounded-sm font-semibold text-link underline underline-offset-4`}
-        >
+        <Link to={RUTAS.INICIAR_SESION} className={`${LINK_CLASS_NAME} rounded-sm underline`}>
           Iniciar sesión para comparar regiones
         </Link>
-      </div>
+      </Card>
     );
   }
 
   const opcionesRegiones = REGIONES_SOPORTADAS.filter(({ codigo }) => codigo !== regionActual);
   const seleccionActiva = seleccion.filter((codigo) => codigo !== regionActual);
-  const limiteAlcanzado = seleccionActiva.length >= MAX_REGIONES_COMPARACION;
 
   function alternarRegion(codigo) {
     setSeleccion((previa) => {
@@ -62,6 +65,7 @@ export function ComparadorRegiones({ tipo, tmdbId, regionActual, nombreTitulo })
 
   function manejarSubmit(evento) {
     evento.preventDefault();
+    setSelectorAbierto(false);
     comparar(seleccionActiva);
   }
 
@@ -70,42 +74,40 @@ export function ComparadorRegiones({ tipo, tmdbId, regionActual, nombreTitulo })
     regiones.length > 0 &&
     regiones.every(({ ofertas }) => ofertas.length === 0) &&
     regionesFallidas.length === 0;
+  const mostrarResultados =
+    !isLoading && !error && consultado && !todasSinDisponibilidad && regiones.length > 0;
+
+  const marcar = (ofertas) =>
+    marcarPlataformasPropias(ofertas, { distinguirPropias, seleccionadas });
+  const filas = [
+    ...(ofertasRegionActual
+      ? [{ region: regionActual, ofertas: marcar(ofertasRegionActual), esActual: true }]
+      : []),
+    ...regiones.map(({ region, ofertas }) => ({ region, ofertas: marcar(ofertas) })),
+  ];
+  const regionesConPropias = contarRegionesConPropias(filas);
 
   return (
     <SeccionPlegable
-      titulo="Comparar disponibilidad en otras regiones"
-      resumen={`Hasta ${MAX_REGIONES_COMPARACION} regiones`}
+      titulo="Comparar regiones"
+      resumen={`Mirá en qué otros países está disponible · hasta ${MAX_REGIONES_COMPARACION}`}
       nivelTitulo="h3"
+      icono={GlobeIcon}
       plegableEnEscritorio
     >
-      <div className="space-y-4 rounded-2xl border border-border bg-background p-4 sm:p-5">
+      <div className="space-y-4">
         <form onSubmit={manejarSubmit} className="space-y-4">
-          <div
-            role="group"
-            aria-label="Regiones disponibles para comparar"
-            className="flex flex-wrap gap-2"
-          >
-            {opcionesRegiones.map(({ codigo, nombre }) => {
-              const activa = seleccionActiva.includes(codigo);
-              const deshabilitada = !activa && limiteAlcanzado;
-
-              return (
-                <ToggleChip
-                  key={codigo}
-                  aria-label={`${nombre} (${codigo})`}
-                  pressed={activa}
-                  disabled={deshabilitada}
-                  onClick={() => alternarRegion(codigo)}
-                >
-                  <span>{nombre}</span> <span className="font-mono opacity-80">({codigo})</span>
-                </ToggleChip>
-              );
-            })}
-          </div>
-
+          <SelectorRegiones
+            opciones={opcionesRegiones}
+            seleccion={seleccionActiva}
+            abierto={selectorAbierto}
+            onAbiertoChange={setSelectorAbierto}
+            onAlternar={alternarRegion}
+          />
           <Button
             type="submit"
             size="compact"
+            fullWidth={false}
             disabled={seleccionActiva.length === 0}
             loading={isLoading}
             loadingText="Comparando disponibilidad…"
@@ -115,63 +117,34 @@ export function ComparadorRegiones({ tipo, tmdbId, regionActual, nombreTitulo })
         </form>
 
         {error && (
-          <div
-            role="alert"
-            className="flex flex-col gap-2 rounded-xl border border-danger/30 bg-danger-surface p-3 text-sm text-danger sm:flex-row sm:items-center sm:justify-between"
-          >
-            <span>{error}</span>
-            {seleccionActiva.length > 0 && <TextButton onClick={reintentar}>Reintentar</TextButton>}
-          </div>
+          <Alert onRetry={seleccionActiva.length > 0 ? reintentar : undefined}>{error}</Alert>
         )}
 
         {!isLoading && !error && regionesFallidas.length > 0 && (
-          <p
-            role="alert"
-            className="rounded-xl border border-danger/30 bg-danger-surface p-3 text-sm text-danger"
-          >
+          <Alert>
             No se pudo obtener la disponibilidad para:{' '}
             {regionesFallidas.map(formatearNombreRegion).join(', ')}.
-          </p>
+          </Alert>
         )}
 
         {!isLoading && !error && todasSinDisponibilidad && (
-          <p className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
+          <Card tone="inset" padding="sm" className="text-sm text-muted">
             No se encontró disponibilidad para este título en las regiones consultadas (
             {regiones.map(({ region }) => formatearNombreRegion(region)).join(', ')}).
-          </p>
+          </Card>
         )}
 
-        {!isLoading && !error && consultado && !todasSinDisponibilidad && regiones.length > 0 && (
-          <div className="space-y-3" aria-label="Resultados de comparación por región">
-            {regiones.map(({ region, ofertas }) => (
-              <div
-                key={region}
-                className="space-y-3 rounded-xl border border-border bg-surface p-4"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-semibold">{formatearNombreRegion(region)}</h4>
-                  <span className="rounded-full bg-chip px-2 py-0.5 font-mono text-xs font-medium text-chip-foreground">
-                    {region}
-                  </span>
-                </div>
-
-                {ofertas.length === 0 ? (
-                  <p className="text-sm text-muted">
-                    Sin disponibilidad en plataformas de streaming en esta región.
-                  </p>
-                ) : (
-                  <ListaOfertas
-                    ofertas={marcarPlataformasPropias(ofertas, {
-                      distinguirPropias,
-                      seleccionadas,
-                    })}
-                    nombreTitulo={nombreTitulo}
-                    etiquetaLista={`Plataformas en ${region}`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+        {mostrarResultados && (
+          <>
+            {distinguirPropias && regionesConPropias > 0 && (
+              <p className="flex items-center gap-2 text-sm font-medium text-success">
+                <CheckIcon className="size-4" />
+                Lo podés ver con tus plataformas en {regionesConPropias} de {filas.length}{' '}
+                {filas.length === 1 ? 'región' : 'regiones'}.
+              </p>
+            )}
+            <TablaComparacion filas={filas} nombreTitulo={nombreTitulo} />
+          </>
         )}
       </div>
     </SeccionPlegable>

@@ -1,10 +1,19 @@
-import { Link } from 'react-router';
 import { RUTAS } from '../../app/rutas.js';
+import { Alert } from '../../components/ui/Alert.jsx';
 import { Button } from '../../components/ui/Button.jsx';
+import { ButtonLink } from '../../components/ui/ButtonLink.jsx';
+import { Card } from '../../components/ui/Card.jsx';
+import { IconBadge } from '../../components/ui/IconBadge.jsx';
+import { PageHeader } from '../../components/ui/PageHeader.jsx';
+import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
+import { BookmarkIcon } from '../../components/ui/icons.jsx';
 import { useSession } from '../../contexts/session/SessionContext.js';
-import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { TarjetaWatchlist } from './TarjetaWatchlist.jsx';
+import { TarjetaWatchlistCargando } from './TarjetaWatchlistCargando.jsx';
 import { useWatchlist } from './useWatchlist.js';
+
+const GRILLA_CLASS_NAME = 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4';
+const TARJETAS_CARGANDO = 8;
 
 export function PaginaWatchlist() {
   const { user, loading: cargandoSesion } = useSession();
@@ -32,67 +41,54 @@ export function PaginaWatchlist() {
 
   if (!user) {
     return (
-      <section className="mx-auto max-w-2xl space-y-4 rounded-3xl border border-border bg-surface p-6 shadow-sm sm:p-8">
-        <h1 className="text-3xl font-extrabold tracking-tight">Tu watchlist</h1>
-        <p className="leading-7 text-muted">
-          Iniciá sesión para guardar títulos y consultar tu lista desde cualquier dispositivo.
-        </p>
+      <Card as="section" padding="lg" elevated className="mx-auto max-w-2xl space-y-4">
+        <PageHeader
+          titulo="Tu watchlist"
+          descripcion="Iniciá sesión para guardar títulos y consultar tu lista desde cualquier dispositivo."
+        />
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            to={RUTAS.INICIAR_SESION}
-            className={`inline-flex min-h-12 items-center justify-center rounded-lg bg-primary px-5 font-semibold text-primary-foreground hover:bg-primary-hover ${LINK_CLASS_NAME}`}
-          >
+          <ButtonLink to={RUTAS.INICIAR_SESION} fullWidth={false}>
             Iniciar sesión
-          </Link>
-          <Link
-            to={RUTAS.REGISTRO}
-            className={`inline-flex min-h-12 items-center justify-center rounded-lg border border-border px-5 font-semibold text-foreground hover:bg-background ${LINK_CLASS_NAME}`}
-          >
+          </ButtonLink>
+          <ButtonLink to={RUTAS.REGISTRO} variant="secondary" fullWidth={false}>
             Crear cuenta
-          </Link>
+          </ButtonLink>
         </div>
-      </section>
+      </Card>
     );
   }
 
   return (
     <section className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-extrabold tracking-tight">Mi watchlist</h1>
-        <p className="text-muted">Los títulos que guardaste para ver más tarde.</p>
-      </header>
+      <PageHeader
+        titulo="Mi watchlist"
+        descripcion="Los títulos que guardaste para ver más tarde."
+      />
 
-      {error && (
-        <div
-          role="alert"
-          className="flex flex-col gap-3 rounded-2xl border border-danger/30 bg-danger-surface p-4 text-danger sm:flex-row sm:items-center sm:justify-between"
-        >
-          <span>{error}</span>
-          <Button onClick={reintentar} className="sm:w-auto">
-            Reintentar
-          </Button>
-        </div>
-      )}
+      {error && <Alert onRetry={reintentar}>{error}</Alert>}
 
       {cargando && (
-        <p role="status" aria-live="polite" className="text-muted">
-          Cargando tu watchlist…
-        </p>
+        <>
+          <p role="status" aria-live="polite" className="sr-only">
+            Cargando tu watchlist…
+          </p>
+          <ul aria-hidden="true" className={GRILLA_CLASS_NAME}>
+            {Array.from({ length: TARJETAS_CARGANDO }, (_, indice) => (
+              <TarjetaWatchlistCargando key={indice} />
+            ))}
+          </ul>
+        </>
       )}
 
       {!cargando && !error && titulos.length === 0 && (
-        <div className="rounded-2xl border border-border bg-surface p-6 text-center sm:p-10">
-          <h2 className="text-xl font-semibold">Todavía no agregaste títulos</h2>
-          <p className="mt-2 text-muted">
-            Cuando encuentres algo para ver, guardalo desde su detalle.
-          </p>
-          <Link
-            to={RUTAS.BUSQUEDA}
-            className={`mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-5 font-semibold text-primary-foreground hover:bg-primary-hover ${LINK_CLASS_NAME}`}
-          >
+        <Card padding="none" className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+          <IconBadge icon={BookmarkIcon} />
+          <SectionTitle>Todavía no agregaste títulos</SectionTitle>
+          <p className="text-muted">Cuando encuentres algo para ver, guardalo desde su detalle.</p>
+          <ButtonLink to={RUTAS.BUSQUEDA} size="compact" fullWidth={false} className="mt-2">
             Buscar títulos
-          </Link>
-        </div>
+          </ButtonLink>
+        </Card>
       )}
 
       {titulos.length > 0 && (
@@ -101,7 +97,7 @@ export function PaginaWatchlist() {
             Mostrando {titulos.length} de {totalResultados}{' '}
             {totalResultados === 1 ? 'título' : 'títulos'}
           </p>
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className={GRILLA_CLASS_NAME}>
             {titulos.map((item) => {
               const key = `${item.titulo.tipo}:${item.titulo.tmdbId}`;
               return (

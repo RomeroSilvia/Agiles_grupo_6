@@ -3,10 +3,15 @@ const TONES = {
   danger: 'bg-danger-surface text-danger',
 };
 
-export function IconBadge({ icon: Icon, tone = 'primary', className = '' }) {
+const SIZES = {
+  md: 'size-11',
+  sm: 'size-9',
+};
+
+export function IconBadge({ icon: Icon, tone = 'primary', size = 'md', className = '' }) {
   return (
     <span
-      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-full ${TONES[tone]} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full ${SIZES[size]} ${TONES[tone]} ${className}`}
     >
       <Icon className="size-5" />
     </span>

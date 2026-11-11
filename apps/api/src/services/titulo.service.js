@@ -29,10 +29,10 @@ async function armarDisponibilidad({
   region,
   ofertasPorRegion,
   plataformasActivas,
-  agregarDeepLinks,
+  completarDeepLinks,
 }) {
   const ofertasDeRegion = ofertasPorRegion[region] ?? { enlaceTmdb: null, ofertas: [] };
-  const ofertas = await agregarDeepLinks({
+  const ofertas = await completarDeepLinks({
     tipo,
     tmdbId,
     region,
@@ -62,7 +62,7 @@ export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REG
     region: codigoRegion,
     ofertasPorRegion,
     plataformasActivas,
-    agregarDeepLinks: deepLinkService.agregarDeepLinks,
+    completarDeepLinks: deepLinkService.agregarDeepLinks,
   });
 }
 
@@ -80,7 +80,7 @@ export async function compararDisponibilidad({ tipo, tmdbId, regiones }) {
         region,
         ofertasPorRegion,
         plataformasActivas,
-        agregarDeepLinks: deepLinkService.agregarDeepLinksGuardados,
+        completarDeepLinks: deepLinkService.agregarDeepLinksGuardados,
       }),
     ),
   );

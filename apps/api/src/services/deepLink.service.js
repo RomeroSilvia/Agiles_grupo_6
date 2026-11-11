@@ -232,6 +232,10 @@ export async function agregarDeepLinks({ tipo, tmdbId, region, ofertas }) {
   return asignarDeepLinks(ofertas, deepLinks);
 }
 
+/**
+ * Igual que agregarDeepLinks, pero solo usa los deep links guardados y vigentes:
+ * nunca consulta Streaming Availability ni gasta cupo.
+ */
 export async function agregarDeepLinksGuardados({ tipo, tmdbId, region, ofertas }) {
   const enlazables = listarOfertasEnlazables(ofertas);
   const deepLinks =

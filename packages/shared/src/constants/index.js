@@ -9,6 +9,9 @@ export const TIPOS_TITULO = Object.values(TIPO_TITULO);
 export const ROL_PERSONA = Object.freeze({ ACTOR: 'actor', DIRECTOR: 'director' });
 export const ROLES_PERSONA = Object.values(ROL_PERSONA);
 
+export const ROL_USUARIO = Object.freeze({ USUARIO: 'usuario', ADMINISTRADOR: 'administrador' });
+export const ROLES_USUARIO = Object.values(ROL_USUARIO);
+
 export const GENEROS_BUSQUEDA = Object.freeze([
   {
     id: 'accion-aventura',

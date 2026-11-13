@@ -16,6 +16,7 @@ vi.mock('../repositories/plataforma.repository.js', () => ({
 
 vi.mock('./deepLink.service.js', () => ({
   agregarDeepLinks: vi.fn(),
+  agregarDeepLinksGuardados: vi.fn(),
 }));
 
 const plataformasActivas = [
@@ -35,15 +36,50 @@ const plataformasActivas = [
   },
 ];
 
+async function sinDeepLinks({ ofertas }) {
+  return ofertas.map(({ tipoOferta, plataformas }) => ({
+    tipoOferta,
+    plataformas: plataformas.map((plataforma) => ({ ...plataforma, deepLink: null })),
+  }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   plataformaRepository.listarActivas.mockResolvedValue(plataformasActivas);
-  deepLinkService.agregarDeepLinks.mockImplementation(async ({ ofertas }) =>
-    ofertas.map(({ tipoOferta, plataformas }) => ({
-      tipoOferta,
-      plataformas: plataformas.map((plataforma) => ({ ...plataforma, deepLink: null })),
-    })),
-  );
+  deepLinkService.agregarDeepLinks.mockImplementation(sinDeepLinks);
+  deepLinkService.agregarDeepLinksGuardados.mockImplementation(sinDeepLinks);
+});
+
+describe('tituloService.obtenerDisponibilidad', () => {
+  it('completa los deep links de la ficha con agregarDeepLinks', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValue({
+      AR: {
+        enlaceTmdb: null,
+        ofertas: [{ tmdbProviderId: 8, tipoOferta: 'suscripcion', logoPath: '/netflix.jpg' }],
+      },
+    });
+
+    const resultado = await tituloService.obtenerDisponibilidad({
+      tipo: 'pelicula',
+      tmdbId: 1,
+      region: 'ar',
+    });
+
+    expect(deepLinkService.agregarDeepLinks).toHaveBeenCalledWith(
+      expect.objectContaining({ tipo: 'pelicula', tmdbId: 1, region: 'AR' }),
+    );
+    expect(deepLinkService.agregarDeepLinksGuardados).not.toHaveBeenCalled();
+    expect(resultado.region).toBe('AR');
+  });
+
+  it('propaga el error si falla agregarDeepLinks', async () => {
+    tmdbIntegration.obtenerOfertas.mockResolvedValue({});
+    deepLinkService.agregarDeepLinks.mockRejectedValue(new DatabaseError());
+
+    await expect(
+      tituloService.obtenerDisponibilidad({ tipo: 'pelicula', tmdbId: 1, region: 'AR' }),
+    ).rejects.toBeInstanceOf(DatabaseError);
+  });
 });
 
 describe('tituloService.compararDisponibilidad', () => {
@@ -66,7 +102,8 @@ describe('tituloService.compararDisponibilidad', () => {
     });
 
     expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledTimes(1);
-    expect(deepLinkService.agregarDeepLinks).toHaveBeenCalledTimes(2);
+    expect(deepLinkService.agregarDeepLinksGuardados).toHaveBeenCalledTimes(2);
+    expect(deepLinkService.agregarDeepLinks).not.toHaveBeenCalled();
     expect(resultado).toEqual({
       regiones: [
         {
@@ -114,7 +151,7 @@ describe('tituloService.compararDisponibilidad', () => {
     });
   });
 
-  it('conserva los resultados confirmados e identifica la región cuando falla agregarDeepLinks para una región', async () => {
+  it('conserva los resultados confirmados e identifica la región cuando falla la lectura de sus deep links', async () => {
     tmdbIntegration.obtenerOfertas.mockResolvedValue({
       US: {
         enlaceTmdb: null,
@@ -125,14 +162,11 @@ describe('tituloService.compararDisponibilidad', () => {
         ofertas: [{ tmdbProviderId: 337, tipoOferta: 'suscripcion', logoPath: '/disney.jpg' }],
       },
     });
-    deepLinkService.agregarDeepLinks.mockImplementation(async ({ region, ofertas }) => {
-      if (region === 'BR') {
+    deepLinkService.agregarDeepLinksGuardados.mockImplementation(async (parametros) => {
+      if (parametros.region === 'BR') {
         throw new DatabaseError(new Error('Fallo al consultar deep links en BR'));
       }
-      return ofertas.map(({ tipoOferta, plataformas }) => ({
-        tipoOferta,
-        plataformas: plataformas.map((plataforma) => ({ ...plataforma, deepLink: null })),
-      }));
+      return sinDeepLinks(parametros);
     });
 
     const resultado = await tituloService.compararDisponibilidad({
@@ -158,7 +192,7 @@ describe('tituloService.compararDisponibilidad', () => {
 
   it('lanza ExternalServiceError si fallan todas las regiones solicitadas', async () => {
     tmdbIntegration.obtenerOfertas.mockResolvedValue({});
-    deepLinkService.agregarDeepLinks.mockRejectedValue(
+    deepLinkService.agregarDeepLinksGuardados.mockRejectedValue(
       new DatabaseError(new Error('Fallo al resolver deep links')),
     );
 

@@ -17,7 +17,9 @@ combinaciones, las reparte entre ejecuciones para respetar el límite del provee
 Las búsquedas del catálogo consultan TMDB; el detalle puede consultar Streaming Availability
 cuando necesita obtener un deep link. Las consultas del job y del detalle comparten el cupo
 diario de 100 requests y reservan cada llamada antes de contactar al proveedor. Los deep links
-guardados en la base o en caché no consumen requests adicionales.
+guardados en la base o en caché no consumen requests adicionales. La comparación de regiones no
+consulta Streaming Availability: usa solo los deep links guardados y vigentes, y donde no hay,
+la tarjeta lleva a la home de la plataforma.
 
 Cuando un título de la watchlist pasa de no estar disponible a estar disponible en la región
 del usuario, la sincronización deja un aviso pendiente por plataforma. El job

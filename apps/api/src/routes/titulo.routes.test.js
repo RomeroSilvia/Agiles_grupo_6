@@ -476,6 +476,39 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad/comparacion', () => {
     expect(tmdbIntegration.obtenerOfertas).toHaveBeenCalledTimes(1);
   });
 
+  it('usa solo los deep links guardados sin reservar cupo ni consultar Streaming Availability', async () => {
+    const enlaceNetflix = 'https://www.netflix.com/title/80100172';
+    tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue({ id: 10 });
+    disponibilidadRepository.listarPorTituloYRegion.mockImplementation(async (_tituloId, region) =>
+      region === 'AR'
+        ? [
+            {
+              plataformaId: 1,
+              tipoOferta: 'suscripcion',
+              deepLink: enlaceNetflix,
+              verificadaEn: new Date(),
+            },
+          ]
+        : [],
+    );
+
+    const response = await request(createApp())
+      .get('/api/titulos/pelicula/1/disponibilidad/comparacion?regiones=AR,US')
+      .set('Cookie', COOKIE_SESION);
+
+    expect(response.status).toBe(200);
+    const [ar, us] = response.body.data.regiones;
+    expect(ar.ofertas[0].plataformas).toEqual([
+      expect.objectContaining({ nombre: 'Netflix', deepLink: enlaceNetflix }),
+      expect.objectContaining({ nombre: 'Amazon Prime Video', deepLink: null }),
+    ]);
+    expect(us.ofertas[0].plataformas).toEqual([
+      expect.objectContaining({ nombre: 'Disney Plus', deepLink: null }),
+    ]);
+    expect(streamingAvailabilityIntegration.obtenerDeepLinks).not.toHaveBeenCalled();
+    expect(sincronizacionRepository.reservarConsultaDisponibilidad).not.toHaveBeenCalled();
+  });
+
   it('identifica las regiones consultadas sin ofertas cuando no hay disponibilidad (Escenario 2)', async () => {
     const response = await request(createApp())
       .get('/api/titulos/pelicula/1/disponibilidad/comparacion?regiones=ES,MX')

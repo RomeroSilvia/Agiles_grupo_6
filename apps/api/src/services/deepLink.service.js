@@ -118,17 +118,17 @@ function elegirDeepLink({ plataforma, tipoOferta }, opciones) {
   return elegida?.deepLink ?? null;
 }
 
-// Devuelve los deep links guardados solo si hay uno vigente para cada oferta (null incluido).
-async function leerGuardados({ tipo, tmdbId, region, enlazables }) {
+// Devuelve los deep links guardados y vigentes de las ofertas (null si el guardado no es válido).
+async function leerVigentes({ tipo, tmdbId, region, enlazables }) {
   const titulo = await tituloRepository.obtenerPorTmdbIdYTipo(tmdbId, tipo);
   if (!titulo) {
-    return null;
+    return new Map();
   }
 
   const plataformas = new Map(enlazables.map(({ plataforma }) => [plataforma.id, plataforma]));
   const limite = Date.now() - STREAMING_AVAILABILITY_CONFIG.VIGENCIA_DEEP_LINK_MS;
   const disponibilidades = await disponibilidadRepository.listarPorTituloYRegion(titulo.id, region);
-  const guardados = new Map(
+  return new Map(
     disponibilidades
       .filter(
         ({ plataformaId, verificadaEn }) =>
@@ -139,11 +139,13 @@ async function leerGuardados({ tipo, tmdbId, region, enlazables }) {
         esDeepLinkDePlataforma(deepLink, plataformas.get(plataformaId)) ? deepLink : null,
       ]),
   );
+}
 
-  const estanTodos = enlazables.every(({ plataforma, tipoOferta }) =>
+// Hay un guardado vigente para cada oferta (null incluido).
+function estanCompletos(guardados, enlazables) {
+  return enlazables.every(({ plataforma, tipoOferta }) =>
     guardados.has(claveOferta(plataforma.id, tipoOferta)),
   );
-  return estanTodos ? guardados : null;
 }
 
 async function guardar({ tipo, tmdbId, region, enlazables, deepLinks }) {
@@ -171,8 +173,8 @@ async function guardar({ tipo, tmdbId, region, enlazables, deepLinks }) {
 }
 
 async function resolverDeepLinks({ tipo, tmdbId, region, enlazables }) {
-  const guardados = await leerGuardados({ tipo, tmdbId, region, enlazables });
-  if (guardados) {
+  const guardados = await leerVigentes({ tipo, tmdbId, region, enlazables });
+  if (estanCompletos(guardados, enlazables)) {
     return guardados;
   }
 
@@ -207,6 +209,16 @@ async function resolverDeepLinks({ tipo, tmdbId, region, enlazables }) {
   return deepLinks;
 }
 
+function asignarDeepLinks(ofertas, deepLinks) {
+  return ofertas.map(({ tipoOferta, plataformas }) => ({
+    tipoOferta,
+    plataformas: plataformas.map((plataforma) => ({
+      ...plataforma,
+      deepLink: deepLinks.get(claveOferta(plataforma.id, tipoOferta)) ?? null,
+    })),
+  }));
+}
+
 /** Suma a cada plataforma de las ofertas su deep link (null si no tiene uno válido). */
 export async function agregarDeepLinks({ tipo, tmdbId, region, ofertas }) {
   const enlazables = listarOfertasEnlazables(ofertas);
@@ -217,11 +229,17 @@ export async function agregarDeepLinks({ tipo, tmdbId, region, ofertas }) {
           resolverDeepLinks({ tipo, tmdbId, region, enlazables }),
         );
 
-  return ofertas.map(({ tipoOferta, plataformas }) => ({
-    tipoOferta,
-    plataformas: plataformas.map((plataforma) => ({
-      ...plataforma,
-      deepLink: deepLinks.get(claveOferta(plataforma.id, tipoOferta)) ?? null,
-    })),
-  }));
+  return asignarDeepLinks(ofertas, deepLinks);
+}
+
+/**
+ * Igual que agregarDeepLinks, pero solo usa los deep links guardados y vigentes:
+ * nunca consulta Streaming Availability ni gasta cupo.
+ */
+export async function agregarDeepLinksGuardados({ tipo, tmdbId, region, ofertas }) {
+  const enlazables = listarOfertasEnlazables(ofertas);
+  const deepLinks =
+    enlazables.length === 0 ? new Map() : await leerVigentes({ tipo, tmdbId, region, enlazables });
+
+  return asignarDeepLinks(ofertas, deepLinks);
 }

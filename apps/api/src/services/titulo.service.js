@@ -16,9 +16,23 @@ export async function obtenerDetalleTitulo({ tipo, tmdbId }) {
   return validateExternalResponse(tituloSchema, respuesta);
 }
 
-async function armarDisponibilidad({ tipo, tmdbId, region, ofertasPorRegion, plataformasActivas }) {
+function obtenerDatosDisponibilidad({ tipo, tmdbId }) {
+  return Promise.all([
+    tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
+    plataformaRepository.listarActivas(),
+  ]);
+}
+
+async function armarDisponibilidad({
+  tipo,
+  tmdbId,
+  region,
+  ofertasPorRegion,
+  plataformasActivas,
+  completarDeepLinks,
+}) {
   const ofertasDeRegion = ofertasPorRegion[region] ?? { enlaceTmdb: null, ofertas: [] };
-  const ofertas = await deepLinkService.agregarDeepLinks({
+  const ofertas = await completarDeepLinks({
     tipo,
     tmdbId,
     region,
@@ -37,10 +51,10 @@ async function armarDisponibilidad({ tipo, tmdbId, region, ofertasPorRegion, pla
 
 export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REGION }) {
   const codigoRegion = String(region).toUpperCase();
-  const [ofertasPorRegion, plataformasActivas] = await Promise.all([
-    tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
-    plataformaRepository.listarActivas(),
-  ]);
+  const [ofertasPorRegion, plataformasActivas] = await obtenerDatosDisponibilidad({
+    tipo,
+    tmdbId,
+  });
 
   return armarDisponibilidad({
     tipo,
@@ -48,14 +62,15 @@ export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REG
     region: codigoRegion,
     ofertasPorRegion,
     plataformasActivas,
+    completarDeepLinks: deepLinkService.agregarDeepLinks,
   });
 }
 
 export async function compararDisponibilidad({ tipo, tmdbId, regiones }) {
-  const [ofertasPorRegion, plataformasActivas] = await Promise.all([
-    tmdbIntegration.obtenerOfertas({ tipo, tmdbId }),
-    plataformaRepository.listarActivas(),
-  ]);
+  const [ofertasPorRegion, plataformasActivas] = await obtenerDatosDisponibilidad({
+    tipo,
+    tmdbId,
+  });
 
   const resultados = await Promise.allSettled(
     regiones.map((region) =>
@@ -65,6 +80,7 @@ export async function compararDisponibilidad({ tipo, tmdbId, regiones }) {
         region,
         ofertasPorRegion,
         plataformasActivas,
+        completarDeepLinks: deepLinkService.agregarDeepLinksGuardados,
       }),
     ),
   );

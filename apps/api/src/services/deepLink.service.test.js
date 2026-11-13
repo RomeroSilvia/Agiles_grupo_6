@@ -7,7 +7,7 @@ import * as disponibilidadRepository from '../repositories/disponibilidad.reposi
 import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
 import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
 import * as tituloRepository from '../repositories/titulo.repository.js';
-import { agregarDeepLinks } from './deepLink.service.js';
+import { agregarDeepLinks, agregarDeepLinksGuardados } from './deepLink.service.js';
 
 const envMock = vi.hoisted(() => ({ env: { STREAMING_AVAILABILITY_API_KEY: 'clave-prueba' } }));
 
@@ -319,5 +319,78 @@ describe('agregarDeepLinks', () => {
     tituloRepository.obtenerPorTmdbIdYTipo.mockRejectedValue(new DatabaseError());
 
     await expect(agregarDeepLinks(consulta())).rejects.toBeInstanceOf(DatabaseError);
+  });
+});
+
+describe('agregarDeepLinksGuardados', () => {
+  function expectSinConsultarProveedor() {
+    expect(streamingAvailabilityIntegration.obtenerDeepLinks).not.toHaveBeenCalled();
+    expect(sincronizacionRepository.iniciar).not.toHaveBeenCalled();
+    expect(sincronizacionRepository.reservarConsultaDisponibilidad).not.toHaveBeenCalled();
+  }
+
+  it('usa los deep links guardados y vigentes sin reservar cupo ni consultar Streaming Availability', async () => {
+    guardados([1, ENLACE_NETFLIX], [2, ENLACE_PRIME]);
+
+    const resultado = await agregarDeepLinksGuardados(consulta());
+
+    expectSinConsultarProveedor();
+    expect(deepLinksDe(resultado)).toEqual({
+      'Netflix:suscripcion': ENLACE_NETFLIX,
+      'Amazon Prime Video:suscripcion': ENLACE_PRIME,
+    });
+  });
+
+  it('devuelve los guardados aunque falten los de otras plataformas', async () => {
+    guardados([1, ENLACE_NETFLIX]);
+
+    const resultado = await agregarDeepLinksGuardados(consulta());
+
+    expectSinConsultarProveedor();
+    expect(deepLinksDe(resultado)).toEqual({
+      'Netflix:suscripcion': ENLACE_NETFLIX,
+      'Amazon Prime Video:suscripcion': null,
+    });
+  });
+
+  it('descarta los deep links vencidos o de otro dominio sin consultar Streaming Availability', async () => {
+    guardados([1, ENLACE_NETFLIX, new Date(0)], [2, 'https://primevideo.com.phishing.io/1']);
+
+    const resultado = await agregarDeepLinksGuardados(consulta());
+
+    expectSinConsultarProveedor();
+    expect(deepLinksDe(resultado)).toEqual({
+      'Netflix:suscripcion': null,
+      'Amazon Prime Video:suscripcion': null,
+    });
+  });
+
+  it('devuelve deep links en null si el título no está guardado', async () => {
+    const resultado = await agregarDeepLinksGuardados(consulta());
+
+    expectSinConsultarProveedor();
+    expect(disponibilidadRepository.listarPorTituloYRegion).not.toHaveBeenCalled();
+    expect(deepLinksDe(resultado)).toEqual({
+      'Netflix:suscripcion': null,
+      'Amazon Prime Video:suscripcion': null,
+    });
+  });
+
+  it('propaga el error si falla la lectura de la base', async () => {
+    tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue(TITULO_GUARDADO);
+    disponibilidadRepository.listarPorTituloYRegion.mockRejectedValue(new DatabaseError());
+
+    await expect(agregarDeepLinksGuardados(consulta())).rejects.toBeInstanceOf(DatabaseError);
+  });
+
+  it('no deja en memoria un resultado parcial que evite la consulta de la ficha', async () => {
+    guardados([1, ENLACE_NETFLIX]);
+    const parametros = consulta();
+
+    await agregarDeepLinksGuardados(parametros);
+    const resultado = await agregarDeepLinks(parametros);
+
+    expect(streamingAvailabilityIntegration.obtenerDeepLinks).toHaveBeenCalledTimes(1);
+    expect(deepLinksDe(resultado)['Amazon Prime Video:suscripcion']).toBe(ENLACE_PRIME);
   });
 });

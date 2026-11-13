@@ -90,6 +90,11 @@ export const TIPOS_OFERTA_INCLUIDOS = Object.freeze([
 
 export const ESTADOS_NOTIFICACION = ['pendiente', 'enviada', 'fallida'];
 
+export const ESTADO_USUARIO = Object.freeze({ ACTIVO: 'activo', SIN_CONFIRMAR: 'sin_confirmar' });
+export const ESTADOS_USUARIO = Object.values(ESTADO_USUARIO);
+
+export const USUARIOS_POR_PAGINA = 10;
+
 // Valores técnicos
 export const DEFAULT_REGION = 'AR';
 

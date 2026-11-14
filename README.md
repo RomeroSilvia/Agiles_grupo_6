@@ -90,8 +90,10 @@ La pantalla de detalle también muestra la disponibilidad de TMDB/JustWatch para
 `GET /api/cartelera?pagina=1` devuelve el catálogo público de películas que TMDB clasifica como
 `now_playing` en Argentina. La consulta admite solo `pagina` (entero de 1 a 500) y usa `AR`,
 independientemente de la región del perfil. Esta clasificación no confirma salas ni horarios. La
-cartelera se cachea una hora; las fechas regionales consultadas por película usan la caché general
-de TMDB (24 horas). La integración limita la concurrencia a ocho solicitudes y no reintenta errores
+cartelera se cachea una hora; las fechas regionales y el año original consultados por película se
+cachean 24 horas. El año se obtiene del detalle sin región para distinguir la obra de su estreno
+argentino o reestreno. Al volver del detalle, el historial restaura las páginas cargadas de la
+cartelera. La integración limita la concurrencia a ocho solicitudes y no reintenta errores
 ni respuestas `429`; el endpoint tiene un límite local de 30 solicitudes por IP por minuto.
 TMDB puede modificar sus límites y no garantiza una frecuencia de actualización. Las fechas se
 informan solo cuando TMDB publica para Argentina un estreno en salas limitado o general (tipos 2/3).

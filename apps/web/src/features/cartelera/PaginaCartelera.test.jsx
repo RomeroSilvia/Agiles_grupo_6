@@ -73,6 +73,12 @@ function configurarFetchCartelera(responder) {
     if (url.pathname === '/api/cartelera') {
       return responder(url);
     }
+    if (url.pathname === '/api/titulos/pelicula/78') {
+      return Promise.resolve(respuestaHttp({ data: { ...PELICULA_SIN_FECHA, sinopsis: null } }));
+    }
+    if (url.pathname === '/api/titulos/pelicula/78/disponibilidad') {
+      return Promise.resolve(respuestaHttp({ data: { ofertas: [], enlaceTmdb: null } }));
+    }
 
     throw new Error(`URL no mockeada: ${url.pathname}`);
   });
@@ -167,5 +173,66 @@ describe('PaginaCartelera', () => {
           .map(([input]) => new URL(input.toString()).searchParams.get('pagina')),
       ).toEqual(['1', '2']);
     });
+  });
+
+  it.each(['enlace del detalle', 'navegador'])(
+    'restaura todas las páginas al volver con el %s y continúa desde la siguiente',
+    async (modo) => {
+      const terceraPelicula = { ...DUNE, tmdbId: 79, nombre: 'Tercera película' };
+      const paginas = [[DUNE], [PELICULA_SIN_FECHA], [terceraPelicula]];
+      const fetchMock = configurarFetchCartelera((url) => {
+        const pagina = Number(url.searchParams.get('pagina'));
+        return Promise.resolve(respuestaHttp(respuestaCartelera(paginas[pagina - 1], pagina, 3)));
+      });
+      const router = renderRoute('/cartelera');
+      await screen.findByRole('link', { name: 'Ver detalle de Dune' });
+      fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+      await screen.findByRole('link', { name: 'Ver detalle de Título no disponible' });
+      await waitFor(() => expect(router.state.location.state?.cartelera?.pagina).toBe(2));
+      fireEvent.click(screen.getByRole('link', { name: 'Ver detalle de Título no disponible' }));
+      const volver = await screen.findByRole('link', { name: 'Volver a la búsqueda' });
+
+      if (modo === 'navegador') {
+        await act(async () => router.navigate(-1));
+      } else {
+        fireEvent.click(volver);
+      }
+
+      expect(await screen.findByRole('link', { name: 'Ver detalle de Dune' })).toBeVisible();
+      expect(
+        screen.getByRole('link', { name: 'Ver detalle de Título no disponible' }),
+      ).toBeVisible();
+      fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+      expect(
+        await screen.findByRole('link', { name: 'Ver detalle de Tercera película' }),
+      ).toBeVisible();
+      expect(
+        fetchMock.mock.calls
+          .filter(([url]) => url.pathname === '/api/cartelera')
+          .map(([url]) => url.searchParams.get('pagina')),
+      ).toEqual(['1', '2', '3']);
+    },
+  );
+
+  it('conserva las páginas previas y reintenta la página que falló al cargar más', async () => {
+    configurarFetchCartelera(
+      vi
+        .fn()
+        .mockResolvedValueOnce(respuestaHttp(respuestaCartelera([DUNE], 1, 2)))
+        .mockResolvedValueOnce(
+          respuestaHttp({ error: { code: 'EXTERNAL_SERVICE', message: 'Falló TMDB' } }, 502),
+        )
+        .mockResolvedValueOnce(respuestaHttp(respuestaCartelera([PELICULA_SIN_FECHA], 2, 2))),
+    );
+    renderRoute('/cartelera');
+    await screen.findByRole('link', { name: 'Ver detalle de Dune' });
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falló TMDB');
+    expect(screen.getByRole('link', { name: 'Ver detalle de Dune' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(
+      await screen.findByRole('link', { name: 'Ver detalle de Título no disponible' }),
+    ).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Ver detalle de Dune' })).toBeVisible();
   });
 });

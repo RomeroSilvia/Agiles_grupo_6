@@ -69,6 +69,10 @@ const fechasEstrenoCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
   maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
 });
+const aniosOriginalesCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
+});
 
 const respuestaFechasEstrenoSchema = z.object({
   results: z.array(
@@ -206,6 +210,16 @@ export function descubrirTitulos({ tipo, anio, generoIds, pagina }) {
   );
 }
 
+function obtenerAnioOriginalPelicula(tmdbId) {
+  return aniosOriginalesCache.getOrSet(String(tmdbId), async () => {
+    const detalle = validateExternalResponse(
+      z.object({ id: z.literal(tmdbId), release_date: z.string().nullish() }),
+      await tmdbRequest(`/movie/${tmdbId}`),
+    );
+    return obtenerAnio(detalle.release_date);
+  });
+}
+
 export function listarPeliculasEnCartelera({ pagina }) {
   return cartelerasCache.getOrSet(`${REGION_CARTELERA}:${pagina}`, async () => {
     const respuesta = await tmdbRequest('/movie/now_playing', {
@@ -214,7 +228,7 @@ export function listarPeliculasEnCartelera({ pagina }) {
       page: pagina,
     });
 
-    return validateExternalResponse(respuestaTmdbCarteleraSchema, {
+    const cartelera = validateExternalResponse(respuestaTmdbCarteleraSchema, {
       resultados: mapearColeccion(respuesta?.results, (item) =>
         normalizarBase(item, TIPO_TITULO.PELICULA),
       ),
@@ -223,6 +237,16 @@ export function listarPeliculasEnCartelera({ pagina }) {
       totalPaginas: respuesta?.total_pages,
       consultadoEn: new Date().toISOString(),
     });
+
+    return {
+      ...cartelera,
+      resultados: await Promise.all(
+        cartelera.resultados.map(async (pelicula) => ({
+          ...pelicula,
+          anio: await obtenerAnioOriginalPelicula(pelicula.tmdbId),
+        })),
+      ),
+    };
   });
 }
 

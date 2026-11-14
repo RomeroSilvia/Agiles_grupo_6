@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { ApiError } from '../../services/api.service.js';
 import { listarPeliculasEnCartelera } from './cartelera.api.js';
 
@@ -17,15 +18,18 @@ function acumularPeliculas(actuales, nuevas) {
 }
 
 export function useCartelera() {
-  const [resultados, setResultados] = useState([]);
-  const [pagina, setPagina] = useState(0);
-  const [totalPaginas, setTotalPaginas] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [estadoGuardado] = useState(() => location.state?.cartelera);
+  const [resultados, setResultados] = useState(estadoGuardado?.resultados ?? []);
+  const [pagina, setPagina] = useState(estadoGuardado?.pagina ?? 0);
+  const [totalPaginas, setTotalPaginas] = useState(estadoGuardado?.totalPaginas ?? 0);
+  const [isLoading, setIsLoading] = useState(!estadoGuardado);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [hasSearched, setHasSearched] = useState(Boolean(estadoGuardado));
   const [error, setError] = useState('');
   const abortControllerRef = useRef(null);
-  const ultimaPaginaSolicitadaRef = useRef(1);
+  const ultimaPaginaSolicitadaRef = useRef(estadoGuardado?.pagina ?? 1);
 
   const solicitarPagina = useCallback((paginaSolicitada) => {
     abortControllerRef.current?.abort();
@@ -89,9 +93,42 @@ export function useCartelera() {
   }, [isLoading, isLoadingMore, pagina, procesarSolicitud, solicitarPagina, totalPaginas]);
 
   useEffect(() => {
-    solicitarPagina(1).then((resultado) => procesarSolicitud(resultado));
+    if (!estadoGuardado) {
+      solicitarPagina(1).then((resultado) => procesarSolicitud(resultado));
+    }
     return () => abortControllerRef.current?.abort();
-  }, [procesarSolicitud, solicitarPagina]);
+  }, [estadoGuardado, procesarSolicitud, solicitarPagina]);
+
+  useEffect(() => {
+    if (
+      !hasSearched ||
+      isLoading ||
+      isLoadingMore ||
+      error ||
+      location.state?.cartelera?.resultados === resultados
+    ) {
+      return;
+    }
+
+    navigate(
+      { pathname: location.pathname, search: location.search, hash: location.hash },
+      {
+        replace: true,
+        preventScrollReset: true,
+        state: { ...location.state, cartelera: { resultados, pagina, totalPaginas } },
+      },
+    );
+  }, [
+    error,
+    hasSearched,
+    isLoading,
+    isLoadingMore,
+    location,
+    navigate,
+    pagina,
+    resultados,
+    totalPaginas,
+  ]);
 
   return {
     resultados,

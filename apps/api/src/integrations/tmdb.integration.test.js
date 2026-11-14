@@ -245,22 +245,25 @@ describe('detalle y disponibilidad de TMDB', () => {
 
   describe('cartelera y fechas de estreno de TMDB', () => {
     it('consulta cartelera argentina, normaliza películas y conserva la caché por página', async () => {
-      const fetchMock = vi.fn().mockResolvedValue(
-        respuestaFetch({
-          page: 1,
-          results: [
-            {
-              id: 21,
-              title: 'Película',
-              release_date: '2026-03-04',
-              poster_path: '/poster.jpg',
-              vote_average: 7.5,
-            },
-          ],
-          total_results: 1,
-          total_pages: 1,
-        }),
-      );
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          respuestaFetch({
+            page: 1,
+            results: [
+              {
+                id: 21,
+                title: 'Película',
+                release_date: '2026-03-04',
+                poster_path: '/poster.jpg',
+                vote_average: 7.5,
+              },
+            ],
+            total_results: 1,
+            total_pages: 1,
+          }),
+        )
+        .mockResolvedValueOnce(respuestaFetch({ id: 21, release_date: '2021-09-15' }));
       vi.stubGlobal('fetch', fetchMock);
 
       const primera = await listarPeliculasEnCartelera({ pagina: 1 });
@@ -277,7 +280,7 @@ describe('detalle y disponibilidad de TMDB', () => {
             tmdbId: 21,
             tipo: 'pelicula',
             nombre: 'Película',
-            anio: 2026,
+            anio: 2021,
             posterUrl: 'https://image.tmdb.org/t/p/w500/poster.jpg',
             puntuacion: 7.5,
           },
@@ -287,7 +290,86 @@ describe('detalle y disponibilidad de TMDB', () => {
         totalPaginas: 1,
       });
       expect(segunda.consultadoEn).toBe(primera.consultadoEn);
-      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const [urlDetalle] = fetchMock.mock.calls[1];
+      expect(urlDetalle.pathname).toBe('/3/movie/21');
+      expect(urlDetalle.searchParams.has('region')).toBe(false);
+    });
+
+    it('reutiliza el año original de una película en distintas páginas', async () => {
+      const fetchMock = vi.fn(async (url) =>
+        respuestaFetch(
+          url.pathname.endsWith('/now_playing')
+            ? {
+                page: Number(url.searchParams.get('page')),
+                results: [{ id: 914, release_date: '2026-03-04' }],
+                total_results: 2,
+                total_pages: 2,
+              }
+            : { id: 914, release_date: '2021-09-15' },
+        ),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      await listarPeliculasEnCartelera({ pagina: 13 });
+      const respuesta = await listarPeliculasEnCartelera({ pagina: 14 });
+
+      expect(respuesta.resultados[0].anio).toBe(2021);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock.mock.calls.filter(([url]) => url.pathname === '/3/movie/914')).toHaveLength(
+        1,
+      );
+    });
+
+    it.each([null, '', undefined])(
+      'no usa el año regional si la fecha primaria no está informada (%s)',
+      async (releaseDate) => {
+        const tmdbId = releaseDate === null ? 910 : releaseDate === '' ? 911 : 912;
+        const pagina = tmdbId - 900;
+        vi.stubGlobal(
+          'fetch',
+          vi
+            .fn()
+            .mockResolvedValueOnce(
+              respuestaFetch({
+                page: pagina,
+                results: [{ id: tmdbId, release_date: '2026-03-04' }],
+                total_results: 1,
+                total_pages: 1,
+              }),
+            )
+            .mockResolvedValueOnce(respuestaFetch({ id: tmdbId, release_date: releaseDate })),
+        );
+
+        const respuesta = await listarPeliculasEnCartelera({ pagina });
+
+        expect(respuesta.resultados[0].anio).toBeNull();
+      },
+    );
+
+    it('permite reintentar si falla la consulta del año original sin cachear el error', async () => {
+      const cartelera = {
+        page: 9,
+        results: [{ id: 913, release_date: '2026-03-04' }],
+        total_results: 1,
+        total_pages: 1,
+      };
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(respuestaFetch(cartelera))
+        .mockResolvedValueOnce({ ok: false, status: 503 })
+        .mockResolvedValueOnce(respuestaFetch(cartelera))
+        .mockResolvedValueOnce(respuestaFetch({ id: 913, release_date: '2021-09-15' }));
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(listarPeliculasEnCartelera({ pagina: 9 })).rejects.toMatchObject({
+        code: 'EXTERNAL_SERVICE',
+        status: 502,
+      });
+      const recuperada = await listarPeliculasEnCartelera({ pagina: 9 });
+      expect(recuperada.resultados[0].anio).toBe(2021);
+      await expect(listarPeliculasEnCartelera({ pagina: 9 })).resolves.toEqual(recuperada);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
     });
 
     it.each([

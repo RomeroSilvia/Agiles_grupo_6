@@ -8,6 +8,7 @@ import { plataformaRoutes } from './plataforma.routes.js';
 import { watchlistRoutes } from './watchlist.routes.js';
 import { ciudadCineRoutes } from './ciudadCine.routes.js';
 import { carteleraRoutes } from './cartelera.routes.js';
+import { funcionCineRoutes } from './funcionCine.routes.js';
 
 export const routes = Router();
 
@@ -15,6 +16,7 @@ routes.get('/health', (_req, res) => res.json({ data: { status: 'ok' } }));
 routes.use('/busqueda/propias', busquedaPropiasRoutes);
 routes.use('/busqueda', busquedaRoutes);
 routes.use('/cartelera', carteleraRoutes);
+routes.use('/cartelera', funcionCineRoutes);
 routes.use('/titulos', tituloRoutes);
 routes.use('/auth', authRoutes);
 routes.use('/region', regionRoutes);

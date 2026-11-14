@@ -33,6 +33,8 @@ export const envSchema = z.object({
   DEFAULT_REGION: z.string().regex(REGION_PATTERN).default('AR'),
   NODE_CRON_RUN: z.enum(['true', 'false']).default('false'),
   TMDB_API_KEY: z.string().optional(),
+  SERPAPI_API_KEY: z.string().optional(),
+  BUTACA_ENABLED: z.enum(['true', 'false']).default('false'),
   STREAMING_AVAILABILITY_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM: z.string().optional(),

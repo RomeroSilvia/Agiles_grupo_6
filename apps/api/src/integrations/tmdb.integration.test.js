@@ -9,12 +9,14 @@ import {
   buscarPersonas,
   buscarTitulosPorTexto,
   descubrirTitulos,
+  listarPeliculasEnCartelera,
   listarGenerosPorTipo,
   obtenerCreditosCombinados,
   obtenerCreditosPersona,
   obtenerDetalle,
   obtenerOfertas,
   obtenerPersona,
+  obtenerFechaEstrenoArgentina,
 } from './tmdb.integration.js';
 import { env } from '../config/env.config.js';
 
@@ -238,6 +240,124 @@ describe('detalle y disponibilidad de TMDB', () => {
     await expect(obtenerDetalle(TIPO_TITULO.SERIE, 999)).rejects.toMatchObject({
       code: 'NOT_FOUND',
       status: 404,
+    });
+  });
+
+  describe('cartelera y fechas de estreno de TMDB', () => {
+    it('consulta cartelera argentina, normaliza películas y conserva la caché por página', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        respuestaFetch({
+          page: 1,
+          results: [
+            {
+              id: 21,
+              title: 'Película',
+              release_date: '2026-03-04',
+              poster_path: '/poster.jpg',
+              vote_average: 7.5,
+            },
+          ],
+          total_results: 1,
+          total_pages: 1,
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      const primera = await listarPeliculasEnCartelera({ pagina: 1 });
+      const segunda = await listarPeliculasEnCartelera({ pagina: 1 });
+      const [url] = fetchMock.mock.calls[0];
+
+      expect(url.pathname).toBe('/3/movie/now_playing');
+      expect(url.searchParams.get('region')).toBe('AR');
+      expect(url.searchParams.get('language')).toBe('es-AR');
+      expect(url.searchParams.get('page')).toBe('1');
+      expect(primera).toMatchObject({
+        resultados: [
+          {
+            tmdbId: 21,
+            tipo: 'pelicula',
+            nombre: 'Película',
+            anio: 2026,
+            posterUrl: 'https://image.tmdb.org/t/p/w500/poster.jpg',
+            puntuacion: 7.5,
+          },
+        ],
+        pagina: 1,
+        totalResultados: 1,
+        totalPaginas: 1,
+      });
+      expect(segunda.consultadoEn).toBe(primera.consultadoEn);
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
+
+    it('selecciona la primera fecha argentina de tipo 2 o 3 sin cambiar el día civil', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        respuestaFetch({
+          results: [
+            {
+              iso_3166_1: 'US',
+              release_dates: [{ release_date: '2026-01-01', type: 3 }],
+            },
+            {
+              iso_3166_1: 'AR',
+              release_dates: [
+                { release_date: '2026-06-08', type: 1 },
+                { release_date: '2026-06-09', type: 2 },
+                { release_date: '2026-06-10', type: 3 },
+                { release_date: '2026-06-11', type: 4 },
+              ],
+            },
+          ],
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      const primera = await obtenerFechaEstrenoArgentina({ tmdbId: 321 });
+      const segunda = await obtenerFechaEstrenoArgentina({ tmdbId: 321 });
+
+      expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe('/3/movie/321/release_dates');
+      expect(primera.fechaEstrenoAr).toBe('2026-06-09');
+      expect(segunda.consultadoEn).toBe(primera.consultadoEn);
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
+
+    it('falla ante respuestas inválidas del endpoint de fechas y errores HTTP 429', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(respuestaFetch({ results: 'inválido' })));
+      await expect(obtenerFechaEstrenoArgentina({ tmdbId: 654 })).rejects.toMatchObject({
+        code: 'EXTERNAL_SERVICE',
+        status: 502,
+      });
+
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          respuestaFetch({
+            results: [
+              {
+                iso_3166_1: 'AR',
+                release_dates: [{ release_date: '2026-02-31', type: 3 }],
+              },
+            ],
+          }),
+        ),
+      );
+      await expect(obtenerFechaEstrenoArgentina({ tmdbId: 655 })).rejects.toMatchObject({
+        code: 'EXTERNAL_SERVICE',
+        status: 502,
+      });
+
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('timeout')));
+      await expect(listarPeliculasEnCartelera({ pagina: 2 })).rejects.toMatchObject({
+        code: 'EXTERNAL_SERVICE',
+        status: 502,
+      });
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 429 }));
+      await expect(listarPeliculasEnCartelera({ pagina: 3 })).rejects.toMatchObject({
+        code: 'EXTERNAL_SERVICE',
+        status: 502,
+        cause: { status: 429 },
+      });
     });
   });
 

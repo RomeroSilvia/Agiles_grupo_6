@@ -10,7 +10,7 @@ import {
 } from '../constants/index.js';
 import { tmdbIdSchema } from './busqueda.schema.js';
 
-const fechaCivilSchema = z
+export const fechaCivilCarteleraSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine((fecha) => {
@@ -42,7 +42,7 @@ export const peliculaCarteleraSchema = z.object({
   puntuacion: z.number().min(0).max(10).nullable(),
   region: z.literal(REGION_CARTELERA),
   estadoExhibicion: z.enum(ESTADOS_EXHIBICION),
-  fechaEstrenoAr: fechaCivilSchema.nullable(),
+  fechaEstrenoAr: fechaCivilCarteleraSchema.nullable(),
   estadoFecha: z.enum(ESTADOS_FECHA),
   fuente: fuenteCarteleraSchema,
 });

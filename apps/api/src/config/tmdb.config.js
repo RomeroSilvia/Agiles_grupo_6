@@ -23,3 +23,8 @@ export const TMDB_CONFIG = Object.freeze({
   RATE_LIMIT_BUSQUEDA: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
   RATE_LIMIT_PERSONAS: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
 });
+
+export const CARTELERA_CONFIG = Object.freeze({
+  CACHE_TTL_MS: ONE_HOUR_MS,
+  RATE_LIMIT: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
+});

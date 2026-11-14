@@ -36,7 +36,7 @@ export const ciudadCineSchema = z
     provincia: z.string().trim().min(1, 'La provincia es obligatoria'),
     pais: z.literal('AR'),
     zonaHoraria: zonaHorariaCineSchema,
-    cobertura: z.enum(['disponible', 'sin_cobertura']),
+    cobertura: z.enum(['disponible', 'sin_verificar', 'sin_cobertura']),
     fuente: ciudadCineFuenteSchema,
   })
   .strict();
@@ -49,3 +49,7 @@ export const respuestaCiudadesCineSchema = z
   .strict();
 
 export const listarCiudadesCineQuerySchema = z.object({}).strict();
+
+export function permiteConsultarCiudadCine(ciudad) {
+  return ciudad?.cobertura === 'disponible' || ciudad?.cobertura === 'sin_verificar';
+}

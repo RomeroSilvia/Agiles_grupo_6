@@ -4,6 +4,7 @@ import {
   ciudadCineSchema,
   listarCiudadesCineQuerySchema,
   respuestaCiudadesCineSchema,
+  permiteConsultarCiudadCine,
 } from './ciudadCine.schema.js';
 
 const ciudad = {
@@ -36,6 +37,14 @@ describe('identificador de ciudad de cine', () => {
 });
 
 describe('contrato de ciudad de cine', () => {
+  it('distingue una ubicación consultable de la cobertura de horarios confirmada', () => {
+    const sinVerificar = { ...ciudad, cobertura: 'sin_verificar' };
+    expect(ciudadCineSchema.safeParse(sinVerificar).success).toBe(true);
+    expect(permiteConsultarCiudadCine(sinVerificar)).toBe(true);
+    expect(permiteConsultarCiudadCine(ciudad)).toBe(true);
+    expect(permiteConsultarCiudadCine({ ...ciudad, cobertura: 'sin_cobertura' })).toBe(false);
+    expect(permiteConsultarCiudadCine(null)).toBe(false);
+  });
   it('valida ciudad, provincia, zona horaria y referencia de procedencia', () => {
     expect(ciudadCineSchema.parse(ciudad)).toEqual(ciudad);
   });

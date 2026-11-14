@@ -39,13 +39,29 @@ se excluyeron claves, URLs de búsqueda autenticadas y contenido ajeno a horario
 Hubo cuatro búsquedas en total: se repitió Córdoba para corregir la codificación
 del nombre en el shell. No se automatizan comprobaciones que gasten cupo.
 
-No se habilitaron ciudades: una respuesta sin estructura no demuestra ausencia
-de exhibición ni cobertura. El directorio revisado está configurado y vacío;
-responde 200 con «No hay información de ciudades disponible». Si se elimina la
-configuración o es inválida devuelve 502. Los IDs y mapeos de futuras entradas
-deben asignarse una vez y acompañarse de evidencia de cine/municipio/provincia y
-zona IANA; las muestras no se convierten en ciudades productivas. La habilitación
-real de #74/#75 sigue pendiente de evidencia representativa.
+La implementación inicial dejó el directorio vacío: una respuesta sin estructura
+no demuestra ausencia de exhibición ni cobertura. A pedido de la persona responsable,
+el alcance inicial se ajustó para permitir consultas en La Plata, CABA, Córdoba y
+Mar del Plata, conservando explícitamente la cobertura `sin_verificar`.
+
+Las cuatro ubicaciones se verificaron mediante la API pública de Locations de
+SerpApi, escogiendo registros urbanos AR vigentes (`target_type=City`), no provincias
+ni registros obsoletos. Ver [evidencia geográfica](evidencia/ciudades-serpapi-2026-11-14.json).
+Esta verificación no confirma horarios. CABA usa el registro urbano de Buenos Aires,
+con coordenadas de la ciudad; Córdoba usa el registro vigente de Córdoba capital.
+Las consultas del directorio no requieren API key ni búsquedas Google.
+
+`sin_verificar` permite selección, restauración y consulta explícita con un aviso
+visible; toda respuesta de funciones conserva `incompleta` hasta verificar cobertura.
+`sin_cobertura` continúa deshabilitada. `disponible` se reserva para cobertura
+comprobada. Los UUID públicos asignados son permanentes y no dependen del proveedor.
+No hay que editar `.env` para ver las ciudades: reiniciar la API y recargar la web
+si estaban abiertas. Los nombres canónicos del proveedor permanecen solo en backend.
+
+La cobertura real de funciones de #74/#75 sigue pendiente de evidencia
+representativa y de correspondencias verificadas de películas/establecimientos.
+Butaca permanece deshabilitado. Un directorio eliminado o inválido devuelve 502;
+uno configurado sin entradas devuelve una lista vacía.
 
 ## Funciones (#75)
 
@@ -184,6 +200,7 @@ una sola consulta de funciones por prueba. Los datos del navegador fueron fixtur
 sin afirmar cobertura productiva ni compra real.
 
 Pendientes externos: fuente verificable de anuncios AR sin fecha (#73), cobertura
-municipal y correspondencias productivas (#74/#75), permiso/operación de Butaca
+de horarios y correspondencias productivas (#74/#75), permiso/operación de Butaca
 (#75), y enlaces de compra de una función comprobables (#77). No se consideran
-resueltos mediante mocks ni se habilitan ciudades o checkout para aparentarlo.
+resueltos mediante mocks; las ciudades consultables se distinguen de cobertura
+confirmada y no se habilita checkout para aparentarlo.

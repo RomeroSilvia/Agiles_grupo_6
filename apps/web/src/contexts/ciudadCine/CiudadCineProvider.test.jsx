@@ -62,6 +62,25 @@ afterEach(() => {
 });
 
 describe('CiudadCineProvider', () => {
+  it('permite seleccionar y restaurar ubicaciones por verificar sin cambiar su cobertura', async () => {
+    const sinVerificar = { ...ciudadDisponible, cobertura: 'sin_verificar' };
+    fetch.mockResolvedValue(respuestaCiudades([sinVerificar]));
+    const { unmount } = render(
+      <CiudadCineProvider>
+        <Consumidor />
+      </CiudadCineProvider>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Elegir Córdoba' }));
+    expect(await screen.findByText('Córdoba')).toBeInTheDocument();
+    expect(window.sessionStorage.getItem('streamly.ciudadCine')).toBe(sinVerificar.id);
+    unmount();
+    render(
+      <CiudadCineProvider>
+        <Consumidor />
+      </CiudadCineProvider>,
+    );
+    expect(await screen.findByText('Córdoba')).toBeInTheDocument();
+  });
   it('no consulta el directorio hasta que un consumidor lo necesita', () => {
     render(
       <CiudadCineProvider>

@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ciudadCineIdSchema, respuestaCiudadesCineSchema } from '@buscador/shared/schemas';
+import {
+  ciudadCineIdSchema,
+  respuestaCiudadesCineSchema,
+  permiteConsultarCiudadCine,
+} from '@buscador/shared/schemas';
 import { request } from '../../services/api.service.js';
 import { CiudadCineContext } from './CiudadCineContext.js';
 
@@ -64,7 +68,7 @@ export function CiudadCineProvider({ children }) {
 
         setCiudades(directorio);
         setIdCiudadSeleccionada(
-          ciudadGuardada?.cobertura === 'disponible' ? ciudadGuardada.id : null,
+          permiteConsultarCiudadCine(ciudadGuardada) ? ciudadGuardada.id : null,
         );
 
         if (!guardada.disponible) {
@@ -112,8 +116,8 @@ export function CiudadCineProvider({ children }) {
 
       const resultado = ciudadCineIdSchema.safeParse(id);
       const ciudad = resultado.success ? ciudades.find((item) => item.id === resultado.data) : null;
-      if (!ciudad || ciudad.cobertura !== 'disponible') {
-        setAviso('Elegí una ciudad con cobertura verificada.');
+      if (!permiteConsultarCiudadCine(ciudad)) {
+        setAviso('Elegí una ciudad habilitada para consultas.');
         return;
       }
 

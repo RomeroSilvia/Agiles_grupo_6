@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { permiteConsultarCiudadCine } from '@buscador/shared/schemas';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { Select } from '../../components/ui/Select.jsx';
 import { Skeleton } from '../../components/ui/Skeleton.jsx';
@@ -15,6 +16,7 @@ export function SelectorCiudadCine() {
     seleccionarCiudad,
     reintentar,
   } = useCiudadCine();
+  const ciudadSeleccionada = ciudades.find((ciudad) => ciudad.id === idCiudadSeleccionada);
 
   useEffect(() => {
     cargarDirectorio();
@@ -53,10 +55,11 @@ export function SelectorCiudadCine() {
               <option
                 key={ciudad.id}
                 value={ciudad.id}
-                disabled={ciudad.cobertura !== 'disponible'}
+                disabled={!permiteConsultarCiudadCine(ciudad)}
               >
                 {ciudad.nombre}, {ciudad.provincia}
                 {ciudad.cobertura === 'sin_cobertura' ? ' — Sin cobertura' : ''}
+                {ciudad.cobertura === 'sin_verificar' ? ' — Cobertura por verificar' : ''}
               </option>
             ))}
           </Select>
@@ -64,6 +67,12 @@ export function SelectorCiudadCine() {
       )}
 
       {aviso && <Alert tone="info">{aviso}</Alert>}
+      {ciudadSeleccionada?.cobertura === 'sin_verificar' && (
+        <Alert tone="info">
+          Podés consultar esta ciudad, pero la cobertura de cines y horarios todavía no está
+          verificada. La fuente puede devolver información incompleta.
+        </Alert>
+      )}
     </section>
   );
 }

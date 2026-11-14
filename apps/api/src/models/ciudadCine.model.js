@@ -35,8 +35,8 @@ export const ciudadCineConfiguracionSchema = ciudadCineSchema
   )
   .refine(
     ({ cobertura, serpApiLocation, butacaCines }) =>
-      cobertura !== 'disponible' || serpApiLocation !== null || butacaCines.length > 0,
-    'La cobertura disponible requiere un mapeo de proveedor',
+      cobertura === 'sin_cobertura' || serpApiLocation !== null || butacaCines.length > 0,
+    'La ciudad consultable requiere un mapeo de proveedor',
   )
   .refine(({ fuente, evidenciaPorFuente }) => {
     const evidencia = evidenciaPorFuente[fuente.fuenteId === 'serpapi' ? 'serpApi' : 'butaca'];

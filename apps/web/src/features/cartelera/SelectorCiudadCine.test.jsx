@@ -36,6 +36,18 @@ function configurarContexto(overrides = {}) {
 }
 
 describe('SelectorCiudadCine', () => {
+  it('permite consultar una ubicación por verificar y explica la limitación de horarios', () => {
+    const ciudad = { ...ciudadDisponible, cobertura: 'sin_verificar' };
+    const seleccionarCiudad = vi.fn();
+    configurarContexto({ ciudades: [ciudad], idCiudadSeleccionada: ciudad.id, seleccionarCiudad });
+    render(<SelectorCiudadCine />);
+    expect(
+      screen.getByRole('option', { name: 'Córdoba, Córdoba — Cobertura por verificar' }),
+    ).toBeEnabled();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: ciudad.id } });
+    expect(seleccionarCiudad).toHaveBeenCalledWith(ciudad.id);
+    expect(screen.getByRole('status')).toHaveTextContent('Podés consultar esta ciudad');
+  });
   it('permite elegir ciudades cubiertas y no ofrece como seleccionable una ciudad sin cobertura', () => {
     const seleccionarCiudad = vi.fn();
     const cargarDirectorio = vi.fn();

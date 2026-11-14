@@ -43,6 +43,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe('consulta pública única de funciones', () => {
+  it('consulta una ubicación por verificar y conserva ese diagnóstico aunque la fuente responda', async () => {
+    ciudades.obtenerCiudadCine.mockReturnValueOnce({
+      ...CIUDAD_CINE_FIXTURE,
+      cobertura: 'sin_verificar',
+      serpApiLocation: 'Ciudad,Argentina',
+      butacaCines: [],
+    });
+    const respuesta = await request(createApp()).get(ruta);
+    expect(respuesta.status).toBe(200);
+    expect(serpApi.obtenerFuncionesSerpApi).toHaveBeenCalledOnce();
+    expect(respuesta.body.data.ciudad.cobertura).toBe('sin_verificar');
+    expect(respuesta.body.data.estado).toBe('incompleta');
+    expect(respuesta.body.data.advertencias).toContainEqual(
+      expect.objectContaining({ code: 'INCOMPLETE_DATA', fuenteId: null }),
+    );
+  });
   it('descarta horarios vencidos de caché y declara el truncamiento sin ocultarlo', async () => {
     const resultado = resultadoProveedor();
     resultado.funciones = Array.from({ length: 1002 }, (_, indice) => ({

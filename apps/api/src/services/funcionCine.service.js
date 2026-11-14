@@ -75,6 +75,14 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
     );
   }
   const resultado = combinarFuncionesCine(exitosas);
+  if (ciudad.cobertura === 'sin_verificar') {
+    resultado.advertencias.push({
+      code: 'INCOMPLETE_DATA',
+      message:
+        'La ubicación está habilitada para consultas, pero su cobertura de cines y horarios todavía no está verificada.',
+      fuenteId: null,
+    });
+  }
   respuestas.forEach((respuesta, indice) => {
     if (respuesta.status === 'rejected')
       resultado.advertencias.push({

@@ -2,6 +2,7 @@ import { createBrowserRouter, redirect } from 'react-router';
 import { MainLayout } from './MainLayout.jsx';
 import { NotFoundPage } from './NotFoundPage.jsx';
 import { PaginaBusqueda } from '../features/busqueda/PaginaBusqueda.jsx';
+import { PaginaCartelera } from '../features/cartelera/PaginaCartelera.jsx';
 import { PaginaDetalleTitulo } from '../features/detalle/PaginaDetalleTitulo.jsx';
 import { SoloSinSesion } from '../features/auth/SoloSinSesion.jsx';
 import { PaginaInicioSesion } from '../features/auth/PaginaInicioSesion.jsx';
@@ -26,6 +27,7 @@ export const routes = [
     Component: MainLayout,
     children: [
       { index: true, Component: PaginaBusqueda },
+      { path: RUTAS.CARTELERA, Component: PaginaCartelera },
       { path: RUTAS.DETALLE_TITULO, Component: PaginaDetalleTitulo },
       { path: RUTAS.WATCHLIST, Component: PaginaWatchlist },
       {

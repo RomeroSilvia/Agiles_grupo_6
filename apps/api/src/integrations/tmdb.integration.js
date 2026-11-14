@@ -1,21 +1,28 @@
-import { z } from 'zod';
 import { env } from '../config/env.config.js';
-import { CARTELERA_CONFIG, RUTA_TMDB_POR_TIPO, TMDB_CONFIG } from '../config/tmdb.config.js';
+import {
+  CARTELERA_CONFIG,
+  RUTA_TMDB_POR_TIPO,
+  TIPOS_ESTRENO_SALA_TMDB,
+  TMDB_CONFIG,
+} from '../config/tmdb.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
-import { respuestaTmdbCarteleraSchema } from '../models/cartelera.model.js';
+import {
+  crearRespuestaDetallePeliculaSchema,
+  respuestaFechasEstrenoSchema,
+  respuestaTmdbCarteleraSchema,
+} from '../models/cartelera.model.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import { createTtlCache } from '../utils/ttlCache.js';
 import { validateExternalResponse } from '../utils/validateExternalResponse.js';
-import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
-import { fechaCivilCarteleraSchema, httpUrlSchema } from '@buscador/shared/schemas';
+import { REGION_CARTELERA, TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
+import { httpUrlSchema } from '@buscador/shared/schemas';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const PROFILE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_LANGUAGE = 'es-AR';
-const REGION_CARTELERA = 'AR';
 
 const PARAMETRO_ANIO_POR_TIPO = Object.freeze({
   [TIPO_TITULO.PELICULA]: 'primary_release_year',
@@ -72,23 +79,6 @@ const fechasEstrenoCache = createTtlCache({
 const aniosOriginalesCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
   maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
-});
-
-const respuestaFechasEstrenoSchema = z.object({
-  results: z.array(
-    z.object({
-      iso_3166_1: z.string().length(2),
-      release_dates: z.array(
-        z.object({
-          release_date: z
-            .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.iso.datetime({ offset: true })])
-            .transform((fecha) => fecha.slice(0, 10))
-            .pipe(fechaCivilCarteleraSchema),
-          type: z.number().int(),
-        }),
-      ),
-    }),
-  ),
 });
 
 function tmdbRequest(path, params) {
@@ -213,7 +203,7 @@ export function descubrirTitulos({ tipo, anio, generoIds, pagina }) {
 function obtenerAnioOriginalPelicula(tmdbId) {
   return aniosOriginalesCache.getOrSet(String(tmdbId), async () => {
     const detalle = validateExternalResponse(
-      z.object({ id: z.literal(tmdbId), release_date: z.string().nullish() }),
+      crearRespuestaDetallePeliculaSchema(tmdbId),
       await tmdbRequest(`/movie/${tmdbId}`),
     );
     return obtenerAnio(detalle.release_date);
@@ -259,7 +249,7 @@ export function obtenerFechaEstrenoArgentina({ tmdbId }) {
     const fechasArgentina =
       respuesta.results
         .find(({ iso_3166_1 }) => iso_3166_1 === REGION_CARTELERA)
-        ?.release_dates.filter(({ type }) => type === 2 || type === 3) ?? [];
+        ?.release_dates.filter(({ type }) => TIPOS_ESTRENO_SALA_TMDB.includes(type)) ?? [];
 
     return {
       fechaEstrenoAr: fechasArgentina[0]?.release_date ?? null,

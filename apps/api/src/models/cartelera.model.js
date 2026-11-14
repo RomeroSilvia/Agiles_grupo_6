@@ -19,7 +19,23 @@ export const respuestaTmdbCarteleraSchema = z.object({
   consultadoEn: z.iso.datetime({ offset: false }),
 });
 
-export const fechaEstrenoArgentinaSchema = z.object({
-  fechaEstrenoAr: fechaCivilCarteleraSchema.nullable(),
-  consultadoEn: z.iso.datetime({ offset: false }),
+export const respuestaFechasEstrenoSchema = z.object({
+  results: z.array(
+    z.object({
+      iso_3166_1: z.string().length(2),
+      release_dates: z.array(
+        z.object({
+          release_date: z
+            .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.iso.datetime({ offset: true })])
+            .transform((fecha) => fecha.slice(0, 10))
+            .pipe(fechaCivilCarteleraSchema),
+          type: z.number().int(),
+        }),
+      ),
+    }),
+  ),
 });
+
+export function crearRespuestaDetallePeliculaSchema(tmdbId) {
+  return z.object({ id: z.literal(tmdbId), release_date: z.string().nullish() });
+}

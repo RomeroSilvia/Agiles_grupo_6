@@ -1,6 +1,8 @@
-import { TIPO_TITULO } from '@buscador/shared/constants';
+import { CARTELERA_CACHE_TTL_MS, TIPO_TITULO } from '@buscador/shared/constants';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
+
+export const TIPOS_ESTRENO_SALA_TMDB = Object.freeze([2, 3]);
 
 export const RUTA_TMDB_POR_TIPO = Object.freeze({
   [TIPO_TITULO.PELICULA]: 'movie',
@@ -25,6 +27,6 @@ export const TMDB_CONFIG = Object.freeze({
 });
 
 export const CARTELERA_CONFIG = Object.freeze({
-  CACHE_TTL_MS: ONE_HOUR_MS,
+  CACHE_TTL_MS: CARTELERA_CACHE_TTL_MS,
   RATE_LIMIT: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
 });

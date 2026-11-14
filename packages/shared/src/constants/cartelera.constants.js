@@ -14,3 +14,4 @@ export const ESTADOS_FECHA = Object.values(ESTADO_FECHA);
 
 export const FUENTE_ID_TMDB = 'tmdb';
 export const REGION_CARTELERA = 'AR';
+export const CARTELERA_CACHE_TTL_MS = 60 * 60 * 1000;

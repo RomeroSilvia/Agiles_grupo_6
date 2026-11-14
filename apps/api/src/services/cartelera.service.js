@@ -6,11 +6,6 @@ import {
 } from '@buscador/shared/constants';
 import { respuestaCarteleraSchema } from '@buscador/shared/schemas';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
-import {
-  fechaEstrenoArgentinaSchema,
-  respuestaTmdbCarteleraSchema,
-} from '../models/cartelera.model.js';
-import { validateExternalResponse } from '../utils/validateExternalResponse.js';
 
 function crearFuente({ registroId = null, consultadoEn }) {
   return {
@@ -23,19 +18,15 @@ function crearFuente({ registroId = null, consultadoEn }) {
 }
 
 export async function listarPeliculasEnCartelera({ pagina }) {
-  const cartelera = validateExternalResponse(
-    respuestaTmdbCarteleraSchema,
-    await tmdbIntegration.listarPeliculasEnCartelera({ pagina }),
-  );
+  const cartelera = await tmdbIntegration.listarPeliculasEnCartelera({ pagina });
   const peliculasUnicas = new Map(
     cartelera.resultados.map((pelicula) => [pelicula.tmdbId, pelicula]),
   );
   const resultados = await Promise.all(
     [...peliculasUnicas.values()].map(async (pelicula) => {
-      const fechaEstreno = validateExternalResponse(
-        fechaEstrenoArgentinaSchema,
-        await tmdbIntegration.obtenerFechaEstrenoArgentina({ tmdbId: pelicula.tmdbId }),
-      );
+      const fechaEstreno = await tmdbIntegration.obtenerFechaEstrenoArgentina({
+        tmdbId: pelicula.tmdbId,
+      });
 
       return {
         ...pelicula,
@@ -51,7 +42,7 @@ export async function listarPeliculasEnCartelera({ pagina }) {
     }),
   );
 
-  return validateExternalResponse(respuestaCarteleraSchema, {
+  return respuestaCarteleraSchema.parse({
     region: REGION_CARTELERA,
     resultados,
     pagina,

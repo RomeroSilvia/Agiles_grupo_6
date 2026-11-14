@@ -1,5 +1,7 @@
+import { CINES_CINEMARK, EVIDENCIA_CINEMARK } from './cinesCinemark.config.js';
+
 // IDs asignados una vez; conservarlos al actualizar nombres o proveedores.
-// Ubicaciones verificadas en Locations API; cobertura de horarios sin verificar.
+// Ubicaciones de SerpApi y sucursales con horarios Cinemark verificadas por separado.
 export const DIRECTORIO_CIUDADES_CINE = Object.freeze({
   configurado: true,
   ciudades: [
@@ -115,5 +117,16 @@ export const DIRECTORIO_CIUDADES_CINE = Object.freeze({
         butaca: null,
       },
     },
-  ],
+  ].map((ciudad) => {
+    const cines = CINES_CINEMARK.filter((cine) => cine.ciudadId === ciudad.id);
+    if (!cines.length) return ciudad;
+    const { registroId, url, consultadoEn, actualizadoEn } = EVIDENCIA_CINEMARK;
+    return {
+      ...ciudad,
+      cobertura: 'disponible',
+      fuente: { registroId, url, consultadoEn, actualizadoEn, fuenteId: 'butaca' },
+      butacaCines: cines.map(({ id, slug }) => ({ id, slug })),
+      evidenciaPorFuente: { ...ciudad.evidenciaPorFuente, butaca: EVIDENCIA_CINEMARK },
+    };
+  }),
 });

@@ -55,6 +55,96 @@ const parametros = {
   hasta: '2026-11-21',
 };
 describe('complemento Butaca / Cinemark', () => {
+  function simularCartelera({ direccion = 'Calle 123', duracion = 115 } = {}) {
+    const fetchMock = vi.fn().mockImplementation(async (url) => ({
+      ok: true,
+      json: async () => ({
+        data: url.pathname.endsWith('/theaters')
+          ? [
+              {
+                id: 1,
+                slug: 'centro',
+                name: 'Cine de prueba',
+                address: direccion,
+                city: 'Interior',
+                location: { name: 'Región del proveedor' },
+              },
+            ]
+          : url.pathname.endsWith('/movies')
+            ? [
+                {
+                  id: 'uuid-proveedor',
+                  corporateId: 'corp-nuevo',
+                  title: 'Nueva película',
+                  openingDate: '2026-11-12T00:00:00.000Z',
+                  runTime: duracion,
+                },
+              ]
+            : [
+                {
+                  sessionId: 'sesion-nueva',
+                  corporateId: 'corp-nuevo',
+                  movieName: 'Nueva película',
+                  theaterId: '1',
+                  theaterRoom: '2',
+                  sessionDateTime: '2026-11-15T21:00:00.000Z',
+                  sessionDisplayDate: '2026-11-15',
+                  sessionFormat: '2D',
+                },
+              ],
+      }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+  it('consulta horarios de una película nueva sin mapeo manual y reutiliza la caché', async () => {
+    config.habilitado = true;
+    config.verificado = true;
+    const fetchMock = simularCartelera();
+    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+    const consulta = {
+      ...parametros,
+      pelicula: {
+        tmdbId: 77,
+        identidadCine: { nombres: ['Nueva película'], anio: 2026, duracion: 115 },
+      },
+    };
+    const resultado = await obtenerFuncionesButaca(consulta);
+    expect(resultado.funciones).toHaveLength(1);
+    expect(resultado.funciones[0]).toMatchObject({
+      tmdbId: 77,
+      inicio: '2026-11-15T21:00:00-03:00',
+    });
+    expect(resultado.estadoFuente).toBe('disponible');
+    await obtenerFuncionesButaca(consulta);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+  it('excluye una sucursal que conserva ID pero cambia su dirección revisada', async () => {
+    config.habilitado = true;
+    config.verificado = true;
+    const fetchMock = simularCartelera({ direccion: 'Otra sucursal 999' });
+    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+    const resultado = await obtenerFuncionesButaca(parametros);
+    expect(resultado.funciones).toEqual([]);
+    expect(resultado.estadoFuente).toBe('incompleta');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it('no atribuye horarios por título cuando la duración contradice la identidad TMDB', async () => {
+    config.habilitado = true;
+    config.verificado = true;
+    const fetchMock = simularCartelera({ duracion: 90 });
+    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+    const resultado = await obtenerFuncionesButaca({
+      ...parametros,
+      pelicula: {
+        tmdbId: 77,
+        identidadCine: { nombres: ['Nueva película'], anio: 2026, duracion: 115 },
+      },
+    });
+    expect(resultado.funciones).toEqual([]);
+    expect(resultado.estadoFuente).toBe('incompleta');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it('no consulta una fuente deshabilitada ni habilitada sin verificación', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

@@ -96,8 +96,21 @@ export const respuestaPeliculasButacaSchema = z.object({
       id: z.string(),
       corporateId: z.string().min(1),
       title: z.string().min(1),
+      openingDate: z.iso.datetime().nullish(),
+      runTime: z.number().int().nonnegative().nullish(),
     }),
   ),
+});
+
+export const identidadPeliculaTmdbCineSchema = z.object({
+  id: tmdbIdSchema,
+  title: z.string().min(1),
+  original_title: z.string().nullish(),
+  release_date: z.string().nullish(),
+  runtime: z.number().int().nonnegative().nullish(),
+  alternative_titles: z
+    .object({ titles: z.array(z.object({ iso_3166_1: z.string(), title: z.string() })) })
+    .optional(),
 });
 export const respuestaFuncionesButacaSchema = z.object({
   data: z.array(

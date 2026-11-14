@@ -209,6 +209,49 @@ describe('llamadas de búsqueda a TMDB', () => {
 });
 
 describe('detalle y disponibilidad de TMDB', () => {
+  it('incluye identidad privada para cine sin agregar otra consulta de metadata', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      respuestaFetch({
+        id: 77,
+        title: 'Título internacional',
+        original_title: 'Original title',
+        runtime: 115,
+        release_date: '2026-11-11',
+        alternative_titles: {
+          titles: [
+            { iso_3166_1: 'AR', title: 'Película argentina' },
+            { iso_3166_1: 'US', title: 'Otro alias' },
+          ],
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const detalle = await obtenerDetalle(TIPO_TITULO.PELICULA, 77, { incluirIdentidadCine: true });
+    expect(detalle.identidadCine).toEqual({
+      nombres: ['Título internacional', 'Original title', 'Película argentina'],
+      anio: 2026,
+      duracion: 115,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(new URL(fetchMock.mock.calls[0][0]).searchParams.get('append_to_response')).toBe(
+      'alternative_titles',
+    );
+  });
+  it('rechaza identidad de cine si TMDB devuelve otro ID o tipos inválidos', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        respuestaFetch({
+          id: 88,
+          title: 'Otra película',
+          runtime: '115',
+        }),
+      ),
+    );
+    await expect(
+      obtenerDetalle(TIPO_TITULO.PELICULA, 77, { incluirIdentidadCine: true }),
+    ).rejects.toMatchObject({ code: 'EXTERNAL_SERVICE' });
+  });
   it('normaliza el detalle de una película', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       respuestaFetch({

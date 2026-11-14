@@ -4,7 +4,7 @@ import { listarCiudadesCine, obtenerCiudadCine } from '../services/ciudadCine.se
 import { ciudadCineConfiguracionSchema } from '../models/ciudadCine.model.js';
 
 describe('directorio inicial de ciudades consultables', () => {
-  it('publica las cuatro ciudades solicitadas con mapeos urbanos y sin afirmar cobertura', () => {
+  it('publica cuatro ciudades y habilita las ocho sucursales verificadas de CABA y Córdoba', () => {
     const { ciudades } = listarCiudadesCine();
     expect(ciudades.map((ciudad) => ciudad.nombre).sort()).toEqual(
       ['CABA', 'Córdoba', 'La Plata', 'Mar del Plata'].sort(),
@@ -12,10 +12,14 @@ describe('directorio inicial de ciudades consultables', () => {
     expect(new Set(ciudades.map((ciudad) => ciudad.id)).size).toBe(4);
     for (const ciudad of ciudades) {
       const configuracion = obtenerCiudadCine(ciudad.id);
-      expect(ciudad.cobertura).toBe('sin_verificar');
+      const verificada = ['CABA', 'Córdoba'].includes(ciudad.nombre);
+      expect(ciudad.cobertura).toBe(verificada ? 'disponible' : 'sin_verificar');
       expect(ciudadCineConfiguracionSchema.safeParse(configuracion).success).toBe(true);
       expect(configuracion.serpApiLocation).toContain('Argentina');
-      expect(configuracion.butacaCines).toEqual([]);
+      expect(configuracion.butacaCines).toHaveLength(
+        ciudad.nombre === 'CABA' ? 6 : ciudad.nombre === 'Córdoba' ? 2 : 0,
+      );
+      if (verificada) expect(ciudad.fuente.fuenteId).toBe('butaca');
       expect(ciudad).not.toHaveProperty('serpApiLocation');
     }
   });

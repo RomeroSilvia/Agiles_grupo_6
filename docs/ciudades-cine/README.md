@@ -1,10 +1,10 @@
 # Directorio de ciudades de cine
 
-El endpoint público `GET /api/cartelera/ciudades` publica solo ciudades argentinas cuya cobertura esté respaldada por evidencia. No se debe inferir una ciudad a partir de `AR`, de la región de streaming ni de la ubicación del navegador.
+El endpoint público `GET /api/cartelera/ciudades` publica ciudades argentinas con ubicación verificada y distingue la cobertura de horarios confirmada de la pendiente. No se debe inferir una ciudad a partir de `AR`, de la región de streaming ni de la ubicación del navegador.
 
 ## Estado actual
 
-El directorio se mantiene en `apps/api/src/config/ciudadesCine.config.js`. Está deshabilitado y vacío mientras no haya cobertura verificada. En ese estado, la API responde `502 EXTERNAL_SERVICE`; no debe sustituirse por una respuesta vacía ni por datos de ejemplo. Una lista vacía `200` solo corresponde cuando la configuración fue revisada y no tiene ciudades publicables.
+El directorio se mantiene en `apps/api/src/config/ciudadesCine.config.js` y contiene La Plata, CABA, Córdoba y Mar del Plata. CABA y Córdoba tienen cobertura Cinemark verificada con ocho sucursales en total; La Plata y Mar del Plata permiten consultar SerpApi con cobertura `sin_verificar`. Ver [estado y evidencia](../cine.md). Una configuración deshabilitada o inválida devuelve `502 EXTERNAL_SERVICE`; una lista vacía `200` solo corresponde cuando fue revisada y no tiene ciudades publicables.
 
 ## Requisitos para publicar una ciudad
 
@@ -12,10 +12,10 @@ El directorio se mantiene en `apps/api/src/config/ciudadesCine.config.js`. Está
 - Verificar municipio y provincia para desambiguar nombres homónimos, una zona horaria IANA y el alcance geográfico que usará cada proveedor.
 - Registrar por separado la ubicación canónica de SerpApi y los pares `{ id, slug }` de complejos de Butaca que correspondan a esa ciudad. No usar slugs de barrios o complejos como IDs de ciudad.
 - Guardar evidencia y fecha de consulta por fuente. La referencia pública `fuente` debe coincidir con esa evidencia.
-- Marcar `disponible` solo cuando haya evidencia y un mapeo de proveedor. Usar `sin_cobertura` para una ciudad conocida cuya cobertura no pueda ofrecerse; no implica que no haya funciones.
+- Marcar `disponible` solo cuando haya evidencia de horarios y un mapeo de proveedor. `sin_verificar` permite consultar una ubicación geográfica revisada sin prometer horarios. Usar `sin_cobertura` para una ciudad conocida cuya cobertura no pueda ofrecerse; no implica que no haya funciones.
 - Mantener en backend los identificadores y mapeos de proveedores. El contrato público solo entrega el ID propio, el nombre, la provincia, la zona horaria, la cobertura y la referencia de procedencia.
 
-SerpApi y Butaca requieren verificación representativa y evidencia vigente antes de habilitar ciudades. No agregar credenciales de proveedores al frontend ni probar cobertura con fixtures como si fueran datos productivos.
+No agregar credenciales de proveedores al frontend ni probar cobertura con fixtures como si fueran datos productivos.
 
 ## Consumo
 

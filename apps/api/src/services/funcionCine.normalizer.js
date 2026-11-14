@@ -121,6 +121,32 @@ export function corresponderPeliculaCine({
   return coincidencias.length === 1 && coincidencias[0].tmdbId === tmdbId;
 }
 
+export function corresponderCarteleraButaca(peliculas, pelicula) {
+  const identidad = pelicula.identidadCine;
+  if (!identidad?.anio || !identidad.duracion) return [];
+  const nombres = identidad.nombres.map(normalizarTextoCine).filter(Boolean);
+  // El título por sí solo no identifica remakes: exigir también año y duración.
+  const candidatas = peliculas.filter(
+    (item) =>
+      nombres.includes(normalizarTextoCine(item.title)) &&
+      Number(item.openingDate?.slice(0, 4)) === identidad.anio &&
+      item.runTime > 0 &&
+      Math.abs(item.runTime - identidad.duracion) <= 1,
+  );
+  if (new Set(candidatas.map((item) => item.corporateId)).size !== 1) return [];
+  const candidata = candidatas[0];
+  return [
+    {
+      fuenteId: 'butaca',
+      registroId: candidata.corporateId,
+      nombre: candidata.title,
+      tmdbId: pelicula.tmdbId,
+      evidencia: `Coincidencia única de título/alias AR, año ${identidad.anio} y duración ${identidad.duracion} min de TMDB con ${candidata.runTime} min de Cinemark.`,
+      urlEvidencia: `https://www.themoviedb.org/movie/${pelicula.tmdbId}`,
+    },
+  ];
+}
+
 function resolverLugar(observacion, ciudad, lugares) {
   const candidatos = lugares.filter(
     (lugar) =>

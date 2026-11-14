@@ -58,10 +58,13 @@ comprobada. Los UUID públicos asignados son permanentes y no dependen del prove
 No hay que editar `.env` para ver las ciudades: reiniciar la API y recargar la web
 si estaban abiertas. Los nombres canónicos del proveedor permanecen solo en backend.
 
-La cobertura real de funciones de #74/#75 sigue pendiente de evidencia
-representativa y de correspondencias verificadas de películas/establecimientos.
-Butaca permanece deshabilitado. Un directorio eliminado o inválido devuelve 502;
-uno configurado sin entradas devuelve una lista vacía.
+La verificación posterior habilitó cobertura Cinemark en CABA (seis sucursales)
+y Córdoba (Nuevo Centro y Patio Olmos). Los IDs, slugs y direcciones están en
+`cinesCinemark.config.js`; se contrastaron con el directorio oficial, no con el
+campo `city` del BFF, que llama «Interior» a Córdoba y mezcla regiones en CABA.
+La Plata y Mar del Plata siguen sin fuente de horarios confirmada: no figuran en
+ese directorio. Un directorio eliminado o inválido devuelve 502; uno configurado
+sin entradas devuelve una lista vacía.
 
 ## Funciones (#75)
 
@@ -91,6 +94,15 @@ registroId, nombre, direccion}]}`. `clave` es permanente entre fuentes; las
   únicamente se admite una correspondencia de nombre revisada e inequívoca.
   Google sin título/identidad comprobable queda incompleto, aunque tenga horarios.
 
+Cinemark también permite correspondencias automáticas durante la consulta. TMDB
+entrega título localizado, original y alias AR, año y duración en el mismo request
+de detalle (`append_to_response=alternative_titles`). Se exige coincidencia exacta
+de un título normalizado, el mismo año de estreno y duración con diferencia máxima
+de un minuto, con un único `corporateId` compatible. La evidencia resultante dura
+lo que dura la caché de funciones. No se adjudican sesiones solo por el título.
+Títulos traducidos sin alias AR, reestrenos y duraciones incompatibles necesitan
+una correspondencia revisada; si no existe, el resultado informa incompletitud.
+
 SerpApi conserva la estructura documentada por días/establecimientos; la variante
 por películas sin identificación de cine se declara incompleta. No extrae horarios
 de snippets. Días relativos y fechas sin año se resuelven únicamente en la ventana
@@ -103,11 +115,12 @@ Solo permite GET a cines, películas y horarios del BFF de Cinemark, header
 `country: AR`, y corresponde películas por `corporateId`, nunca `movie.id`.
 El `Z` del `sessionDateTime` bruto representa componentes locales según ese contrato;
 se contrasta con `sessionDisplayDate` civil y se emite un offset IANA coherente.
-No consulta asientos, inventario ni órdenes. No requiere API key. Sigue desactivado:
-`BUTACA_ENABLED=true` requiere además `BUTACA_VERIFICADO=true` en configuración,
-con permiso/viabilidad y mapeos previamente revisados. La licencia del código no
-prueba permiso sobre los datos subyacentes. No se hicieron lecturas reales a ese
-BFF para eludir este requisito.
+No consulta asientos, inventario ni órdenes. No requiere API key. Las lecturas
+anónimas de directorio, películas y horarios se comprobaron el 14/11/2026 y el
+adaptador está habilitado por defecto (`BUTACA_ENABLED=true`, configurable a
+`false`). `BUTACA_VERIFICADO` registra esa verificación operativa. El BFF no es
+una API contractual con SLA; la licencia MIT corresponde al código adaptado.
+Ver [evidencia de Cinemark](evidencia/cinemark-2026-11-14.json).
 
 La normalización no mezcla horarios/versiones incompatibles: Butaca tiene prioridad
 en coincidencias revisadas de Cinemark; discrepancias y candidatos secundarios
@@ -127,14 +140,14 @@ Sin fuentes habilitables o si todas fallan: 502. Una fuente parcial o caída con
 otra respuesta útil conserva resultados e informa `incompleta`, incluso ante
 cuota agotada. `sin_funciones` solo corresponde a una respuesta estructurada vacía;
 no significa «no se exhibe». `sin_cobertura` identifica una ciudad conocida cuyo
-directorio lo indique. Las muestras reales actuales no habilitan datos productivos.
+directorio lo indique. Una advertencia de SerpApi no elimina funciones válidas
+devueltas por Cinemark.
 
 Referencias: [Showtimes](https://serpapi.com/showtimes-results),
 [parámetros SerpApi](https://serpapi.com/search-api), [términos](https://serpapi.com/legal),
 [Butaca CONTRACT](https://github.com/crafter-station/butaca/blob/595f908f3092e423b27839c650e2eae248e2b256/CONTRACT.md),
 [términos Cinemark](https://www.cinemark.com.ar/terminos-condiciones).
-Antes de habilitar, revisar derechos de contenido/redistribución y las condiciones
-vigentes del plan de la cuenta. No se garantiza exhaustividad, SLA ni checkout.
+No se garantiza exhaustividad, SLA ni checkout.
 
 ## Filtros (#76)
 
@@ -187,9 +200,21 @@ La validación local no certifica disponibilidad ni redirecciones futuras del se
 ## Verificación local del 14/11/2026
 
 Se ejecutaron `npm run check` y `npm run build`. Las pruebas automatizadas usan
-fixtures y mocks, sin Supabase ni APIs externas reales. Las únicas consultas reales
-de esta implementación fueron las lecturas TMDB/SerpApi documentadas arriba y la
-consulta de documentación/sitio oficial; no hubo migraciones ni escrituras de datos.
+fixtures y mocks, sin Supabase ni APIs externas reales. Las comprobaciones manuales
+incluyeron TMDB, SerpApi y lecturas anónimas Cinemark; no hubo migraciones ni
+escrituras de datos.
+
+El endpoint completo de funciones se probó con Godzilla Minus Zero (TMDB 1381071)
+y fuentes reales: HTTP 200 con 149 funciones futuras en seis cines de CABA y 37 en
+dos de Córdoba, dentro del horizonte local. La identidad se resolvió automáticamente
+por título, año 2026 y duración 135 minutos. Estas dos consultas SerpApi adicionales
+no devolvieron estructura de horarios: F1 conserva los horarios Cinemark y advierte
+que esa otra fuente está incompleta. Son conteos de la adquisición del 14/11/2026,
+no valores permanentes ni funciones inventadas para los tests.
+
+Para reproducir en desarrollo: reiniciar `npm run dev`, abrir el detalle de
+Godzilla Minus Zero, elegir CABA o Córdoba y pulsar «Consultar funciones».
+Los filtros de fecha y cine usan esa respuesta sin consumir consultas adicionales.
 
 Se revisaron cartelera/estrenos y detalle con funciones en Chrome headless mediante
 Playwright, a 390 y 1280 px, en claro y oscuro, con zona del navegador
@@ -199,8 +224,14 @@ errores JavaScript ni desbordamiento horizontal; cambiar/limpiar filtros mantuvo
 una sola consulta de funciones por prueba. Los datos del navegador fueron fixtures,
 sin afirmar cobertura productiva ni compra real.
 
-Pendientes externos: fuente verificable de anuncios AR sin fecha (#73), cobertura
-de horarios y correspondencias productivas (#74/#75), permiso/operación de Butaca
-(#75), y enlaces de compra de una función comprobables (#77). No se consideran
-resueltos mediante mocks; las ciudades consultables se distinguen de cobertura
-confirmada y no se habilita checkout para aparentarlo.
+Tras habilitar Cinemark se repitió la revisión del detalle a 390/1280 px, en claro
+y oscuro, con las respuestas F1 reales de Godzilla Minus Zero capturadas arriba
+(las otras pantallas conservaron mocks). Se mostraron las 149/37 funciones, cambio
+de ciudad y filtros sin consultas adicionales por filtro, sin errores JavaScript
+ni desbordamiento horizontal y con horarios locales conservados en Auckland.
+
+Pendientes externos: fuente verificable de anuncios AR sin fecha (#73), fuente
+de horarios para La Plata y Mar del Plata y correspondencias de títulos que no
+superan la vinculación automática (#74/#75), y enlaces de compra de una función
+comprobables (#77). No se consideran resueltos mediante mocks; las ciudades
+consultables se distinguen de cobertura confirmada.

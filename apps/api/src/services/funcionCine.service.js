@@ -16,7 +16,9 @@ const limitar = createConcurrencyLimiter(FUNCIONES_CINE_CONFIG.MAX_CONCURRENT_RE
 
 export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
   const configuracion = ciudadCineService.obtenerCiudadCine(ciudadId);
-  const pelicula = await tmdbIntegration.obtenerDetalle('pelicula', tmdbId);
+  const pelicula = await tmdbIntegration.obtenerDetalle('pelicula', tmdbId, {
+    incluirIdentidadCine: true,
+  });
   const ciudad = ciudadCineSchema.parse(
     Object.fromEntries(
       Object.entries(configuracion).filter(([campo]) =>

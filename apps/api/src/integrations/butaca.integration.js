@@ -14,6 +14,7 @@ import {
 import {
   normalizarObservacionesCine,
   corresponderPeliculaCine,
+  corresponderCarteleraButaca,
   normalizarTextoCine,
 } from '../services/funcionCine.normalizer.js';
 import { fetchJson } from '../utils/fetchJson.js';
@@ -64,14 +65,22 @@ export function obtenerFuncionesButaca({ pelicula, ciudad, desde, hasta }) {
     async () => {
       const cines = await listarCinesButaca();
       const observaciones = [];
+      const correspondencias = [...CORRESPONDENCIAS_PELICULAS_CINE];
       let estructuraPresente = true;
       for (const mapeo of ciudad.butacaCines) {
+        const lugar = LUGARES_CINE.find(
+          (item) =>
+            item.ciudadId === ciudad.id &&
+            item.fuentes.some(
+              (fuente) => fuente.fuenteId === 'butaca' && fuente.registroId === String(mapeo.id),
+            ),
+        );
         const cine = cines.find(
           (item) =>
             String(item.id) === String(mapeo.id) &&
             item.slug === mapeo.slug &&
-            normalizarTextoCine(item.city) === normalizarTextoCine(ciudad.nombre) &&
-            normalizarTextoCine(item.location.name) === normalizarTextoCine(ciudad.provincia),
+            lugar &&
+            normalizarTextoCine(item.address) === normalizarTextoCine(lugar.direccion),
         );
         if (!cine) {
           estructuraPresente = false;
@@ -82,13 +91,33 @@ export function obtenerFuncionesButaca({ pelicula, ciudad, desde, hasta }) {
           { theater: String(cine.id) },
           respuestaPeliculasButacaSchema,
         );
+        const revisadas = peliculas.filter((item) =>
+          corresponderPeliculaCine({
+            fuenteId: 'butaca',
+            registroId: item.corporateId,
+            nombre: item.title,
+            tmdbId: pelicula.tmdbId,
+            correspondencias,
+          }),
+        );
+        if (!revisadas.length) {
+          const nuevas = corresponderCarteleraButaca(peliculas, pelicula);
+          for (const nueva of nuevas) {
+            if (
+              !correspondencias.some(
+                (item) => item.fuenteId === nueva.fuenteId && item.registroId === nueva.registroId,
+              )
+            )
+              correspondencias.push(nueva);
+          }
+        }
         const candidatas = peliculas.filter((item) =>
           corresponderPeliculaCine({
             fuenteId: 'butaca',
             registroId: item.corporateId,
             nombre: item.title,
             tmdbId: pelicula.tmdbId,
-            correspondencias: CORRESPONDENCIAS_PELICULAS_CINE,
+            correspondencias,
           }),
         );
         if (peliculas.length && !candidatas.length) estructuraPresente = false;
@@ -145,7 +174,7 @@ export function obtenerFuncionesButaca({ pelicula, ciudad, desde, hasta }) {
         hasta,
         fuente,
         lugares: LUGARES_CINE,
-        correspondencias: CORRESPONDENCIAS_PELICULAS_CINE,
+        correspondencias,
         estructuraPresente,
       });
     },

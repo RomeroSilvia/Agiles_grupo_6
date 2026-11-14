@@ -1,4 +1,5 @@
 import { env } from '../config/env.config.js';
+import { identidadPeliculaTmdbCineSchema } from '../models/funcionCine.model.js';
 import {
   CARTELERA_CONFIG,
   RUTA_TMDB_POR_TIPO,
@@ -382,7 +383,7 @@ export function listarGenerosPorTipo(tipo) {
   });
 }
 
-export async function obtenerDetalle(tipo, tmdbId) {
+export async function obtenerDetalle(tipo, tmdbId, { incluirIdentidadCine = false } = {}) {
   const ruta = RUTA_TMDB_POR_TIPO[tipo];
   if (!ruta) {
     throw new TypeError(`Tipo de título inválido: ${tipo}`);
@@ -392,6 +393,7 @@ export async function obtenerDetalle(tipo, tmdbId) {
   try {
     response = await tmdbRequest(`/${ruta}/${tmdbId}`, {
       language: TMDB_LANGUAGE,
+      ...(incluirIdentidadCine ? { append_to_response: 'alternative_titles' } : {}),
     });
   } catch (error) {
     if (error instanceof ExternalServiceError && error.cause?.status === 404) {
@@ -400,9 +402,29 @@ export async function obtenerDetalle(tipo, tmdbId) {
     throw error;
   }
 
+  let identidadCine;
+  if (incluirIdentidadCine) {
+    const datos = validateExternalResponse(
+      identidadPeliculaTmdbCineSchema.refine((item) => item.id === tmdbId),
+      response,
+      'TMDB',
+    );
+    identidadCine = {
+      nombres: [
+        datos.title,
+        datos.original_title,
+        ...(datos.alternative_titles?.titles ?? [])
+          .filter((item) => item.iso_3166_1 === 'AR')
+          .map((item) => item.title),
+      ].filter(Boolean),
+      anio: obtenerAnio(datos.release_date),
+      duracion: datos.runtime ?? null,
+    };
+  }
   return {
     ...normalizarBase(response, tipo),
     sinopsis: obtenerTexto(response?.overview),
+    ...(identidadCine ? { identidadCine } : {}),
   };
 }
 

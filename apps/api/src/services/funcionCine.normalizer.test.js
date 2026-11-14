@@ -7,6 +7,7 @@ import {
 } from '@buscador/shared/testing';
 import {
   combinarFuncionesCine,
+  corresponderCarteleraButaca,
   normalizarObservacionesCine,
   resolverFechaSerpApi,
   resolverHoraSerpApi,
@@ -65,6 +66,42 @@ beforeEach(() => {
   vi.setSystemTime('2026-11-14T12:00:00Z');
 });
 afterEach(() => vi.useRealTimers());
+
+describe('correspondencia automática de películas Cinemark', () => {
+  const pelicula = {
+    tmdbId: 77,
+    identidadCine: {
+      nombres: ['Título original', 'Película de prueba'],
+      anio: 2026,
+      duracion: 115,
+    },
+  };
+  const candidata = {
+    corporateId: 'corp-77',
+    title: 'PELÍCULA DE PRUEBA',
+    openingDate: '2026-11-12T00:00:00.000Z',
+    runTime: 115,
+  };
+  it('vincula un título o alias único con año y duración coincidentes', () => {
+    expect(corresponderCarteleraButaca([candidata], pelicula)).toEqual([
+      expect.objectContaining({ fuenteId: 'butaca', registroId: 'corp-77', tmdbId: 77 }),
+    ]);
+  });
+  it.each([
+    { openingDate: '1998-11-12T00:00:00.000Z' },
+    { runTime: 90 },
+    { runTime: null },
+    { title: 'Otra película' },
+  ])('rechaza homónimos y datos insuficientes: %j', (cambio) => {
+    expect(corresponderCarteleraButaca([{ ...candidata, ...cambio }], pelicula)).toEqual([]);
+  });
+  it('rechaza dos identidades nativas compatibles y metadata TMDB ausente', () => {
+    expect(
+      corresponderCarteleraButaca([candidata, { ...candidata, corporateId: 'otro' }], pelicula),
+    ).toEqual([]);
+    expect(corresponderCarteleraButaca([candidata], { tmdbId: 77 })).toEqual([]);
+  });
+});
 describe('normalización de funciones', () => {
   it('descarta destinos inseguros sin perder el horario ni hacer otra consulta', () => {
     const resultado = normalizar(

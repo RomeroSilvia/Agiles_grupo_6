@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Bookmark,
+  ChartNoAxesColumn,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -24,6 +25,7 @@ import {
   Star,
   Sun,
   Trash,
+  Users,
   X,
 } from 'lucide-react';
 
@@ -76,3 +78,5 @@ export const FiltersIcon = createIcon(SlidersHorizontal);
 export const GlobeIcon = createIcon(Globe);
 export const PlusIcon = createIcon(Plus);
 export const StarIcon = createIcon(Star);
+export const ChartIcon = createIcon(ChartNoAxesColumn);
+export const UsersIcon = createIcon(Users);

@@ -66,6 +66,26 @@ La Plata y Mar del Plata siguen sin fuente de horarios confirmada: no figuran en
 ese directorio. Un directorio eliminado o inválido devuelve 502; uno configurado
 sin entradas devuelve una lista vacía.
 
+La ampliación del 14/11/2026 incorpora Avellaneda, Boulogne, Malvinas Argentinas,
+Martínez, Moreno, Morón, San Justo, Quilmes, Temperley y Tortuguitas (Buenos Aires),
+Rosario y Santa Fe capital (Santa Fe), Godoy Cruz (Mendoza), Neuquén capital y Salta
+capital. Junto con CABA y Córdoba capital, son 17 localidades con 24 complejos
+Cinemark. Salta reúne Alto NOA e Hiper Libertad; Godoy Cruz consulta el complejo
+llamado «Mendoza», Boulogne consulta Soleil y Martínez consulta Unicenter.
+Malvinas Argentinas conserva el ámbito solicitado del partido.
+
+Se contrastaron IDs, slugs, direcciones y mapas del directorio oficial, y se
+comprobaron lecturas anónimas de películas y horarios de las 16 sucursales
+incorporadas. Ver [evidencia de la ampliación](evidencia/cinemark-ciudades-2026-11-14.json).
+Las nuevas localidades usan exclusivamente Cinemark: `serpApiLocation=null`
+porque no se verificaron ubicaciones propias de SerpApi, y no consumen su cupo.
+El selector existente recibe las opciones desde la API sin cambios de interfaz.
+Se conservan los cuatro IDs anteriores, incluidos La Plata y Mar del Plata.
+El listado público y el selector muestran únicamente las 17 localidades con
+cobertura `disponible`: La Plata y Mar del Plata quedan fuera por no tener
+cobertura confirmada. El directorio interno conserva sus registros e IDs para
+futuras verificaciones. Reiniciar la API y recargar la web actualiza la lista.
+
 ## Funciones (#75)
 
 Única ruta: `GET /api/cartelera/peliculas/:tmdbId/funciones?ciudadId=ar:<UUID>`.

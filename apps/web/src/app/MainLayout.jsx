@@ -86,6 +86,14 @@ export function MainLayout() {
           >
             Cartelera
           </NavLink>
+          <NavLink
+            to={RUTAS.EVENTOS}
+            className={({ isActive }) =>
+              `inline-flex min-h-11 items-center rounded-sm px-2 text-sm transition-colors duration-150 hover:text-foreground ${isActive ? 'font-bold text-foreground' : 'text-muted'} ${FOCUS_RING_CLASS_NAME}`
+            }
+          >
+            Cooltura
+          </NavLink>
           {user && (
             <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
               <Enlaces />

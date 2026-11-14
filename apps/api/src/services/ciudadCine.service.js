@@ -43,8 +43,9 @@ function cargarCiudadesCine() {
 }
 
 export function listarCiudadesCine() {
-  const ciudades = cargarCiudadesCine().map(
-    ({ id, nombre, provincia, pais, zonaHoraria, cobertura, fuente }) => ({
+  const ciudades = cargarCiudadesCine()
+    .filter((ciudad) => ciudad.cobertura === 'disponible')
+    .map(({ id, nombre, provincia, pais, zonaHoraria, cobertura, fuente }) => ({
       id,
       nombre,
       provincia,
@@ -52,8 +53,7 @@ export function listarCiudadesCine() {
       zonaHoraria,
       cobertura,
       fuente,
-    }),
-  );
+    }));
 
   const resultado = respuestaCiudadesCineSchema.safeParse({ pais: 'AR', ciudades });
   if (!resultado.success) {

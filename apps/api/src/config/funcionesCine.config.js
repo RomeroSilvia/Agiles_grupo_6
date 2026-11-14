@@ -1,7 +1,7 @@
 import { CINES_CINEMARK, EVIDENCIA_CINEMARK } from './cinesCinemark.config.js';
 
 export const FUNCIONES_CINE_CONFIG = Object.freeze({
-  VERSION_MAPEOS: '2',
+  VERSION_MAPEOS: '3',
   RATE_LIMIT: Object.freeze({ maxRequests: 5, windowMs: 60_000 }),
   MAX_CONCURRENT_REQUESTS: 2,
   MAX_FUNCIONES: 1000,

@@ -3,6 +3,7 @@ import { MainLayout } from './MainLayout.jsx';
 import { NotFoundPage } from './NotFoundPage.jsx';
 import { PaginaBusqueda } from '../features/busqueda/PaginaBusqueda.jsx';
 import { PaginaCartelera } from '../features/cartelera/PaginaCartelera.jsx';
+import { PaginaEventos } from '../features/eventos/PaginaEventos.jsx';
 import { PaginaDetalleTitulo } from '../features/detalle/PaginaDetalleTitulo.jsx';
 import { SoloSinSesion } from '../features/auth/SoloSinSesion.jsx';
 import { PaginaInicioSesion } from '../features/auth/PaginaInicioSesion.jsx';
@@ -24,6 +25,7 @@ export const routes = [
     children: [
       { index: true, Component: PaginaBusqueda },
       { path: RUTAS.CARTELERA, Component: PaginaCartelera },
+      { path: RUTAS.EVENTOS, Component: PaginaEventos },
       { path: RUTAS.DETALLE_TITULO, Component: PaginaDetalleTitulo },
       { path: RUTAS.WATCHLIST, Component: PaginaWatchlist },
       {

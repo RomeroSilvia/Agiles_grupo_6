@@ -31,7 +31,7 @@ function crearCiudad({ id, nombre, provincia, cobertura = 'disponible' }) {
       consultadoEn: evidencia.consultadoEn,
       actualizadoEn: null,
     },
-    serpApiLocation: cobertura === 'disponible' ? `${nombre},Argentina` : null,
+    serpApiLocation: cobertura !== 'sin_cobertura' ? `${nombre},Argentina` : null,
     butacaCines: [],
     evidenciaPorFuente: { serpApi: evidencia, butaca: null },
   };
@@ -73,15 +73,6 @@ describe('servicio de ciudades de cine', () => {
           fuente: cordoba.fuente,
         },
         {
-          id: sinCobertura.id,
-          nombre: sinCobertura.nombre,
-          provincia: sinCobertura.provincia,
-          pais: 'AR',
-          zonaHoraria: sinCobertura.zonaHoraria,
-          cobertura: 'sin_cobertura',
-          fuente: sinCobertura.fuente,
-        },
-        {
           id: santaFe.id,
           nombre: santaFe.nombre,
           provincia: santaFe.provincia,
@@ -92,6 +83,24 @@ describe('servicio de ciudades de cine', () => {
         },
       ],
     });
+  });
+
+  it('excluye del listado ciudades sin cobertura y con cobertura sin verificar', () => {
+    const sinVerificar = crearCiudad({
+      id: 'ar:550e8400-e29b-41d4-a716-446655440003',
+      nombre: 'La Plata',
+      provincia: 'Buenos Aires',
+      cobertura: 'sin_verificar',
+    });
+    DIRECTORIO_CIUDADES_CINE.ciudades = [sinCobertura, sinVerificar, cordoba];
+
+    expect(listarCiudadesCine().ciudades.map((ciudad) => ciudad.id)).toEqual([cordoba.id]);
+  });
+
+  it('devuelve una lista vacía cuando ninguna ciudad tiene cobertura confirmada', () => {
+    DIRECTORIO_CIUDADES_CINE.ciudades = [sinCobertura];
+
+    expect(listarCiudadesCine()).toEqual({ pais: 'AR', ciudades: [] });
   });
 
   it('devuelve una ciudad sin cobertura para que el consumidor informe su estado', () => {

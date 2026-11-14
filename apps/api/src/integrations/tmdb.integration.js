@@ -1,10 +1,21 @@
 import { env } from '../config/env.config.js';
-import { RUTA_TMDB_POR_TIPO, TMDB_CONFIG } from '../config/tmdb.config.js';
+import {
+  CARTELERA_CONFIG,
+  RUTA_TMDB_POR_TIPO,
+  TIPOS_ESTRENO_SALA_TMDB,
+  TMDB_CONFIG,
+} from '../config/tmdb.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
+import {
+  crearRespuestaDetallePeliculaSchema,
+  respuestaFechasEstrenoSchema,
+  respuestaTmdbCarteleraSchema,
+} from '../models/cartelera.model.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import { createTtlCache } from '../utils/ttlCache.js';
-import { TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
+import { validateExternalResponse } from '../utils/validateExternalResponse.js';
+import { REGION_CARTELERA, TIPO_OFERTA, TIPO_TITULO } from '@buscador/shared/constants';
 import { httpUrlSchema } from '@buscador/shared/schemas';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -56,6 +67,18 @@ const personasCache = createTtlCache({
 const creditosCombinadosCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
   maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES_ROLES_PERSONA,
+});
+const cartelerasCache = createTtlCache({
+  ttlMs: CARTELERA_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
+});
+const fechasEstrenoCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
+});
+const aniosOriginalesCache = createTtlCache({
+  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
+  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
 });
 
 function tmdbRequest(path, params) {
@@ -175,6 +198,64 @@ export function descubrirTitulos({ tipo, anio, generoIds, pagina }) {
     async () =>
       normalizarRespuestaBusqueda(await tmdbRequest(`/discover/${ruta}`, parametros), tipo),
   );
+}
+
+function obtenerAnioOriginalPelicula(tmdbId) {
+  return aniosOriginalesCache.getOrSet(String(tmdbId), async () => {
+    const detalle = validateExternalResponse(
+      crearRespuestaDetallePeliculaSchema(tmdbId),
+      await tmdbRequest(`/movie/${tmdbId}`),
+    );
+    return obtenerAnio(detalle.release_date);
+  });
+}
+
+export function listarPeliculasEnCartelera({ pagina }) {
+  return cartelerasCache.getOrSet(`${REGION_CARTELERA}:${pagina}`, async () => {
+    const respuesta = await tmdbRequest('/movie/now_playing', {
+      region: REGION_CARTELERA,
+      language: TMDB_LANGUAGE,
+      page: pagina,
+    });
+
+    const cartelera = validateExternalResponse(respuestaTmdbCarteleraSchema, {
+      resultados: mapearColeccion(respuesta?.results, (item) =>
+        normalizarBase(item, TIPO_TITULO.PELICULA),
+      ),
+      pagina: respuesta?.page,
+      totalResultados: respuesta?.total_results,
+      totalPaginas: respuesta?.total_pages,
+      consultadoEn: new Date().toISOString(),
+    });
+
+    return {
+      ...cartelera,
+      resultados: await Promise.all(
+        cartelera.resultados.map(async (pelicula) => ({
+          ...pelicula,
+          anio: await obtenerAnioOriginalPelicula(pelicula.tmdbId),
+        })),
+      ),
+    };
+  });
+}
+
+export function obtenerFechaEstrenoArgentina({ tmdbId }) {
+  return fechasEstrenoCache.getOrSet(String(tmdbId), async () => {
+    const respuesta = validateExternalResponse(
+      respuestaFechasEstrenoSchema,
+      await tmdbRequest(`/movie/${tmdbId}/release_dates`),
+    );
+    const fechasArgentina =
+      respuesta.results
+        .find(({ iso_3166_1 }) => iso_3166_1 === REGION_CARTELERA)
+        ?.release_dates.filter(({ type }) => TIPOS_ESTRENO_SALA_TMDB.includes(type)) ?? [];
+
+    return {
+      fechaEstrenoAr: fechasArgentina[0]?.release_date ?? null,
+      consultadoEn: new Date().toISOString(),
+    };
+  });
 }
 
 export function obtenerCreditosPersona({ personaId, tipo }) {

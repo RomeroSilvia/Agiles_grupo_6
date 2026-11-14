@@ -192,6 +192,58 @@ describe('complemento Butaca / Cinemark', () => {
     await obtenerFuncionesButaca(consulta);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
+  it.each([false, true])(
+    'devuelve cero funciones sin advertencias si la película está ausente (cartelera vacía: %s)',
+    async (vacia) => {
+      config.habilitado = true;
+      config.verificado = true;
+      const fetchMock = simularCartelera();
+      if (vacia) {
+        const consultar = fetchMock.getMockImplementation();
+        fetchMock.mockImplementation((url) =>
+          url.pathname.endsWith('/movies')
+            ? Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
+            : consultar(url),
+        );
+      }
+      const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+      const resultado = await obtenerFuncionesButaca({
+        ...parametros,
+        pelicula: {
+          tmdbId: 77,
+          identidadCine: { nombres: ['Película de prueba'], anio: 2026, duracion: 115 },
+        },
+      });
+      expect(resultado.funciones).toEqual([]);
+      expect(resultado.estadoFuente).toBe('disponible');
+      expect(resultado.advertencias).toEqual([]);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
+  it('conserva datos incompletos si un ID conocido cambia de título', async () => {
+    config.habilitado = true;
+    config.verificado = true;
+    const fetchMock = simularCartelera();
+    const consultar = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((url) =>
+      url.pathname.endsWith('/movies')
+        ? Promise.resolve({
+            ok: true,
+            json: async () => ({
+              data: [{ id: 'uuid-proveedor', corporateId: 'corp-77', title: 'Otro título' }],
+            }),
+          })
+        : consultar(url),
+    );
+    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+    const resultado = await obtenerFuncionesButaca(parametros);
+    expect(resultado.funciones).toEqual([]);
+    expect(resultado.estadoFuente).toBe('incompleta');
+    expect(resultado.advertencias).toContainEqual(
+      expect.objectContaining({ code: 'INCOMPLETE_DATA', fuenteId: 'butaca' }),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it('publica una sola función por sesión aunque Cinemark repita sus formatos', async () => {
     config.habilitado = true;
     config.verificado = true;

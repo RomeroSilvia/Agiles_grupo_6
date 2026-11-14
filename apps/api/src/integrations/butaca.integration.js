@@ -125,7 +125,23 @@ export function obtenerFuncionesButaca({ pelicula, ciudad, desde, hasta }) {
               correspondencias,
             }),
           );
-          if (peliculas.length && !candidatas.length) estructuraPresente = false;
+          if (!candidatas.length) {
+            const correspondenciasPelicula = correspondencias.filter(
+              (item) => item.fuenteId === 'butaca' && item.tmdbId === pelicula.tmdbId,
+            );
+            const nombres = [
+              ...(pelicula.identidadCine?.nombres ?? []),
+              ...correspondenciasPelicula.map((item) => item.nombre),
+            ].map(normalizarTextoCine);
+            const identidadPendiente = peliculas.some(
+              (item) =>
+                nombres.includes(normalizarTextoCine(item.title)) ||
+                correspondenciasPelicula.some(
+                  (correspondencia) => correspondencia.registroId === item.corporateId,
+                ),
+            );
+            if (identidadPendiente) estructuraPresente = false;
+          }
           for (const candidata of candidatas) {
             const horarios = await consultarButaca(
               '/cinema/showtimes',

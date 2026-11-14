@@ -6,6 +6,7 @@ import { regionRoutes } from './region.routes.js';
 import { tituloRoutes } from './titulo.routes.js';
 import { plataformaRoutes } from './plataforma.routes.js';
 import { watchlistRoutes } from './watchlist.routes.js';
+import { ciudadCineRoutes } from './ciudadCine.routes.js';
 
 export const routes = Router();
 
@@ -17,3 +18,4 @@ routes.use('/auth', authRoutes);
 routes.use('/region', regionRoutes);
 routes.use('/plataformas', plataformaRoutes);
 routes.use('/watchlist', watchlistRoutes);
+routes.use('/cartelera/ciudades', ciudadCineRoutes);

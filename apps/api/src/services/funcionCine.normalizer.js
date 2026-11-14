@@ -147,6 +147,48 @@ export function corresponderCarteleraButaca(peliculas, pelicula) {
   ];
 }
 
+export function consolidarSesionesButaca(horarios) {
+  const sesiones = new Map();
+  for (const horario of horarios) {
+    const clave = JSON.stringify([horario.theaterId, horario.corporateId, horario.sessionId]);
+    const grupo = sesiones.get(clave) ?? [];
+    grupo.push(horario);
+    sesiones.set(clave, grupo);
+  }
+  const consolidadas = [];
+  let incompleta = false;
+  for (const grupo of sesiones.values()) {
+    const firmas = grupo.map((horario) =>
+      JSON.stringify([
+        horario.movieName,
+        horario.sessionDateTime,
+        horario.sessionDisplayDate,
+        horario.theaterRoom ?? null,
+        horario.language?.shortName ?? null,
+        horario.language?.name ?? null,
+      ]),
+    );
+    if (new Set(firmas).size > 1) {
+      // Un mismo ID con horarios o salas incompatibles no identifica una función verificable.
+      incompleta = true;
+      continue;
+    }
+    const formatos = new Map();
+    for (const horario of grupo) {
+      const formato = horario.sessionFormat?.trim();
+      if (!formato) continue;
+      const clave = normalizarTextoCine(formato);
+      const anterior = formatos.get(clave);
+      if (!anterior || formato < anterior) formatos.set(clave, formato);
+    }
+    consolidadas.push({
+      ...grupo[0],
+      sessionFormat: [...formatos.values()].sort().join(' / ') || null,
+    });
+  }
+  return { horarios: consolidadas, incompleta };
+}
+
 export function resolverLugarCine(observacion, ciudad, lugares) {
   const candidatos = lugares.filter(
     (lugar) =>

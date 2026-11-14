@@ -147,6 +147,13 @@ en coincidencias revisadas de Cinemark; discrepancias y candidatos secundarios
 ambiguos generan advertencias, preservando procedencia. Dos salas simultáneas
 con datos distintos siguen siendo funciones distintas.
 
+Cinemark puede repetir una misma sesión con formatos de asientos distintos (por
+ejemplo, `2D` y `DBOX 2D` para `sessionId=106515` en la evidencia). El adaptador
+consolida por cine, película e ID nativo antes de generar el ID público y conserva
+los formatos en un texto ordenado, sin duplicar la función. Si ese mismo ID trae
+horarios, salas o idiomas contradictorios, se descarta esa sesión y se informa
+incompletitud; las otras sesiones se conservan.
+
 Cachés por proceso/película/ciudad/día/versión: SerpApi una hora, Butaca quince
 minutos, 100 entradas por proveedor y promesas compartidas. Máximo dos consultas
 de proveedores concurrentes, cinco solicitudes por minuto y cliente, 1.000

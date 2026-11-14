@@ -192,6 +192,29 @@ describe('complemento Butaca / Cinemark', () => {
     await obtenerFuncionesButaca(consulta);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
+  it('publica una sola función por sesión aunque Cinemark repita sus formatos', async () => {
+    config.habilitado = true;
+    config.verificado = true;
+    const fetchMock = simularCartelera({ sucursales });
+    const consultar = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation(async (url) => {
+      const respuesta = await consultar(url);
+      if (!url.pathname.endsWith('/showtimes')) return respuesta;
+      const { data } = await respuesta.json();
+      return {
+        ...respuesta,
+        json: async () => ({
+          data: [...data, ...data.map((horario) => ({ ...horario, sessionFormat: 'DBOX 2D' }))],
+        }),
+      };
+    });
+    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+    const resultado = await obtenerFuncionesButaca(consultaSucursales);
+    expect(resultado.funciones).toHaveLength(sucursales.length);
+    expect(resultado.estadoFuente).toBe('disponible');
+    expect(resultado.funciones.every((funcion) => funcion.formato === '2D / DBOX 2D')).toBe(true);
+    expect(new Set(resultado.funciones.map((funcion) => funcion.id)).size).toBe(sucursales.length);
+  });
   it('excluye una sucursal que conserva ID pero cambia su dirección revisada', async () => {
     config.habilitado = true;
     config.verificado = true;

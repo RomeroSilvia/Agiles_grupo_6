@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import evidenciaCinemark from '../../../../docs/evidencia/cinemark-2026-11-14.json';
 import {
   CIUDAD_CINE_FIXTURE,
   FUENTE_CINE_FIXTURE,
@@ -7,6 +8,7 @@ import {
 } from '@buscador/shared/testing';
 import {
   combinarFuncionesCine,
+  consolidarSesionesButaca,
   corresponderCarteleraButaca,
   normalizarObservacionesCine,
   resolverFechaSerpApi,
@@ -66,6 +68,47 @@ beforeEach(() => {
   vi.setSystemTime('2026-11-14T12:00:00Z');
 });
 afterEach(() => vi.useRealTimers());
+
+describe('consolidación de sesiones Cinemark', () => {
+  const muestra = evidenciaCinemark.muestras[1].funciones;
+
+  it('consolida la sesión real 106515 y conserva sus formatos sin depender del orden', () => {
+    const resultado = consolidarSesionesButaca(muestra);
+    expect(resultado.incompleta).toBe(false);
+    expect(resultado.horarios).toHaveLength(1);
+    expect(resultado.horarios[0]).toMatchObject({
+      sessionId: '106515',
+      theaterId: '105',
+      theaterRoom: '3',
+      sessionDateTime: '2026-11-14T16:30:00.000Z',
+      sessionFormat: '2D / DBOX 2D',
+    });
+    expect(consolidarSesionesButaca([...muestra].reverse())).toEqual(resultado);
+    expect(consolidarSesionesButaca([...muestra, ...muestra])).toEqual(resultado);
+  });
+
+  it.each([
+    { sessionId: 'otra-sesion', theaterRoom: '4' },
+    { theaterId: '106' },
+    { corporateId: 'otra-pelicula' },
+  ])('conserva sesiones nativas distintas: %j', (cambios) => {
+    const resultado = consolidarSesionesButaca([muestra[0], { ...muestra[0], ...cambios }]);
+    expect(resultado.horarios).toHaveLength(2);
+    expect(resultado.incompleta).toBe(false);
+  });
+
+  it.each([
+    { theaterRoom: '4' },
+    { sessionDateTime: '2026-11-14T17:30:00.000Z' },
+    { language: { shortName: 'SUB', name: 'Subtitulada' } },
+  ])('descarta una sesión contradictoria y conserva las otras: %j', (cambios) => {
+    const otra = { ...muestra[0], sessionId: 'otra-sesion' };
+    expect(consolidarSesionesButaca([muestra[0], { ...muestra[0], ...cambios }, otra])).toEqual({
+      horarios: [otra],
+      incompleta: true,
+    });
+  });
+});
 
 describe('correspondencia automática de películas Cinemark', () => {
   const pelicula = {

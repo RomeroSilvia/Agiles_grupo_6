@@ -15,6 +15,7 @@ import {
   normalizarObservacionesCine,
   corresponderPeliculaCine,
   corresponderCarteleraButaca,
+  consolidarSesionesButaca,
   normalizarTextoCine,
 } from '../services/funcionCine.normalizer.js';
 import { fetchJson } from '../utils/fetchJson.js';
@@ -131,7 +132,9 @@ export function obtenerFuncionesButaca({ pelicula, ciudad, desde, hasta }) {
               { movieCorporateId: candidata.corporateId, theater: String(cine.id) },
               respuestaFuncionesButacaSchema,
             );
-            for (const horario of horarios) {
+            const sesiones = consolidarSesionesButaca(horarios);
+            if (sesiones.incompleta) estructuraPresente = false;
+            for (const horario of sesiones.horarios) {
               if (
                 String(horario.theaterId) !== String(cine.id) ||
                 horario.corporateId !== candidata.corporateId

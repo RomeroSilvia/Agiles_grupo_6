@@ -4,7 +4,8 @@ import { consultaEventosSchema } from '@buscador/shared/schemas';
 import { Select } from '../../components/ui/Select.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
-import { CalendarIcon, MapPinIcon } from '../../components/ui/icons.jsx';
+import { MapPinIcon } from '../../components/ui/icons.jsx';
+import catedralLaPlata from '../../assets/catedral-la-plata.jpg';
 import { ListaEventos } from './ListaEventos.jsx';
 
 export function PaginaEventos() {
@@ -28,7 +29,7 @@ export function PaginaEventos() {
             <MapPinIcon className="size-3.5" /> La Plata, Buenos Aires
           </Chip>
         </div>
-        <div className="mt-6 flex items-start justify-between gap-4">
+        <div className="mt-6 flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
           <div className="max-w-2xl space-y-4">
             <h1 className="font-display text-3xl leading-tight font-extrabold tracking-tight sm:text-5xl">
               Desconectá la pantalla y conectá <span className="text-panel-accent">Cooltura</span>.
@@ -38,7 +39,13 @@ export function PaginaEventos() {
               para salir en La Plata.
             </p>
           </div>
-          <CalendarIcon className="hidden size-20 shrink-0 text-panel-accent lg:block" />
+          <img
+            src={catedralLaPlata}
+            alt="Catedral de La Plata al atardecer"
+            width="1079"
+            height="1223"
+            className="w-full rounded-card object-contain lg:w-64 lg:shrink-0"
+          />
         </div>
       </header>
       <p className="text-sm text-muted">

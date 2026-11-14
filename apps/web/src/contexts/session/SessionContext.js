@@ -3,7 +3,7 @@ import { createContext, useContext } from 'react';
 export const SessionContext = createContext(null);
 
 /**
- * @typedef {{ id: string, email: string }} User
+ * @typedef {{ id: string, email: string, esAdmin: boolean }} User
  * @returns {{
  *   user: User | null,
  *   loading: boolean,

@@ -1,6 +1,7 @@
 import * as authRepository from '../repositories/auth.repository.js';
 import * as intentoLoginRepository from '../repositories/intentoLogin.repository.js';
 import { ForbiddenError, TooManyAttemptsError, UnauthenticatedError } from '../errors/index.js';
+import * as perfilService from './perfil.service.js';
 
 // Bloqueo temporal del ingreso para frenar ataques de fuerza bruta
 export const MAX_INTENTOS_LOGIN = 5;
@@ -9,6 +10,10 @@ export const MINUTOS_BLOQUEO_LOGIN = 15;
 // Mismo mensaje para mail inexistente y contraseña incorrecta:
 // así no se puede averiguar qué mails están registrados.
 const CREDENCIALES_INVALIDAS = 'El mail o la contraseña no son correctos';
+
+/**
+ * @typedef {import('../repositories/auth.repository.js').UsuarioSesion & { esAdmin: boolean }} UsuarioConAcceso
+ */
 
 /**
  * E4HU2: registra al usuario y deja la sesión iniciada.
@@ -33,6 +38,19 @@ export async function registrarUsuario({ email, password }) {
  */
 export function iniciarSesion(credenciales) {
   return autenticarConBloqueo(credenciales, () => new UnauthenticatedError(CREDENCIALES_INVALIDAS));
+}
+
+/**
+ * Agrega `esAdmin` al usuario para que el front sepa si mostrar el panel.
+ * Si no se puede leer el rol, la sesión sigue valiendo: el panel igual lo controla requireAdmin.
+ * @returns {Promise<UsuarioConAcceso>}
+ */
+export async function agregarEsAdmin(user) {
+  const esAdmin = await perfilService.esAdministrador(user.id).catch((error) => {
+    console.error('No se pudo leer el rol del usuario', { usuarioId: user.id, error });
+    return false;
+  });
+  return { ...user, esAdmin };
 }
 
 export async function verificarIdentidad(credenciales) {

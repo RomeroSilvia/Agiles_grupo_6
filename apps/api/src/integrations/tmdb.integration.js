@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { env } from '../config/env.config.js';
 import { CARTELERA_CONFIG, RUTA_TMDB_POR_TIPO, TMDB_CONFIG } from '../config/tmdb.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
+import { respuestaTmdbCarteleraSchema } from '../models/cartelera.model.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import { createTtlCache } from '../utils/ttlCache.js';
@@ -213,7 +214,7 @@ export function listarPeliculasEnCartelera({ pagina }) {
       page: pagina,
     });
 
-    return {
+    return validateExternalResponse(respuestaTmdbCarteleraSchema, {
       resultados: mapearColeccion(respuesta?.results, (item) =>
         normalizarBase(item, TIPO_TITULO.PELICULA),
       ),
@@ -221,7 +222,7 @@ export function listarPeliculasEnCartelera({ pagina }) {
       totalResultados: respuesta?.total_results,
       totalPaginas: respuesta?.total_pages,
       consultadoEn: new Date().toISOString(),
-    };
+    });
   });
 }
 

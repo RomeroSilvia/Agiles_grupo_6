@@ -290,6 +290,42 @@ describe('detalle y disponibilidad de TMDB', () => {
       expect(fetchMock).toHaveBeenCalledOnce();
     });
 
+    it.each([
+      ['resultados inválidos', 4, { results: 'inválido' }],
+      ['identidad inválida', 5, { results: [{ id: 0 }] }],
+      ['paginación inválida', 6, { total_pages: -1 }],
+    ])(
+      'permite reintentar tras %s y cachea la respuesta recuperada',
+      async (_caso, pagina, datosInvalidos) => {
+        const respuestaValida = {
+          page: pagina,
+          results: [],
+          total_results: 0,
+          total_pages: 0,
+        };
+        const fetchMock = vi
+          .fn()
+          .mockResolvedValueOnce(respuestaFetch({ ...respuestaValida, ...datosInvalidos }))
+          .mockResolvedValueOnce(respuestaFetch(respuestaValida));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect(listarPeliculasEnCartelera({ pagina })).rejects.toMatchObject({
+          code: 'EXTERNAL_SERVICE',
+          status: 502,
+        });
+
+        const recuperada = await listarPeliculasEnCartelera({ pagina });
+        expect(recuperada).toMatchObject({
+          resultados: [],
+          pagina,
+          totalResultados: 0,
+          totalPaginas: 0,
+        });
+        await expect(listarPeliculasEnCartelera({ pagina })).resolves.toEqual(recuperada);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      },
+    );
+
     it('selecciona la primera fecha argentina de tipo 2 o 3 sin cambiar el día civil', async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         respuestaFetch({

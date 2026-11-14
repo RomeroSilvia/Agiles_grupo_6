@@ -73,3 +73,51 @@ export const respuestaCarteleraSchema = z.object({
   totalPaginas: z.number().int().min(0).max(PAGINA_MAXIMA),
   fuente: fuenteCarteleraSchema,
 });
+
+export function obtenerHoyArgentina(ahora = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(ahora);
+}
+
+export function sumarDiasCivil(fecha, dias) {
+  const instante = new Date(`${fecha}T12:00:00Z`);
+  instante.setUTCDate(instante.getUTCDate() + dias);
+  return instante.toISOString().slice(0, 10);
+}
+
+export const consultaEstrenosSchema = z
+  .object({
+    desde: fechaCivilCarteleraSchema.optional(),
+    hasta: fechaCivilCarteleraSchema.optional(),
+    pagina: paginaCarteleraSchema.default(1),
+  })
+  .strict()
+  .transform(({ desde, hasta, pagina }) => {
+    const inicio = desde ?? sumarDiasCivil(obtenerHoyArgentina(), 1);
+    return { desde: inicio, hasta: hasta ?? sumarDiasCivil(inicio, 89), pagina };
+  })
+  .superRefine(({ desde, hasta }, ctx) => {
+    if (desde <= obtenerHoyArgentina()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['desde'],
+        message: 'La fecha inicial debe ser posterior a hoy en Argentina',
+      });
+    }
+    if (hasta < desde || hasta > sumarDiasCivil(desde, 89)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['hasta'],
+        message: 'El período debe abarcar entre 1 y 90 días',
+      });
+    }
+  });
+
+export const respuestaEstrenosSchema = respuestaCarteleraSchema.extend({
+  desde: fechaCivilCarteleraSchema,
+  hasta: fechaCivilCarteleraSchema,
+});

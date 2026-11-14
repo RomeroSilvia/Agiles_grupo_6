@@ -36,6 +36,13 @@ export const respuestaFechasEstrenoSchema = z.object({
   ),
 });
 
+export const respuestaVentanaEstrenosSchema = z
+  .object({
+    minimum: fechaCivilCarteleraSchema,
+    maximum: fechaCivilCarteleraSchema,
+  })
+  .refine(({ minimum, maximum }) => minimum <= maximum);
+
 export function crearRespuestaDetallePeliculaSchema(tmdbId) {
   return z.object({ id: z.literal(tmdbId), release_date: z.string().nullish() });
 }

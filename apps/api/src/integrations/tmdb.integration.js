@@ -10,6 +10,7 @@ import {
   crearRespuestaDetallePeliculaSchema,
   respuestaFechasEstrenoSchema,
   respuestaTmdbCarteleraSchema,
+  respuestaVentanaEstrenosSchema,
 } from '../models/cartelera.model.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 import { fetchJson } from '../utils/fetchJson.js';
@@ -241,21 +242,72 @@ export function listarPeliculasEnCartelera({ pagina }) {
 }
 
 export function obtenerFechaEstrenoArgentina({ tmdbId }) {
+  return obtenerFechasEstrenoArgentina({ tmdbId }).then(({ fechas, consultadoEn }) => ({
+    fechaEstrenoAr: fechas[0] ?? null,
+    consultadoEn,
+  }));
+}
+
+export function obtenerFechasEstrenoArgentina({ tmdbId }) {
   return fechasEstrenoCache.getOrSet(String(tmdbId), async () => {
     const respuesta = validateExternalResponse(
       respuestaFechasEstrenoSchema,
       await tmdbRequest(`/movie/${tmdbId}/release_dates`),
     );
-    const fechasArgentina =
-      respuesta.results
-        .find(({ iso_3166_1 }) => iso_3166_1 === REGION_CARTELERA)
-        ?.release_dates.filter(({ type }) => TIPOS_ESTRENO_SALA_TMDB.includes(type)) ?? [];
+    const fechasArgentina = respuesta.results
+      .filter(({ iso_3166_1 }) => iso_3166_1 === REGION_CARTELERA)
+      .flatMap(({ release_dates }) => release_dates)
+      .filter(({ type }) => TIPOS_ESTRENO_SALA_TMDB.includes(type));
 
     return {
-      fechaEstrenoAr: fechasArgentina[0]?.release_date ?? null,
+      fechas: [...new Set(fechasArgentina.map(({ release_date }) => release_date))].sort(),
       consultadoEn: new Date().toISOString(),
     };
   });
+}
+
+export async function listarCandidatosEstrenos({ origen, desde, hasta, pagina }) {
+  const respuesta = await tmdbRequest(
+    origen === 'upcoming' ? '/movie/upcoming' : '/discover/movie',
+    {
+      region: REGION_CARTELERA,
+      language: TMDB_LANGUAGE,
+      page: pagina,
+      ...(origen === 'upcoming'
+        ? {}
+        : {
+            with_release_type: '2|3',
+            include_adult: false,
+            include_video: false,
+            'release_date.gte': desde,
+            'release_date.lte': hasta,
+          }),
+    },
+  );
+  const datos = validateExternalResponse(respuestaTmdbCarteleraSchema, {
+    resultados: mapearColeccion(respuesta?.results, (item) =>
+      normalizarBase(item, TIPO_TITULO.PELICULA),
+    ),
+    pagina: respuesta?.page,
+    totalResultados: respuesta?.total_results,
+    totalPaginas: respuesta?.total_pages,
+    consultadoEn: new Date().toISOString(),
+  });
+  const esperados = Math.min(20, Math.max(0, datos.totalResultados - (pagina - 1) * 20));
+  if (datos.pagina !== pagina || datos.resultados.length !== esperados) {
+    throw new ExternalServiceError(
+      'TMDB',
+      new Error('La página de candidatos no se recibió completa'),
+    );
+  }
+  if (origen === 'upcoming') {
+    validateExternalResponse(respuestaVentanaEstrenosSchema, respuesta?.dates);
+  }
+  return datos;
+}
+
+export function obtenerAnioEstrenoOriginal(tmdbId) {
+  return obtenerAnioOriginalPelicula(tmdbId);
 }
 
 export function obtenerCreditosPersona({ personaId, tipo }) {

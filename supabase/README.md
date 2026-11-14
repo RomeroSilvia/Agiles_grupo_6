@@ -18,6 +18,10 @@ where id = (select id from auth.users where email = '<mail del usuario>');
 
 El resultado tiene que decir `UPDATE 1`. Si dice `UPDATE 0`, no hay ninguna cuenta con ese mail.
 
+La API controla el rol en cada request a `/api/admin`, así que el cambio vale enseguida. La web
+recién muestra u oculta «Administración» cuando el usuario recarga la página o vuelve a iniciar
+sesión.
+
 Quitar el rol:
 
 ```sql

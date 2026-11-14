@@ -68,6 +68,9 @@ supabase/
 | `/mis-plataformas`        |   sí   | Elegir las plataformas contratadas                                                                   |
 | `/perfil`                 |   sí   | Mail y región de la cuenta, plataformas propias y accesos a las acciones de cuenta                   |
 | `/perfil/cuenta`          |   sí   | Cambiar el mail, cambiar la contraseña y eliminar la cuenta                                          |
+| `/admin`                  | admin  | Panel de administración: lleva a `/admin/metricas`                                                   |
+| `/admin/metricas`         | admin  | Pestaña «Métricas» del panel                                                                         |
+| `/admin/usuarios`         | admin  | Pestaña «Usuarios» del panel                                                                         |
 | `/iniciar-sesion`         |        | Inicio de sesión (solo sin sesión)                                                                   |
 | `/registro`               |        | Registro (solo sin sesión)                                                                           |
 | `/recuperar-contrasena`   |        | Pedir un enlace por mail para restablecer la contraseña (solo sin sesión)                            |
@@ -79,6 +82,12 @@ invita a iniciar sesión. Con sesión, el avatar abre un menú con «Perfil» y 
 perfil, las plataformas se editan con el mismo listado que en `/mis-plataformas`, y las acciones de
 cuenta llevan a cada sección de `/perfil/cuenta`. Los enlaces que llegan por mail vencen a los 30
 minutos. Eliminar la cuenta borra al usuario y todos sus datos.
+
+Las pantallas `admin` son solo para usuarios con rol de administrador (el rol se asigna desde la
+base, ver [supabase/README.md](supabase/README.md)). Para ellos, la nav y el menú de celular suman
+«Administración» y el header muestra el chip «ADMIN». Sin sesión, `/admin` lleva a iniciar sesión;
+con sesión y sin el rol, muestra un error de acceso. Ocultar el panel es solo una comodidad: el
+control real lo hace la API.
 
 ## Endpoints
 
@@ -120,7 +129,7 @@ aviso por mail (ver [apps/api/README.md](apps/api/README.md)).
 | POST   | `/auth/sign-up`                                     |        | Registro con mail y contraseña                                             |
 | POST   | `/auth/sign-in`                                     |        | Inicio de sesión (la sesión viaja en cookies httpOnly)                     |
 | POST   | `/auth/sign-out`                                    |        | Cierre de sesión                                                           |
-| GET    | `/auth/session`                                     |        | Usuario de la sesión actual, o `null`                                      |
+| GET    | `/auth/session`                                     |        | Usuario de la sesión actual (con `esAdmin`), o `null`                      |
 | POST   | `/auth/password-recovery`                           |        | Manda por mail un enlace para restablecer la contraseña                    |
 | POST   | `/auth/password-reset`                              |        | Restablece la contraseña con el token del enlace                           |
 | POST   | `/auth/password-change`                             |   si   | Cambia la contraseña con la contraseña actual                              |
@@ -146,6 +155,15 @@ aviso por mail (ver [apps/api/README.md](apps/api/README.md)).
 | DELETE | `/watchlist/:tipo/:tmdbId`                          |   si   | Quita un título de la watchlist                                            |
 
 Los endpoints con sesión responden `401` (`UNAUTHENTICATED`) si no hay un usuario logueado.
+
+`/auth/sign-up`, `/auth/sign-in` y `/auth/session` devuelven el usuario como
+`{ id, email, esAdmin }`. El rol se consulta solo en esos endpoints y no en cada request.
+
+Las rutas de `/api/admin` son del panel de administración. Todas pasan por `requireAdmin`, que
+responde `401` (`UNAUTHENTICATED`) sin sesión y `403` (`FORBIDDEN`) si el usuario no tiene rol de
+administrador. El rol se lee de la base en cada request, así que quitarlo corta el acceso enseguida.
+Todas las respuestas, también las de error, llevan `Cache-Control: no-store` para que los datos del
+panel no queden en la caché del navegador ni de un proxy.
 
 En `/api/busqueda`, `q` se puede omitir cuando se indica `tipo`, `anio`, `genero`, `actor` o
 `director`. En `/api/busqueda/propias`, la disponibilidad en las plataformas del usuario también

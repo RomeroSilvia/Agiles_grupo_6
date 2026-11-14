@@ -6,7 +6,12 @@ import * as authRepository from '../repositories/auth.repository.js';
 import * as intentoLoginRepository from '../repositories/intentoLogin.repository.js';
 import * as perfilRepository from '../repositories/perfil.repository.js';
 import * as emailService from '../services/email.service.js';
-import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/index.js';
+import {
+  ConflictError,
+  DatabaseError,
+  ExternalServiceError,
+  RateLimitError,
+} from '../errors/index.js';
 import { RATE_LIMIT_RECUPERACION } from '../config/cuenta.config.js';
 import { USUARIO } from '../test/fixtures.js';
 
@@ -205,6 +210,18 @@ describe('GET /api/auth/session', () => {
       .get('/api/auth/session')
       .set('Cookie', 'access_token=access-de-prueba');
 
+    expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
+  });
+
+  it('mantiene la sesión con esAdmin false si falla la consulta del rol', async () => {
+    authRepository.obtenerUsuarioPorToken.mockResolvedValue(USUARIO);
+    perfilRepository.obtenerRol.mockRejectedValue(new DatabaseError(new Error('caída')));
+
+    const res = await request(createApp())
+      .get('/api/auth/session')
+      .set('Cookie', 'access_token=access-de-prueba');
+
+    expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
   });
 

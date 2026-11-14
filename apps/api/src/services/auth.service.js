@@ -40,8 +40,10 @@ export async function iniciarSesion(credenciales) {
   return sesionConRol(sesion);
 }
 
+/** Si no se puede leer el rol, la sesión sigue valiendo: el panel igual lo controla requireAdmin. */
 export async function agregarRol(user) {
-  return { ...user, esAdmin: await perfilService.esAdministrador(user.id) };
+  const esAdmin = await perfilService.esAdministrador(user.id).catch(() => false);
+  return { ...user, esAdmin };
 }
 
 async function sesionConRol(sesion) {

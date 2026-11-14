@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { CARTELERA_CACHE_TTL_MS } from '@buscador/shared/constants';
 import { renderRoute } from '../../test/renderRoute.jsx';
 
 const consultadoEn = '2026-11-13T23:00:00.000Z';
@@ -119,7 +120,7 @@ describe('PaginaCartelera', () => {
   });
 
   it('restaura un estado vigente sin extender su vencimiento ni consultar la API', async () => {
-    const expiresAt = Date.now() + 30 * 60 * 1000;
+    const expiresAt = Date.now() + CARTELERA_CACHE_TTL_MS / 2;
     const responder = vi.fn();
     configurarFetchCartelera(responder);
 
@@ -148,16 +149,18 @@ describe('PaginaCartelera', () => {
     const router = renderRoute('/cartelera');
 
     await waitFor(() =>
-      expect(router.state.location.state?.cartelera?.expiresAt).toBe(ahora + 60 * 60 * 1000),
+      expect(router.state.location.state?.cartelera?.expiresAt).toBe(
+        ahora + CARTELERA_CACHE_TTL_MS,
+      ),
     );
-    dateNow.mockReturnValue(ahora + 30 * 60 * 1000);
+    dateNow.mockReturnValue(ahora + CARTELERA_CACHE_TTL_MS / 2);
     fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
     await waitFor(() => expect(router.state.location.state?.cartelera?.pagina).toBe(2));
-    expect(router.state.location.state.cartelera.expiresAt).toBe(ahora + 60 * 60 * 1000);
+    expect(router.state.location.state.cartelera.expiresAt).toBe(ahora + CARTELERA_CACHE_TTL_MS);
     fireEvent.click(screen.getByRole('link', { name: 'Ver detalle de Título no disponible' }));
     await screen.findByRole('link', { name: 'Volver a la búsqueda' });
 
-    dateNow.mockReturnValue(ahora + 60 * 60 * 1000);
+    dateNow.mockReturnValue(ahora + CARTELERA_CACHE_TTL_MS);
     await act(async () => router.navigate(-1));
 
     expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeVisible();

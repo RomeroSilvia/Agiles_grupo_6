@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { CARTELERA_CACHE_TTL_MS } from '@buscador/shared/constants';
 import { ApiError } from '../../services/api.service.js';
 import { listarPeliculasEnCartelera } from './cartelera.api.js';
-
-const HISTORY_CACHE_TTL_MS = 60 * 60 * 1000;
 
 function obtenerMensajeError(error) {
   return error instanceof ApiError
@@ -62,7 +61,7 @@ export function useCartelera() {
         setError(obtenerMensajeError(requestError));
       } else {
         if (!acumular) {
-          expiresAtRef.current = Date.now() + HISTORY_CACHE_TTL_MS;
+          expiresAtRef.current = Date.now() + CARTELERA_CACHE_TTL_MS;
         }
         setResultados((actuales) =>
           acumular ? acumularPeliculas(actuales, data.resultados) : data.resultados,

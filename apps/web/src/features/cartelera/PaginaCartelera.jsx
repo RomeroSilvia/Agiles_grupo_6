@@ -4,10 +4,9 @@ import { Card } from '../../components/ui/Card.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { ResultadoCard } from '../busqueda/ResultadoCard.jsx';
-import { ResultadoCardCargando } from '../busqueda/ResultadoCardCargando.jsx';
+import { CardsCargando, GrillaResultados } from '../busqueda/ResultadosBusqueda.jsx';
 import { useCartelera } from './useCartelera.js';
 
-const ESQUELETOS = Array.from({ length: 10 }, (_, indice) => indice);
 const FORMATEADOR_FECHA = new Intl.DateTimeFormat('es-AR', {
   dateStyle: 'long',
   timeZone: 'UTC',
@@ -56,11 +55,9 @@ export function PaginaCartelera() {
             <p role="status" aria-live="polite" className="sr-only">
               Cargando películas en cartelera…
             </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-              {ESQUELETOS.map((indice) => (
-                <ResultadoCardCargando key={indice} />
-              ))}
-            </div>
+            <GrillaResultados>
+              <CardsCargando />
+            </GrillaResultados>
           </>
         )}
 
@@ -75,7 +72,7 @@ export function PaginaCartelera() {
         )}
 
         {resultados.length > 0 && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+          <GrillaResultados>
             {resultados.map((pelicula) => (
               <ResultadoCard
                 key={`${pelicula.tipo}:${pelicula.tmdbId}`}
@@ -83,11 +80,8 @@ export function PaginaCartelera() {
                 contenidoAdicional={contenidoFecha(pelicula)}
               />
             ))}
-            {isLoadingMore &&
-              ESQUELETOS.slice(0, 5).map((indice) => (
-                <ResultadoCardCargando key={`cargando-${indice}`} />
-              ))}
-          </div>
+            {isLoadingMore && <CardsCargando />}
+          </GrillaResultados>
         )}
 
         {pagina < totalPaginas && (

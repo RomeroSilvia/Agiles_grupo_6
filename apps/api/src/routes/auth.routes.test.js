@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
+import { ROL_USUARIO } from '@buscador/shared/constants';
 import { createApp } from '../app.js';
 import * as authRepository from '../repositories/auth.repository.js';
 import * as intentoLoginRepository from '../repositories/intentoLogin.repository.js';
+import * as perfilRepository from '../repositories/perfil.repository.js';
 import * as emailService from '../services/email.service.js';
 import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/index.js';
 import { RATE_LIMIT_RECUPERACION } from '../config/cuenta.config.js';
@@ -11,6 +13,7 @@ import { USUARIO } from '../test/fixtures.js';
 // La base es compartida: los tests nunca llegan a Supabase
 vi.mock('../repositories/auth.repository.js');
 vi.mock('../repositories/intentoLogin.repository.js');
+vi.mock('../repositories/perfil.repository.js');
 vi.mock('../services/email.service.js');
 
 const SESION = {
@@ -20,6 +23,8 @@ const SESION = {
   user: USUARIO,
 };
 const PASSWORD_VALIDA = 'Segura#2026';
+// El front recibe el usuario con el dato de si es administrador
+const USUARIO_SESION = { ...USUARIO, esAdmin: false };
 
 function cookiesDe(res) {
   return (res.headers['set-cookie'] ?? []).join(';');
@@ -29,6 +34,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   intentoLoginRepository.obtenerBloqueo.mockResolvedValue(null);
   intentoLoginRepository.registrarFallido.mockResolvedValue(null);
+  perfilRepository.obtenerRol.mockResolvedValue(ROL_USUARIO.USUARIO);
 });
 
 describe('POST /api/auth/sign-up', () => {
@@ -41,7 +47,7 @@ describe('POST /api/auth/sign-up', () => {
       .send({ email: USUARIO.email, password: PASSWORD_VALIDA });
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ data: { user: USUARIO } });
+    expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
     expect(authRepository.crearUsuario).toHaveBeenCalledWith(USUARIO.email, PASSWORD_VALIDA);
     expect(cookiesDe(res)).toMatch(/access_token=access-de-prueba;.*HttpOnly/);
     expect(cookiesDe(res)).toMatch(/refresh_token=refresh-de-prueba;.*HttpOnly/);
@@ -94,9 +100,20 @@ describe('POST /api/auth/sign-in', () => {
       .send({ email: USUARIO.email, password: PASSWORD_VALIDA });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ data: { user: USUARIO } });
+    expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
     expect(cookiesDe(res)).toMatch(/access_token=access-de-prueba/);
     expect(intentoLoginRepository.limpiar).toHaveBeenCalledWith(USUARIO.email);
+  });
+
+  it('devuelve esAdmin true al administrador, para que el front no tenga que recargar', async () => {
+    authRepository.iniciarSesionConPassword.mockResolvedValue(SESION);
+    perfilRepository.obtenerRol.mockResolvedValue(ROL_USUARIO.ADMINISTRADOR);
+
+    const res = await request(createApp())
+      .post('/api/auth/sign-in')
+      .send({ email: USUARIO.email, password: PASSWORD_VALIDA });
+
+    expect(res.body).toEqual({ data: { user: { ...USUARIO, esAdmin: true } } });
   });
 
   it('responde 401 con un mensaje genérico si las credenciales no coinciden', async () => {
@@ -165,7 +182,36 @@ describe('GET /api/auth/session', () => {
       .get('/api/auth/session')
       .set('Cookie', 'access_token=access-de-prueba');
 
-    expect(res.body).toEqual({ data: { user: USUARIO } });
+    expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
+    expect(perfilRepository.obtenerRol).toHaveBeenCalledWith(USUARIO.id);
+  });
+
+  it('indica esAdmin true si el usuario tiene rol de administrador', async () => {
+    authRepository.obtenerUsuarioPorToken.mockResolvedValue(USUARIO);
+    perfilRepository.obtenerRol.mockResolvedValue(ROL_USUARIO.ADMINISTRADOR);
+
+    const res = await request(createApp())
+      .get('/api/auth/session')
+      .set('Cookie', 'access_token=access-de-prueba');
+
+    expect(res.body).toEqual({ data: { user: { ...USUARIO, esAdmin: true } } });
+  });
+
+  it('indica esAdmin false si el usuario no tiene perfil', async () => {
+    authRepository.obtenerUsuarioPorToken.mockResolvedValue(USUARIO);
+    perfilRepository.obtenerRol.mockResolvedValue(null);
+
+    const res = await request(createApp())
+      .get('/api/auth/session')
+      .set('Cookie', 'access_token=access-de-prueba');
+
+    expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
+  });
+
+  it('no consulta el rol si no hay sesión', async () => {
+    await request(createApp()).get('/api/auth/session');
+
+    expect(perfilRepository.obtenerRol).not.toHaveBeenCalled();
   });
 
   it('renueva las cookies con el refresh token si el access token venció', async () => {
@@ -176,7 +222,7 @@ describe('GET /api/auth/session', () => {
       .get('/api/auth/session')
       .set('Cookie', 'access_token=vencido; refresh_token=refresh-de-prueba');
 
-    expect(res.body).toEqual({ data: { user: USUARIO } });
+    expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
     expect(cookiesDe(res)).toMatch(/access_token=access-nuevo/);
   });
 
@@ -205,8 +251,8 @@ describe('GET /api/auth/session', () => {
     const [primera, segunda] = await Promise.all([pedirSesion(), pedirSesion()]);
 
     expect(authRepository.refrescarSesion).toHaveBeenCalledTimes(1);
-    expect(primera.body).toEqual({ data: { user: USUARIO } });
-    expect(segunda.body).toEqual({ data: { user: USUARIO } });
+    expect(primera.body).toEqual({ data: { user: USUARIO_SESION } });
+    expect(segunda.body).toEqual({ data: { user: USUARIO_SESION } });
     expect(cookiesDe(segunda)).toMatch(/access_token=access-nuevo/);
   });
 

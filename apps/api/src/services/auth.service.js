@@ -1,6 +1,7 @@
 import * as authRepository from '../repositories/auth.repository.js';
 import * as intentoLoginRepository from '../repositories/intentoLogin.repository.js';
 import { ForbiddenError, TooManyAttemptsError, UnauthenticatedError } from '../errors/index.js';
+import * as perfilService from './perfil.service.js';
 
 // Bloqueo temporal del ingreso para frenar ataques de fuerza bruta
 export const MAX_INTENTOS_LOGIN = 5;
@@ -24,15 +25,27 @@ export async function registrarUsuario({ email, password }) {
       'Tu cuenta se creó, pero no pudimos iniciar sesión. Probá ingresar.',
     );
   }
-  return sesion;
+  return sesionConRol(sesion);
 }
 
 /**
  * E4HU2: inicia sesión con mail y contraseña.
  * @returns {Promise<import('../repositories/auth.repository.js').Sesion>}
  */
-export function iniciarSesion(credenciales) {
-  return autenticarConBloqueo(credenciales, () => new UnauthenticatedError(CREDENCIALES_INVALIDAS));
+export async function iniciarSesion(credenciales) {
+  const sesion = await autenticarConBloqueo(
+    credenciales,
+    () => new UnauthenticatedError(CREDENCIALES_INVALIDAS),
+  );
+  return sesionConRol(sesion);
+}
+
+export async function agregarRol(user) {
+  return { ...user, esAdmin: await perfilService.esAdministrador(user.id) };
+}
+
+async function sesionConRol(sesion) {
+  return { ...sesion, user: await agregarRol(sesion.user) };
 }
 
 export async function verificarIdentidad(credenciales) {

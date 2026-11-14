@@ -2,7 +2,8 @@ import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
 import { PERFIL_COLUMNS, fromRow } from '../models/perfil.model.js';
 
-export async function obtenerRegion(usuarioId) {
+/** @returns {Promise<{ region: string | null, rol: string } | null>} null si no existe el perfil */
+async function obtenerPerfil(usuarioId) {
   const { data, error } = await supabaseAdmin
     .from('perfil')
     .select(PERFIL_COLUMNS)
@@ -12,7 +13,15 @@ export async function obtenerRegion(usuarioId) {
   if (error) {
     throw new DatabaseError(error);
   }
-  return data ? fromRow(data).region : null;
+  return data ? fromRow(data) : null;
+}
+
+export async function obtenerRegion(usuarioId) {
+  return (await obtenerPerfil(usuarioId))?.region ?? null;
+}
+
+export async function obtenerRol(usuarioId) {
+  return (await obtenerPerfil(usuarioId))?.rol ?? null;
 }
 
 export async function actualizarRegion(usuarioId, region) {

@@ -30,6 +30,14 @@ const ciudadConfigurada = {
 };
 
 describe('configuración interna de ciudades de cine', () => {
+  it('rechaza un complemento sin evidencia aunque la fuente primaria sea válida', () => {
+    expect(
+      ciudadCineConfiguracionSchema.safeParse({
+        ...ciudadConfigurada,
+        butacaCines: [{ id: 1, slug: 'centro' }],
+      }).success,
+    ).toBe(false);
+  });
   it('valida los mapeos internos y la evidencia de una ciudad', () => {
     expect(ciudadCineConfiguracionSchema.parse(ciudadConfigurada)).toEqual(ciudadConfigurada);
   });

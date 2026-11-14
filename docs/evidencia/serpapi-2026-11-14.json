@@ -1,0 +1,38 @@
+[
+  {
+    "ciudad": "CABA",
+    "location": "Buenos Aires,Argentina",
+    "q": "Resident Evil horarios cine CABA",
+    "tmdbId": 1423191,
+    "nombrePelicula": "Resident Evil",
+    "consultadoEn": "2026-11-14T17:53:17.437Z",
+    "status": 200,
+    "error": null,
+    "estado": "Success",
+    "showtimes": null
+  },
+  {
+    "ciudad": "La Plata",
+    "location": "La Plata,Buenos Aires,Argentina",
+    "q": "Resident Evil horarios cine La Plata",
+    "tmdbId": 1423191,
+    "nombrePelicula": "Resident Evil",
+    "consultadoEn": "2026-11-14T17:53:18.413Z",
+    "status": 200,
+    "error": null,
+    "estado": "Success",
+    "showtimes": null
+  },
+  {
+    "ciudad": "Córdoba",
+    "location": "Cordoba,Cordoba,Argentina",
+    "q": "Resident Evil horarios cine Cordoba",
+    "tmdbId": 1423191,
+    "nombrePelicula": "Resident Evil",
+    "consultadoEn": "2026-11-14T17:56:58.675Z",
+    "status": 200,
+    "error": null,
+    "estado": "Success",
+    "showtimes": null
+  }
+]

@@ -23,3 +23,26 @@ Fuentes: [Upcoming](https://developer.themoviedb.org/reference/movie-upcoming-li
 [Release Dates](https://developer.themoviedb.org/reference/movie-release-dates).
 Se conservan las atribuciones TMDB/JustWatch. No hay garantía de exhaustividad ni
 frecuencia de actualización del catálogo.
+
+## Ciudades (#74)
+
+Se reutilizan el directorio C2, endpoint público estricto y Context que ya estaban
+en esta rama. El selector se conecta a las dos vistas de cartelera y conserva el
+ID en sessionStorage; no modifica país de streaming ni perfil. Cada mapeo exige
+evidencia de su propio proveedor. La procedencia S1 comparte esquema con cartelera.
+
+El 14/11/2026 se hicieron consultas SerpApi acotadas con Resident Evil (TMDB
+1423191), tomado de Now Playing AR, en Buenos Aires/CABA, La Plata y Córdoba.
+Respondieron HTTP 200/Success sin `showtimes`. Ver
+[muestras sanitizadas](evidencia/serpapi-2026-11-14.json), con fecha y parámetros;
+se excluyeron claves, URLs de búsqueda autenticadas y contenido ajeno a horarios.
+Hubo cuatro búsquedas en total: se repitió Córdoba para corregir la codificación
+del nombre en el shell. No se automatizan comprobaciones que gasten cupo.
+
+No se habilitaron ciudades: una respuesta sin estructura no demuestra ausencia
+de exhibición ni cobertura. El directorio revisado está configurado y vacío;
+responde 200 con «No hay información de ciudades disponible». Si se elimina la
+configuración o es inválida devuelve 502. Los IDs y mapeos de futuras entradas
+deben asignarse una vez y acompañarse de evidencia de cine/municipio/provincia y
+zona IANA; las muestras no se convierten en ciudades productivas. La habilitación
+real de #74/#75 sigue pendiente de evidencia representativa.

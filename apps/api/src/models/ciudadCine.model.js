@@ -49,4 +49,10 @@ export const ciudadCineConfiguracionSchema = ciudadCineSchema
       fuente.actualizadoEn === evidencia.actualizadoEn &&
       ['serpapi', 'butaca'].includes(fuente.fuenteId)
     );
-  }, 'La procedencia pública debe coincidir con la evidencia de su fuente');
+  }, 'La procedencia pública debe coincidir con la evidencia de su fuente')
+  .refine(
+    ({ serpApiLocation, butacaCines, evidenciaPorFuente }) =>
+      (serpApiLocation === null || evidenciaPorFuente.serpApi !== null) &&
+      (butacaCines.length === 0 || evidenciaPorFuente.butaca !== null),
+    'Cada mapeo de proveedor requiere su propia evidencia',
+  );

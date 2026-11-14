@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fuenteSchema } from './cartelera.schema.js';
 
 const uuidSchema = z.uuid();
 
@@ -9,7 +10,7 @@ export const ciudadCineIdSchema = z
     message: 'El identificador de ciudad no es válido',
   });
 
-const zonaHorariaSchema = z
+export const zonaHorariaCineSchema = z
   .string()
   .trim()
   .min(1, 'La zona horaria es obligatoria')
@@ -26,15 +27,7 @@ const zonaHorariaSchema = z
     }
   }, 'La zona horaria debe ser un identificador IANA válido');
 
-export const ciudadCineFuenteSchema = z
-  .object({
-    fuenteId: z.string().trim().min(1),
-    registroId: z.string().nullable(),
-    url: z.url({ protocol: /^https?$/ }).nullable(),
-    consultadoEn: z.iso.datetime({ offset: false }),
-    actualizadoEn: z.iso.datetime({ offset: false }).nullable(),
-  })
-  .strict();
+export const ciudadCineFuenteSchema = fuenteSchema.strict();
 
 export const ciudadCineSchema = z
   .object({
@@ -42,7 +35,7 @@ export const ciudadCineSchema = z
     nombre: z.string().trim().min(1, 'El nombre de la ciudad es obligatorio'),
     provincia: z.string().trim().min(1, 'La provincia es obligatoria'),
     pais: z.literal('AR'),
-    zonaHoraria: zonaHorariaSchema,
+    zonaHoraria: zonaHorariaCineSchema,
     cobertura: z.enum(['disponible', 'sin_cobertura']),
     fuente: ciudadCineFuenteSchema,
   })

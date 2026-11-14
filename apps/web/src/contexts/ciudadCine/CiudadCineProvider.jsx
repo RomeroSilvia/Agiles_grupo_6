@@ -124,6 +124,8 @@ export function CiudadCineProvider({ children }) {
   );
 
   const reintentar = useCallback(() => {
+    setIdCiudadSeleccionada(null);
+    setCiudades([]);
     setError('');
     setLoading(true);
     setHabilitado(true);

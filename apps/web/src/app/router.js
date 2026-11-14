@@ -17,7 +17,12 @@ import { PaginaPerfil } from '../features/perfil/PaginaPerfil.jsx';
 import { PaginaWatchlist } from '../features/watchlist/PaginaWatchlist.jsx';
 import { SoloAdmin } from '../features/administracion/SoloAdmin.jsx';
 import { PaginaAdministracion } from '../features/administracion/PaginaAdministracion.jsx';
-import { PESTANAS_ADMIN } from '../features/administracion/administracion.constants.js';
+import { PestanaMetricas } from '../features/administracion/PestanaMetricas.jsx';
+import { PestanaUsuarios } from '../features/administracion/PestanaUsuarios.jsx';
+import {
+  PESTANA_METRICAS,
+  PESTANA_USUARIOS,
+} from '../features/administracion/administracion.constants.js';
 import { RUTAS } from './rutas.js';
 
 export const routes = [
@@ -43,11 +48,16 @@ export const routes = [
                 Component: PaginaAdministracion,
                 children: [
                   { index: true, loader: () => redirect(RUTAS.ADMIN_METRICAS) },
-                  ...PESTANAS_ADMIN.map((pestana) => ({
-                    path: pestana.to,
-                    Component: pestana.Component,
-                    handle: { pestanaAdmin: pestana },
-                  })),
+                  {
+                    path: PESTANA_METRICAS.to,
+                    Component: PestanaMetricas,
+                    handle: { pestanaAdmin: PESTANA_METRICAS },
+                  },
+                  {
+                    path: PESTANA_USUARIOS.to,
+                    Component: PestanaUsuarios,
+                    handle: { pestanaAdmin: PESTANA_USUARIOS },
+                  },
                 ],
               },
             ],

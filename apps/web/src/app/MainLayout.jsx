@@ -12,17 +12,13 @@ import { IconButton } from '../components/ui/IconButton.jsx';
 import { BookmarkIcon, MenuIcon, XIcon } from '../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../components/ui/focusRing.js';
 import { MenuUsuario } from './MenuUsuario.jsx';
-import {
-  ENLACE_PANEL_ADMIN,
-  ETIQUETA_ROL_ADMIN,
-} from '../features/administracion/administracion.constants.js';
 import { RUTAS } from './rutas.js';
 
 const ENLACES = [
   { to: RUTAS.WATCHLIST, label: 'Mi watchlist' },
   { to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' },
   { to: RUTAS.PERFIL, label: 'Perfil' },
-  { to: RUTAS.ADMIN, label: ENLACE_PANEL_ADMIN, soloAdmin: true },
+  { to: RUTAS.ADMIN, label: 'Administración', soloAdmin: true },
 ];
 
 function Enlaces({ onNavigate }) {
@@ -56,7 +52,7 @@ function AccionesDeSesion() {
         <MenuUsuario />
         {user.esAdmin && (
           <span className="hidden sm:inline-flex">
-            <Chip className="uppercase">{ETIQUETA_ROL_ADMIN}</Chip>
+            <Chip className="uppercase">Admin</Chip>
           </span>
         )}
       </div>

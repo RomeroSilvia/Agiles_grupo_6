@@ -213,9 +213,11 @@ describe('GET /api/auth/session', () => {
     expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
   });
 
-  it('mantiene la sesión con esAdmin false si falla la consulta del rol', async () => {
+  it('mantiene la sesión con esAdmin false si falla la consulta del rol, y lo registra', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorBase = new DatabaseError(new Error('caída'));
     authRepository.obtenerUsuarioPorToken.mockResolvedValue(USUARIO);
-    perfilRepository.obtenerRol.mockRejectedValue(new DatabaseError(new Error('caída')));
+    perfilRepository.obtenerRol.mockRejectedValue(errorBase);
 
     const res = await request(createApp())
       .get('/api/auth/session')
@@ -223,6 +225,11 @@ describe('GET /api/auth/session', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: { user: USUARIO_SESION } });
+    expect(consoleError).toHaveBeenCalledWith(expect.any(String), {
+      usuarioId: USUARIO.id,
+      error: errorBase,
+    });
+    consoleError.mockRestore();
   });
 
   it('no consulta el rol si no hay sesión', async () => {

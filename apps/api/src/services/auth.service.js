@@ -12,8 +12,13 @@ export const MINUTOS_BLOQUEO_LOGIN = 15;
 const CREDENCIALES_INVALIDAS = 'El mail o la contraseña no son correctos';
 
 /**
+ * @typedef {import('../repositories/auth.repository.js').UsuarioSesion & { esAdmin: boolean }} UsuarioConAcceso
+ * @typedef {import('../repositories/auth.repository.js').Sesion & { user: UsuarioConAcceso }} SesionConAcceso
+ */
+
+/**
  * E4HU2: registra al usuario y deja la sesión iniciada.
- * @returns {Promise<import('../repositories/auth.repository.js').Sesion>}
+ * @returns {Promise<SesionConAcceso>}
  */
 export async function registrarUsuario({ email, password }) {
   await authRepository.crearUsuario(email, password);
@@ -25,29 +30,36 @@ export async function registrarUsuario({ email, password }) {
       'Tu cuenta se creó, pero no pudimos iniciar sesión. Probá ingresar.',
     );
   }
-  return sesionConRol(sesion);
+  return sesionConEsAdmin(sesion);
 }
 
 /**
  * E4HU2: inicia sesión con mail y contraseña.
- * @returns {Promise<import('../repositories/auth.repository.js').Sesion>}
+ * @returns {Promise<SesionConAcceso>}
  */
 export async function iniciarSesion(credenciales) {
   const sesion = await autenticarConBloqueo(
     credenciales,
     () => new UnauthenticatedError(CREDENCIALES_INVALIDAS),
   );
-  return sesionConRol(sesion);
+  return sesionConEsAdmin(sesion);
 }
 
-/** Si no se puede leer el rol, la sesión sigue valiendo: el panel igual lo controla requireAdmin. */
-export async function agregarRol(user) {
-  const esAdmin = await perfilService.esAdministrador(user.id).catch(() => false);
+/**
+ * Agrega `esAdmin` al usuario para que el front sepa si mostrar el panel.
+ * Si no se puede leer el rol, la sesión sigue valiendo: el panel igual lo controla requireAdmin.
+ * @returns {Promise<UsuarioConAcceso>}
+ */
+export async function agregarEsAdmin(user) {
+  const esAdmin = await perfilService.esAdministrador(user.id).catch((error) => {
+    console.error('No se pudo leer el rol del usuario', { usuarioId: user.id, error });
+    return false;
+  });
   return { ...user, esAdmin };
 }
 
-async function sesionConRol(sesion) {
-  return { ...sesion, user: await agregarRol(sesion.user) };
+async function sesionConEsAdmin(sesion) {
+  return { ...sesion, user: await agregarEsAdmin(sesion.user) };
 }
 
 export async function verificarIdentidad(credenciales) {

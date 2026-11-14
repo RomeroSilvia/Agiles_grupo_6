@@ -36,5 +36,5 @@ export async function cerrarSesion(req, res) {
 
 /** Sin sesión responde 200 con `data: null`: no es un error, el front solo consulta. */
 export async function obtenerSesion(req, res) {
-  res.json({ data: req.user ? { user: await authService.agregarRol(req.user) } : null });
+  res.json({ data: req.user ? { user: await authService.agregarEsAdmin(req.user) } : null });
 }

@@ -133,3 +133,57 @@ El vacío de filtros no reemplaza los estados de adquisición; las advertencias
 de cobertura, horizonte y truncamiento permanecen visibles. Filtrar no garantiza
 exhaustividad fuera de los datos recibidos. Paginar F1 en el futuro requiere
 revisar este contrato antes de conservar filtrado local.
+
+## Sitios de cines (#77)
+
+La política de confianza vive únicamente en `enlaceCine.schema.js`, compartida por
+normalización backend y acción web. Reutiliza `httpUrlSchema` sin cambiar su
+semántica genérica. `ExternalLink` mantiene `target=_blank` y
+`rel="noopener noreferrer"`, nombre accesible, foco y aviso de apertura externa.
+
+Se comparan hosts normalizados exactos y URLs completas contra destinos revisados,
+con asociación de fuente/cine/función. Se rechazan credenciales, controles,
+protocolos ajenos a HTTPS, IPs, hosts locales o engañosos, puertos no estándar,
+endpoints genéricos de redirección, parámetros de URL y claves/tokens. HTTP solo
+se permite para un destino individual configurado expresamente con evidencia;
+ninguno de los destinos actuales usa esa excepción. No hay seguimiento de
+redirects, requests de comprobación ni endpoint público de redirección.
+
+Destino habilitado: únicamente `https://www.cinemark.com.ar/`, como sitio general
+para establecimientos correspondientes a Butaca/Cinemark. Se comprobó la home
+oficial el 14/11/2026; la correspondencia del establecimiento sigue requiriendo
+el mapeo revisado de #75. No se habilitan comodines ni intermediarios. El path y
+query se conservan únicamente cuando coinciden con un destino completo revisado.
+
+No hay ninguna URL de compra real habilitada. Una futura compra requiere URL
+explícita revisada para el cine, función y TMDB ID exactos y fuente coincidente;
+no se construye a partir de IDs. Los tests con destinos ficticios demuestran ese
+contrato condicional, sin acreditar una capacidad productiva. Butaca proporciona
+sitios generales, no un checkout verificado de sesión: `urlCompra=null`. Si falta
+compra válida, se ofrece el sitio general autorizado con esa aclaración. Sin ambos
+se muestra «Enlace no disponible», conservando horario y procedencia. Una URL
+rechazada se transforma en null, con diagnóstico sanitizado, sin descartar la función.
+
+Evidencia: [sitio oficial](https://www.cinemark.com.ar/) y
+[enlaces de Butaca](https://github.com/crafter-station/butaca/blob/595f908f3092e423b27839c650e2eae248e2b256/src/links.ts).
+La validación local no certifica disponibilidad ni redirecciones futuras del servidor.
+
+## Verificación local del 14/11/2026
+
+Se ejecutaron `npm run check` y `npm run build`. Las pruebas automatizadas usan
+fixtures y mocks, sin Supabase ni APIs externas reales. Las únicas consultas reales
+de esta implementación fueron las lecturas TMDB/SerpApi documentadas arriba y la
+consulta de documentación/sitio oficial; no hubo migraciones ni escrituras de datos.
+
+Se revisaron cartelera/estrenos y detalle con funciones en Chrome headless mediante
+Playwright, a 390 y 1280 px, en claro y oscuro, con zona del navegador
+`Pacific/Auckland`. Las cuatro combinaciones conservaron fechas locales, navegación,
+atribuciones, foco de controles, seguridad de enlaces y advertencias. No hubo
+errores JavaScript ni desbordamiento horizontal; cambiar/limpiar filtros mantuvo
+una sola consulta de funciones por prueba. Los datos del navegador fueron fixtures,
+sin afirmar cobertura productiva ni compra real.
+
+Pendientes externos: fuente verificable de anuncios AR sin fecha (#73), cobertura
+municipal y correspondencias productivas (#74/#75), permiso/operación de Butaca
+(#75), y enlaces de compra de una función comprobables (#77). No se consideran
+resueltos mediante mocks ni se habilitan ciudades o checkout para aparentarlo.

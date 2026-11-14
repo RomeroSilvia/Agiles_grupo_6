@@ -66,6 +66,19 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 describe('normalización de funciones', () => {
+  it('descarta destinos inseguros sin perder el horario ni hacer otra consulta', () => {
+    const resultado = normalizar(
+      [{ ...observacion, urlCompra: 'https://www.google.com/search?q=entradas' }],
+      { lugares: [{ ...lugares[0], urlSitio: 'javascript:alert(1)' }] },
+    );
+    expect(resultado.funciones).toHaveLength(1);
+    expect(resultado.funciones[0].urlCompra).toBeNull();
+    expect(resultado.cines[0].urlSitio).toBeNull();
+    expect(
+      resultado.diagnostico.filter((item) => item.code === 'INVALID_DESTINATION'),
+    ).toHaveLength(2);
+    expect(JSON.stringify(resultado.diagnostico)).not.toContain('javascript:');
+  });
   it('no duplica una observación secundaria que podría corresponder a varias salas', () => {
     const fuenteButaca = { ...FUENTE_CINE_FIXTURE, fuenteId: 'butaca' };
     const primarias = ['1', '2'].map((sala) => ({

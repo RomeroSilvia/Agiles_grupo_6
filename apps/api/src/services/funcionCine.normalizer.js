@@ -8,6 +8,7 @@ import {
   fechaCivilCarteleraSchema,
   funcionCineSchema,
   sumarDiasCivil,
+  validarEnlaceCine,
 } from '@buscador/shared/schemas';
 
 export function normalizarTextoCine(valor) {
@@ -256,8 +257,7 @@ export function normalizarObservacionesCine({
       );
       continue;
     }
-    // Los destinos se habilitan únicamente al aplicar la política de confianza de #77.
-    cines.set(cineId, {
+    const cine = {
       id: cineId,
       ciudadId: ciudad.id,
       nombre: lugar.nombre,
@@ -265,7 +265,29 @@ export function normalizarObservacionesCine({
       zonaHoraria: ciudad.zonaHoraria,
       urlSitio: null,
       fuentes: [{ ...fuente, registroId: String(observacion.cineRegistroId ?? lugar.clave) }],
+    };
+    cine.urlSitio = validarEnlaceCine(lugar.urlSitio ?? null, {
+      cine,
+      funcion: validada.data,
+      tipo: 'sitio',
     });
+    validada.data.urlCompra = validarEnlaceCine(observacion.urlCompra ?? null, {
+      cine,
+      funcion: validada.data,
+      tipo: 'compra',
+    });
+    for (const [campo, original, validadaUrl] of [
+      ['urlSitio', lugar.urlSitio, cine.urlSitio],
+      ['urlCompra', observacion.urlCompra, validada.data.urlCompra],
+    ]) {
+      if (original && !validadaUrl)
+        diagnostico.push({
+          code: 'INVALID_DESTINATION',
+          campo,
+          registroId: observacion.registroId ?? null,
+        });
+    }
+    cines.set(cineId, cine);
     funciones.push(validada.data);
   }
   return {

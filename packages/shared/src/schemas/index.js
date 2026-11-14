@@ -5,3 +5,4 @@ export * from './region.schema.js';
 export * from './url.schema.js';
 export * from './ciudadCine.schema.js';
 export * from './funcionCine.schema.js';
+export * from './enlaceCine.schema.js';

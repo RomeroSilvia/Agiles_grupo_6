@@ -5,6 +5,7 @@ import { Skeleton } from '../../components/ui/Skeleton.jsx';
 import { useCiudadCine } from '../../contexts/ciudadCine/CiudadCineContext.js';
 import { SelectorCiudadCine } from './SelectorCiudadCine.jsx';
 import { FuncionesFiltradas } from './FuncionesFiltradas.jsx';
+import { AccionSitioCine } from './AccionSitioCine.jsx';
 import { useFuncionesCine } from './useFuncionesCine.js';
 
 export function SeccionFunciones({ tmdbId }) {
@@ -71,7 +72,11 @@ export function SeccionFunciones({ tmdbId }) {
           </p>
         </>
       )}
-      <FuncionesFiltradas key={`${tmdbId}:${idCiudadSeleccionada ?? ''}`} data={data} />
+      <FuncionesFiltradas
+        key={`${tmdbId}:${idCiudadSeleccionada ?? ''}`}
+        data={data}
+        renderAccion={({ cine, funcion }) => <AccionSitioCine cine={cine} funcion={funcion} />}
+      />
     </section>
   );
 }

@@ -67,6 +67,8 @@ export function obtenerFuncionesButaca({ pelicula, ciudad, desde, hasta }) {
       const observaciones = [];
       const correspondencias = [...CORRESPONDENCIAS_PELICULAS_CINE];
       let estructuraPresente = true;
+      let sucursalesRespondidas = 0;
+      let errorSucursal;
       for (const mapeo of ciudad.butacaCines) {
         const lugar = LUGARES_CINE.find(
           (item) =>
@@ -86,79 +88,88 @@ export function obtenerFuncionesButaca({ pelicula, ciudad, desde, hasta }) {
           estructuraPresente = false;
           continue;
         }
-        const peliculas = await consultarButaca(
-          '/cinema/movies',
-          { theater: String(cine.id) },
-          respuestaPeliculasButacaSchema,
-        );
-        const revisadas = peliculas.filter((item) =>
-          corresponderPeliculaCine({
-            fuenteId: 'butaca',
-            registroId: item.corporateId,
-            nombre: item.title,
-            tmdbId: pelicula.tmdbId,
-            correspondencias,
-          }),
-        );
-        if (!revisadas.length) {
-          const nuevas = corresponderCarteleraButaca(peliculas, pelicula);
-          for (const nueva of nuevas) {
-            if (
-              !correspondencias.some(
-                (item) => item.fuenteId === nueva.fuenteId && item.registroId === nueva.registroId,
-              )
-            )
-              correspondencias.push(nueva);
-          }
-        }
-        const candidatas = peliculas.filter((item) =>
-          corresponderPeliculaCine({
-            fuenteId: 'butaca',
-            registroId: item.corporateId,
-            nombre: item.title,
-            tmdbId: pelicula.tmdbId,
-            correspondencias,
-          }),
-        );
-        if (peliculas.length && !candidatas.length) estructuraPresente = false;
-        for (const candidata of candidatas) {
-          const horarios = await consultarButaca(
-            '/cinema/showtimes',
-            { movieCorporateId: candidata.corporateId, theater: String(cine.id) },
-            respuestaFuncionesButacaSchema,
+        try {
+          const peliculas = await consultarButaca(
+            '/cinema/movies',
+            { theater: String(cine.id) },
+            respuestaPeliculasButacaSchema,
           );
-          for (const horario of horarios) {
-            if (
-              String(horario.theaterId) !== String(cine.id) ||
-              horario.corporateId !== candidata.corporateId
-            ) {
-              estructuraPresente = false;
-              continue;
-            }
-            // El Z del campo bruto representa componentes locales, según contrato de Cinemark.
-            const partes = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):([0-5]\d)(?:\.\d+)?Z?$/.exec(
-              horario.sessionDateTime,
-            );
-            const fechaLocal = partes?.[1] ?? null;
-            const horaLocal = partes?.[2] ?? null;
-            observaciones.push({
+          const revisadas = peliculas.filter((item) =>
+            corresponderPeliculaCine({
               fuenteId: 'butaca',
-              registroId: horario.sessionId,
-              peliculaRegistroId: horario.corporateId,
-              peliculaNombre: horario.movieName,
-              cineRegistroId: String(cine.id),
-              cineNombre: cine.name,
-              direccion: cine.address,
-              fechaLocal: horario.sessionDisplayDate === fechaLocal ? fechaLocal : null,
-              horaLocal,
-              sala: horario.theaterRoom ?? null,
-              formato: horario.sessionFormat ?? null,
-              idioma: horario.language?.shortName ?? null,
-              subtitulos: null,
-            });
+              registroId: item.corporateId,
+              nombre: item.title,
+              tmdbId: pelicula.tmdbId,
+              correspondencias,
+            }),
+          );
+          if (!revisadas.length) {
+            const nuevas = corresponderCarteleraButaca(peliculas, pelicula);
+            for (const nueva of nuevas) {
+              if (
+                !correspondencias.some(
+                  (item) =>
+                    item.fuenteId === nueva.fuenteId && item.registroId === nueva.registroId,
+                )
+              )
+                correspondencias.push(nueva);
+            }
           }
+          const candidatas = peliculas.filter((item) =>
+            corresponderPeliculaCine({
+              fuenteId: 'butaca',
+              registroId: item.corporateId,
+              nombre: item.title,
+              tmdbId: pelicula.tmdbId,
+              correspondencias,
+            }),
+          );
+          if (peliculas.length && !candidatas.length) estructuraPresente = false;
+          for (const candidata of candidatas) {
+            const horarios = await consultarButaca(
+              '/cinema/showtimes',
+              { movieCorporateId: candidata.corporateId, theater: String(cine.id) },
+              respuestaFuncionesButacaSchema,
+            );
+            for (const horario of horarios) {
+              if (
+                String(horario.theaterId) !== String(cine.id) ||
+                horario.corporateId !== candidata.corporateId
+              ) {
+                estructuraPresente = false;
+                continue;
+              }
+              // El Z del campo bruto representa componentes locales, según contrato de Cinemark.
+              const partes = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):([0-5]\d)(?:\.\d+)?Z?$/.exec(
+                horario.sessionDateTime,
+              );
+              const fechaLocal = partes?.[1] ?? null;
+              const horaLocal = partes?.[2] ?? null;
+              observaciones.push({
+                fuenteId: 'butaca',
+                registroId: horario.sessionId,
+                peliculaRegistroId: horario.corporateId,
+                peliculaNombre: horario.movieName,
+                cineRegistroId: String(cine.id),
+                cineNombre: cine.name,
+                direccion: cine.address,
+                fechaLocal: horario.sessionDisplayDate === fechaLocal ? fechaLocal : null,
+                horaLocal,
+                sala: horario.theaterRoom ?? null,
+                formato: horario.sessionFormat ?? null,
+                idioma: horario.language?.shortName ?? null,
+                subtitulos: null,
+              });
+            }
+          }
+          sucursalesRespondidas += 1;
+        } catch (error) {
+          if (!(error instanceof ExternalServiceError)) throw error;
+          estructuraPresente = false;
+          errorSucursal = error;
         }
       }
+      if (errorSucursal && !sucursalesRespondidas && !observaciones.length) throw errorSucursal;
       const fuente = {
         fuenteId: 'butaca',
         registroId: null,

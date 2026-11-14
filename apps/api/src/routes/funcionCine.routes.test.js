@@ -9,7 +9,10 @@ import * as ciudades from '../services/ciudadCine.service.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 
 vi.mock('../integrations/tmdb.integration.js', () => ({ obtenerDetalle: vi.fn() }));
-vi.mock('../integrations/serpApi.integration.js', () => ({ obtenerFuncionesSerpApi: vi.fn() }));
+vi.mock('../integrations/serpApi.integration.js', () => ({
+  obtenerFuncionesSerpApi: vi.fn(),
+  verificarCorrespondenciasSerpApi: vi.fn(),
+}));
 vi.mock('../integrations/butaca.integration.js', () => ({
   obtenerFuncionesButaca: vi.fn(),
   estaHabilitadoButaca: vi.fn(),
@@ -36,6 +39,7 @@ beforeEach(() => {
   });
   tmdb.obtenerDetalle.mockResolvedValue({ tmdbId: 77, nombre: 'Película de prueba' });
   serpApi.obtenerFuncionesSerpApi.mockResolvedValue(resultadoProveedor());
+  serpApi.verificarCorrespondenciasSerpApi.mockReturnValue(true);
   butaca.estaHabilitadoButaca.mockReturnValue(false);
 });
 afterEach(() => {
@@ -43,6 +47,40 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe('consulta pública única de funciones', () => {
+  it('conserva las funciones parciales de Butaca sin consultar SerpApi cuando faltan mapeos utilizables', async () => {
+    ciudades.obtenerCiudadCine.mockReturnValue({
+      ...CIUDAD_CINE_FIXTURE,
+      serpApiLocation: 'Ciudad,Argentina',
+      butacaCines: [{ id: 1, slug: 'centro' }],
+    });
+    serpApi.verificarCorrespondenciasSerpApi.mockReturnValue(false);
+    butaca.estaHabilitadoButaca.mockReturnValue(true);
+    butaca.obtenerFuncionesButaca.mockResolvedValue({
+      ...resultadoProveedor(),
+      estadoFuente: 'incompleta',
+      advertencias: [
+        { code: 'INCOMPLETE_DATA', message: 'Una sucursal no respondió.', fuenteId: 'butaca' },
+      ],
+    });
+    const respuesta = await request(createApp()).get(ruta);
+    expect(respuesta.status).toBe(200);
+    expect(respuesta.body.data.estado).toBe('incompleta');
+    expect(respuesta.body.data.funciones).toHaveLength(3);
+    expect(serpApi.obtenerFuncionesSerpApi).not.toHaveBeenCalled();
+    expect(serpApi.verificarCorrespondenciasSerpApi).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pelicula: { tmdbId: 77, nombre: 'Película de prueba' },
+        ciudad: expect.objectContaining({ id: CIUDAD_CINE_FIXTURE.id }),
+      }),
+    );
+  });
+  it('informa indisponibilidad sin consultar SerpApi si no hay mapeos ni otra fuente habilitada', async () => {
+    serpApi.verificarCorrespondenciasSerpApi.mockReturnValue(false);
+    const respuesta = await request(createApp()).get(ruta);
+    expect(respuesta.status).toBe(502);
+    expect(serpApi.obtenerFuncionesSerpApi).not.toHaveBeenCalled();
+    expect(butaca.obtenerFuncionesButaca).not.toHaveBeenCalled();
+  });
   it('consulta una ubicación por verificar y conserva ese diagnóstico aunque la fuente responda', async () => {
     ciudades.obtenerCiudadCine.mockReturnValueOnce({
       ...CIUDAD_CINE_FIXTURE,

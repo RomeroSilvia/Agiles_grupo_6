@@ -147,7 +147,7 @@ export function corresponderCarteleraButaca(peliculas, pelicula) {
   ];
 }
 
-function resolverLugar(observacion, ciudad, lugares) {
+export function resolverLugarCine(observacion, ciudad, lugares) {
   const candidatos = lugares.filter(
     (lugar) =>
       lugar.ciudadId === ciudad.id &&
@@ -223,7 +223,7 @@ export function normalizarObservacionesCine({
       );
       continue;
     }
-    const lugar = resolverLugar(observacion, ciudad, lugares);
+    const lugar = resolverLugarCine(observacion, ciudad, lugares);
     if (!lugar) {
       advertir(
         'IDENTITY_UNRESOLVED',

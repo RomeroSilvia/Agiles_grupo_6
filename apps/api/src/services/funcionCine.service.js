@@ -48,7 +48,7 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
   }
   const parametros = { pelicula, ciudad: configuracion, desde, hasta };
   const proveedores = [];
-  if (configuracion.serpApiLocation)
+  if (serpApiIntegration.verificarCorrespondenciasSerpApi(parametros))
     proveedores.push({
       fuenteId: 'serpapi',
       consultar: () => serpApiIntegration.obtenerFuncionesSerpApi(parametros),

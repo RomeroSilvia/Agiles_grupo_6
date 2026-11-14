@@ -30,6 +30,36 @@ afterEach(() => {
 });
 
 describe('integración AllEvents mediante API.SH', () => {
+  it.each(['hoy', 'manana', 'fin_de_semana'])(
+    'renueva la consulta de %s al cruzar la medianoche de La Plata',
+    async (fecha) => {
+      vi.setSystemTime('2026-11-15T02:59:00Z');
+      const fetchMock = vi.fn().mockImplementation(async () => ({
+        ok: true,
+        json: async () => ({ ...respuesta, fetched_at: new Date().toISOString() }),
+      }));
+      vi.stubGlobal('fetch', fetchMock);
+      const { listarEventosAllEvents } = await import('./allEvents.integration.js');
+      const params = { categoria: 'all', fecha, pagina: 1 };
+      const anterior = await listarEventosAllEvents(params);
+      vi.setSystemTime('2026-11-15T03:01:00Z');
+      const actual = await listarEventosAllEvents(params);
+      expect(actual.consultadoEn).not.toBe(anterior.consultadoEn);
+      await listarEventosAllEvents(params);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
+  it('conserva la caché al cruzar medianoche UTC dentro del mismo día de La Plata', async () => {
+    vi.setSystemTime('2026-11-14T23:59:00Z');
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => respuesta });
+    vi.stubGlobal('fetch', fetchMock);
+    const { listarEventosAllEvents } = await import('./allEvents.integration.js');
+    const params = { categoria: 'all', fecha: 'hoy', pagina: 1 };
+    await listarEventosAllEvents(params);
+    vi.setSystemTime('2026-11-15T00:01:00Z');
+    await listarEventosAllEvents(params);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it('fija La Plata, envía la clave solo en el header y comparte consultas de la caché', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => respuesta });
     vi.stubGlobal('fetch', fetchMock);

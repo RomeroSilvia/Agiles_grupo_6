@@ -16,16 +16,14 @@ vi.mock('../config/funcionesCine.config.js', async (importOriginal) => {
     get BUTACA_VERIFICADO() {
       return config.verificado;
     },
-    LUGARES_CINE: [
-      {
-        clave: 'centro',
-        ciudadId: CIUDAD_CINE_FIXTURE.id,
-        nombre: 'Cine de prueba',
-        direccion: 'Calle 123',
-        evidencia: 'Municipio revisado en fixture',
-        fuentes: [{ fuenteId: 'butaca', registroId: '1' }],
-      },
-    ],
+    LUGARES_CINE: ['centro', 'norte', 'sur'].map((clave, indice) => ({
+      clave,
+      ciudadId: CIUDAD_CINE_FIXTURE.id,
+      nombre: 'Cine de prueba',
+      direccion: 'Calle 123',
+      evidencia: 'Municipio revisado en fixture',
+      fuentes: [{ fuenteId: 'butaca', registroId: String(indice + 1) }],
+    })),
     CORRESPONDENCIAS_PELICULAS_CINE: [
       {
         fuenteId: 'butaca',
@@ -55,48 +53,123 @@ const parametros = {
   hasta: '2026-11-21',
 };
 describe('complemento Butaca / Cinemark', () => {
-  function simularCartelera({ direccion = 'Calle 123', duracion = 115 } = {}) {
-    const fetchMock = vi.fn().mockImplementation(async (url) => ({
-      ok: true,
-      json: async () => ({
-        data: url.pathname.endsWith('/theaters')
-          ? [
-              {
-                id: 1,
-                slug: 'centro',
+  function simularCartelera({
+    direccion = 'Calle 123',
+    duracion = 115,
+    sucursales = parametros.ciudad.butacaCines,
+    fallo = null,
+  } = {}) {
+    const fetchMock = vi.fn().mockImplementation(async (url) => {
+      if (fallo?.(url)) return { ok: false, status: 503 };
+      return {
+        ok: true,
+        json: async () => ({
+          data: url.pathname.endsWith('/theaters')
+            ? sucursales.map(({ id, slug }) => ({
+                id,
+                slug,
                 name: 'Cine de prueba',
                 address: direccion,
                 city: 'Interior',
                 location: { name: 'Región del proveedor' },
-              },
-            ]
-          : url.pathname.endsWith('/movies')
-            ? [
-                {
-                  id: 'uuid-proveedor',
-                  corporateId: 'corp-nuevo',
-                  title: 'Nueva película',
-                  openingDate: '2026-11-12T00:00:00.000Z',
-                  runTime: duracion,
-                },
-              ]
-            : [
-                {
-                  sessionId: 'sesion-nueva',
-                  corporateId: 'corp-nuevo',
-                  movieName: 'Nueva película',
-                  theaterId: '1',
-                  theaterRoom: '2',
-                  sessionDateTime: '2026-11-15T21:00:00.000Z',
-                  sessionDisplayDate: '2026-11-15',
-                  sessionFormat: '2D',
-                },
-              ],
-      }),
-    }));
+              }))
+            : url.pathname.endsWith('/movies')
+              ? [
+                  {
+                    id: 'uuid-proveedor',
+                    corporateId: 'corp-nuevo',
+                    title: 'Nueva película',
+                    openingDate: '2026-11-12T00:00:00.000Z',
+                    runTime: duracion,
+                  },
+                ]
+              : [
+                  {
+                    sessionId: `sesion-${url.searchParams.get('theater')}`,
+                    corporateId: 'corp-nuevo',
+                    movieName: 'Nueva película',
+                    theaterId: url.searchParams.get('theater'),
+                    theaterRoom: '2',
+                    sessionDateTime: '2026-11-15T21:00:00.000Z',
+                    sessionDisplayDate: '2026-11-15',
+                    sessionFormat: '2D',
+                  },
+                ],
+        }),
+      };
+    });
     vi.stubGlobal('fetch', fetchMock);
     return fetchMock;
   }
+  const sucursales = ['centro', 'norte', 'sur'].map((slug, indice) => ({ id: indice + 1, slug }));
+  const consultaSucursales = {
+    ...parametros,
+    pelicula: {
+      tmdbId: 77,
+      identidadCine: { nombres: ['Nueva película'], anio: 2026, duracion: 115 },
+    },
+    ciudad: { ...parametros.ciudad, butacaCines: sucursales },
+  };
+  it.each([
+    ['movies', '1'],
+    ['movies', '2'],
+    ['showtimes', '1'],
+    ['showtimes', '2'],
+  ])('conserva las otras sucursales si falla /%s en la sucursal %s', async (endpoint, id) => {
+    config.habilitado = true;
+    config.verificado = true;
+    simularCartelera({
+      sucursales,
+      fallo: (url) =>
+        url.pathname.endsWith(`/${endpoint}`) && url.searchParams.get('theater') === id,
+    });
+    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+    const resultado = await obtenerFuncionesButaca(consultaSucursales);
+    expect(resultado.funciones).toHaveLength(2);
+    expect(resultado.funciones.map((funcion) => funcion.fuentes[0].registroId).sort()).toEqual(
+      sucursales.filter((cine) => String(cine.id) !== id).map((cine) => `sesion-${cine.id}`),
+    );
+    expect(resultado.estadoFuente).toBe('incompleta');
+    expect(resultado.advertencias).toContainEqual(
+      expect.objectContaining({ code: 'INCOMPLETE_DATA', fuenteId: 'butaca' }),
+    );
+  });
+  it.each(['movies', 'showtimes'])(
+    'rechaza la consulta si /%s falla en todas las sucursales',
+    async (endpoint) => {
+      config.habilitado = true;
+      config.verificado = true;
+      const fetchMock = simularCartelera({
+        sucursales,
+        fallo: (url) => url.pathname.endsWith(`/${endpoint}`),
+      });
+      const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+      await expect(obtenerFuncionesButaca(consultaSucursales)).rejects.toMatchObject({
+        code: 'EXTERNAL_SERVICE',
+      });
+      expect(
+        fetchMock.mock.calls.filter(([url]) => url.pathname.endsWith(`/${endpoint}`)),
+      ).toHaveLength(3);
+    },
+  );
+  it('devuelve datos incompletos si una sucursal responde sin películas y las otras fallan', async () => {
+    config.habilitado = true;
+    config.verificado = true;
+    const fetchMock = simularCartelera({
+      sucursales,
+      fallo: (url) => url.pathname.endsWith('/movies') && url.searchParams.get('theater') !== '1',
+    });
+    const consultar = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((url) =>
+      url.pathname.endsWith('/movies') && url.searchParams.get('theater') === '1'
+        ? Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
+        : consultar(url),
+    );
+    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
+    const resultado = await obtenerFuncionesButaca(consultaSucursales);
+    expect(resultado.funciones).toEqual([]);
+    expect(resultado.estadoFuente).toBe('incompleta');
+  });
   it('consulta horarios de una película nueva sin mapeo manual y reutiliza la caché', async () => {
     config.habilitado = true;
     config.verificado = true;

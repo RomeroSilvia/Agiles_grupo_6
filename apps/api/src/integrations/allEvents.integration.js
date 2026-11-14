@@ -1,4 +1,5 @@
 import { env } from '../config/env.config.js';
+import { ZONA_HORARIA_EVENTOS } from '@buscador/shared/constants';
 import { EVENTOS_CONFIG } from '../config/eventos.config.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { respuestaAllEventsSchema } from '../models/evento.model.js';
@@ -13,6 +14,12 @@ const cache = createTtlCache({
 });
 const limitar = createConcurrencyLimiter(2);
 const FECHAS_PROVEEDOR = { hoy: 'today', manana: 'tomorrow', fin_de_semana: 'weekend' };
+const formateadorFecha = new Intl.DateTimeFormat('en-CA', {
+  timeZone: ZONA_HORARIA_EVENTOS,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 let diaPresupuesto;
 let solicitudesDelDia = 0;
 
@@ -22,7 +29,8 @@ export function listarEventosAllEvents({ categoria, fecha, pagina }) {
       new ExternalServiceError('los eventos de La Plata: la fuente no está configurada'),
     );
   }
-  return cache.getOrSet(`${categoria}:${fecha}:${pagina}`, () =>
+  const diaLocal = formateadorFecha.format(new Date());
+  return cache.getOrSet(`${diaLocal}:${categoria}:${fecha}:${pagina}`, () =>
     limitar(async () => {
       const diaActual = new Date().toISOString().slice(0, 10);
       if (diaActual !== diaPresupuesto) {

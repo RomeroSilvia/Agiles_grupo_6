@@ -5,9 +5,16 @@ import {
   LUGARES_CINE,
 } from '../config/funcionesCine.config.js';
 import { ExternalServiceError } from '../errors/index.js';
-import { respuestaSerpApiSchema } from '../models/funcionCine.model.js';
+import {
+  correspondenciasPeliculasCineSchema,
+  lugaresCineConfiguracionSchema,
+  respuestaSerpApiSchema,
+} from '../models/funcionCine.model.js';
 import {
   normalizarObservacionesCine,
+  normalizarTextoCine,
+  corresponderPeliculaCine,
+  resolverLugarCine,
   resolverFechaSerpApi,
   resolverHoraSerpApi,
 } from '../services/funcionCine.normalizer.js';
@@ -20,6 +27,43 @@ const cache = createTtlCache({
   maxEntries: FUNCIONES_CINE_CONFIG.CACHE_MAX_ENTRIES,
 });
 const presupuesto = { mes: '', usadas: 0, solicitudes: [], agotado: false };
+
+export function verificarCorrespondenciasSerpApi({ pelicula, ciudad }) {
+  if (
+    !ciudad.serpApiLocation ||
+    !ciudad.evidenciaPorFuente?.serpApi ||
+    typeof pelicula.nombre !== 'string' ||
+    !pelicula.nombre.trim() ||
+    !correspondenciasPeliculasCineSchema.safeParse(CORRESPONDENCIAS_PELICULAS_CINE).success ||
+    !lugaresCineConfiguracionSchema.safeParse(LUGARES_CINE).success
+  )
+    return false;
+  const peliculaVerificada = CORRESPONDENCIAS_PELICULAS_CINE.some(
+    (item) =>
+      item.fuenteId === 'serpapi' &&
+      corresponderPeliculaCine({
+        ...item,
+        tmdbId: pelicula.tmdbId,
+        correspondencias: CORRESPONDENCIAS_PELICULAS_CINE,
+      }),
+  );
+  const lugarVerificado = LUGARES_CINE.some(
+    (lugar) =>
+      lugar.ciudadId === ciudad.id &&
+      lugar.fuentes.some(
+        (fuente) =>
+          fuente.fuenteId === 'serpapi' &&
+          normalizarTextoCine(fuente.nombre) &&
+          normalizarTextoCine(fuente.direccion) &&
+          resolverLugarCine(
+            { fuenteId: 'serpapi', cineNombre: fuente.nombre, direccion: fuente.direccion },
+            ciudad,
+            LUGARES_CINE,
+          ),
+      ),
+  );
+  return peliculaVerificada && lugarVerificado;
+}
 
 function errorCuota() {
   const cause = new Error('El cupo de SerpApi está agotado; no se reintenta automáticamente');
@@ -47,11 +91,14 @@ export function obtenerFuncionesSerpApi({ pelicula, ciudad, desde, hasta }) {
   return cache.getOrSet(
     `${pelicula.tmdbId}:${ciudad.id}:${desde}:${FUNCIONES_CINE_CONFIG.VERSION_MAPEOS}`,
     async () => {
-      if (!env.SERPAPI_API_KEY || !ciudad.serpApiLocation || !ciudad.evidenciaPorFuente.serpApi) {
+      if (!env.SERPAPI_API_KEY || !ciudad.serpApiLocation || !ciudad.evidenciaPorFuente?.serpApi) {
         throw new ExternalServiceError('SerpApi: falta clave o ubicación verificada');
       }
       if (typeof pelicula.nombre !== 'string' || !pelicula.nombre.trim()) {
         throw new ExternalServiceError('SerpApi: la película no tiene un nombre verificado');
+      }
+      if (!verificarCorrespondenciasSerpApi({ pelicula, ciudad })) {
+        throw new ExternalServiceError('SerpApi: faltan correspondencias verificadas utilizables');
       }
       reservarConsulta();
       const url = new URL('https://serpapi.com/search');

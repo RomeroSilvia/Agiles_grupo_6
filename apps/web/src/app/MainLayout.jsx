@@ -18,10 +18,14 @@ const ENLACES = [
   { to: RUTAS.WATCHLIST, label: 'Mi watchlist' },
   { to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' },
   { to: RUTAS.PERFIL, label: 'Perfil' },
+  { to: RUTAS.ADMIN, label: 'Administración', soloAdmin: true },
 ];
 
 function Enlaces({ onNavigate }) {
-  return ENLACES.map(({ to, label }) => (
+  const { user } = useSession();
+  const enlaces = ENLACES.filter(({ soloAdmin }) => !soloAdmin || user?.esAdmin);
+
+  return enlaces.map(({ to, label }) => (
     <NavLink
       key={to}
       to={to}
@@ -43,7 +47,16 @@ function AccionesDeSesion() {
   }
 
   if (user) {
-    return <MenuUsuario />;
+    return (
+      <div className="flex items-center gap-2">
+        <MenuUsuario />
+        {user.esAdmin && (
+          <span className="hidden sm:inline-flex">
+            <Chip className="uppercase">Admin</Chip>
+          </span>
+        )}
+      </div>
+    );
   }
 
   return (

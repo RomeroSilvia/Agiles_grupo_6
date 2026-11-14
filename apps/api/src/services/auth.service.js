@@ -13,12 +13,11 @@ const CREDENCIALES_INVALIDAS = 'El mail o la contraseña no son correctos';
 
 /**
  * @typedef {import('../repositories/auth.repository.js').UsuarioSesion & { esAdmin: boolean }} UsuarioConAcceso
- * @typedef {import('../repositories/auth.repository.js').Sesion & { user: UsuarioConAcceso }} SesionConAcceso
  */
 
 /**
  * E4HU2: registra al usuario y deja la sesión iniciada.
- * @returns {Promise<SesionConAcceso>}
+ * @returns {Promise<import('../repositories/auth.repository.js').Sesion>}
  */
 export async function registrarUsuario({ email, password }) {
   await authRepository.crearUsuario(email, password);
@@ -30,19 +29,15 @@ export async function registrarUsuario({ email, password }) {
       'Tu cuenta se creó, pero no pudimos iniciar sesión. Probá ingresar.',
     );
   }
-  return sesionConEsAdmin(sesion);
+  return sesion;
 }
 
 /**
  * E4HU2: inicia sesión con mail y contraseña.
- * @returns {Promise<SesionConAcceso>}
+ * @returns {Promise<import('../repositories/auth.repository.js').Sesion>}
  */
-export async function iniciarSesion(credenciales) {
-  const sesion = await autenticarConBloqueo(
-    credenciales,
-    () => new UnauthenticatedError(CREDENCIALES_INVALIDAS),
-  );
-  return sesionConEsAdmin(sesion);
+export function iniciarSesion(credenciales) {
+  return autenticarConBloqueo(credenciales, () => new UnauthenticatedError(CREDENCIALES_INVALIDAS));
 }
 
 /**
@@ -56,10 +51,6 @@ export async function agregarEsAdmin(user) {
     return false;
   });
   return { ...user, esAdmin };
-}
-
-async function sesionConEsAdmin(sesion) {
-  return { ...sesion, user: await agregarEsAdmin(sesion.user) };
 }
 
 export async function verificarIdentidad(credenciales) {

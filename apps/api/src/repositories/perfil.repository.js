@@ -1,12 +1,12 @@
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
-import { PERFIL_COLUMNS, fromRow } from '../models/perfil.model.js';
+import { PERFIL_REGION_COLUMNS, PERFIL_ROL_COLUMNS, fromRow } from '../models/perfil.model.js';
 
-/** @returns {Promise<{ region: string | null, rol: string } | null>} null si no existe el perfil */
-async function obtenerPerfil(usuarioId) {
+/** @returns {Promise<{ region?: string | null, rol?: string } | null>} null si no existe el perfil */
+async function obtenerPerfil(usuarioId, columnas) {
   const { data, error } = await supabaseAdmin
     .from('perfil')
-    .select(PERFIL_COLUMNS)
+    .select(columnas)
     .eq('id', usuarioId)
     .maybeSingle();
 
@@ -17,11 +17,11 @@ async function obtenerPerfil(usuarioId) {
 }
 
 export async function obtenerRegion(usuarioId) {
-  return (await obtenerPerfil(usuarioId))?.region ?? null;
+  return (await obtenerPerfil(usuarioId, PERFIL_REGION_COLUMNS))?.region ?? null;
 }
 
 export async function obtenerRol(usuarioId) {
-  return (await obtenerPerfil(usuarioId))?.rol ?? null;
+  return (await obtenerPerfil(usuarioId, PERFIL_ROL_COLUMNS))?.rol ?? null;
 }
 
 export async function actualizarRegion(usuarioId, region) {
@@ -30,7 +30,7 @@ export async function actualizarRegion(usuarioId, region) {
     .update({ region })
     .eq('id', usuarioId)
     .or(`region.is.null,region.neq.${region}`)
-    .select(PERFIL_COLUMNS)
+    .select(PERFIL_REGION_COLUMNS)
     .maybeSingle();
 
   if (error) {

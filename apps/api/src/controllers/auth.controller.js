@@ -9,13 +9,13 @@ import * as authService from '../services/auth.service.js';
 export async function registrar(req, res) {
   const sesion = await authService.registrarUsuario(req.validated.body);
   setSessionCookies(res, sesion);
-  res.status(201).json({ data: { user: sesion.user } });
+  res.status(201).json({ data: { user: await authService.agregarEsAdmin(sesion.user) } });
 }
 
 export async function iniciarSesion(req, res) {
   const sesion = await authService.iniciarSesion(req.validated.body);
   setSessionCookies(res, sesion);
-  res.json({ data: { user: sesion.user } });
+  res.json({ data: { user: await authService.agregarEsAdmin(sesion.user) } });
 }
 
 /**

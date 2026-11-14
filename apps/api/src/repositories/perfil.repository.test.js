@@ -8,17 +8,15 @@ import { ROL_USUARIO } from '@buscador/shared/constants';
 
 vi.mock('../config/supabase.config.js', () => ({ supabaseAdmin: { from: vi.fn() } }));
 
-const FILA_PERFIL = { region: 'BR', rol: ROL_USUARIO.USUARIO };
-
 beforeEach(() => vi.resetAllMocks());
 
 describe('perfil.repository', () => {
-  it('lee la región del perfil del usuario autenticado', async () => {
-    const builder = mockearConsulta(supabaseAdmin.from, { data: FILA_PERFIL, error: null });
+  it('lee solo la región del perfil del usuario autenticado', async () => {
+    const builder = mockearConsulta(supabaseAdmin.from, { data: { region: 'BR' }, error: null });
 
     await expect(perfilRepository.obtenerRegion(USUARIO.id)).resolves.toBe('BR');
     expect(supabaseAdmin.from).toHaveBeenCalledWith('perfil');
-    expect(builder.select).toHaveBeenCalledWith('region, rol');
+    expect(builder.select).toHaveBeenCalledWith('region');
     expect(builder.eq).toHaveBeenCalledWith('id', USUARIO.id);
   });
 
@@ -28,14 +26,21 @@ describe('perfil.repository', () => {
     await expect(perfilRepository.obtenerRegion(USUARIO.id)).resolves.toBeNull();
   });
 
-  it('lee el rol del perfil del usuario', async () => {
+  it('lee solo el rol del perfil del usuario', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, {
-      data: { ...FILA_PERFIL, rol: ROL_USUARIO.ADMINISTRADOR },
+      data: { rol: ROL_USUARIO.ADMINISTRADOR },
       error: null,
     });
 
     await expect(perfilRepository.obtenerRol(USUARIO.id)).resolves.toBe(ROL_USUARIO.ADMINISTRADOR);
+    expect(builder.select).toHaveBeenCalledWith('rol');
     expect(builder.eq).toHaveBeenCalledWith('id', USUARIO.id);
+  });
+
+  it('rechaza un rol que no está entre los roles conocidos', async () => {
+    mockearConsulta(supabaseAdmin.from, { data: { rol: 'moderador' }, error: null });
+
+    await expect(perfilRepository.obtenerRol(USUARIO.id)).rejects.toThrow();
   });
 
   it('devuelve rol null cuando no existe un perfil para el usuario', async () => {
@@ -45,13 +50,10 @@ describe('perfil.repository', () => {
   });
 
   it('actualiza la región solo si está vacía o es distinta', async () => {
-    const builder = mockearConsulta(supabaseAdmin.from, {
-      data: { ...FILA_PERFIL, region: 'UY' },
-      error: null,
-    });
+    const builder = mockearConsulta(supabaseAdmin.from, { data: { region: 'UY' }, error: null });
 
     await expect(perfilRepository.actualizarRegion(USUARIO.id, 'UY')).resolves.toBe('UY');
-    expect(builder.select).toHaveBeenCalledWith('region, rol');
+    expect(builder.select).toHaveBeenCalledWith('region');
     expect(builder.update).toHaveBeenCalledWith({ region: 'UY' });
     expect(builder.eq).toHaveBeenCalledWith('id', USUARIO.id);
     expect(builder.or).toHaveBeenCalledWith('region.is.null,region.neq.UY');

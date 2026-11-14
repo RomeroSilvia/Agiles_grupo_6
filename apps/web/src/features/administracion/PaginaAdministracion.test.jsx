@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { APP_NAME } from '../../config/app.config.js';
 import { request } from '../../services/api.service.js';
 import { renderRoute } from '../../test/renderRoute.jsx';
 
@@ -103,7 +104,9 @@ describe('Acceso al panel de administración', () => {
       'aria-current',
       'page',
     );
-    expect(screen.getByText(/Resumen de la actividad en/)).toBeInTheDocument();
+    expect(screen.getByText(/Resumen de la actividad en/)).toHaveTextContent(
+      `Resumen de la actividad en ${APP_NAME}`,
+    );
 
     await userEvent.click(within(pestanas).getByRole('link', { name: 'Usuarios' }));
 
@@ -112,6 +115,8 @@ describe('Acceso al panel de administración', () => {
       'aria-current',
       'page',
     );
-    expect(screen.getByText(/Usuarios registrados en/)).toBeInTheDocument();
+    expect(screen.getByText(/Usuarios registrados en/)).toHaveTextContent(
+      `Usuarios registrados en ${APP_NAME}`,
+    );
   });
 });

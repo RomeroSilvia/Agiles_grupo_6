@@ -53,6 +53,19 @@ describe('SeccionFunciones', () => {
       screen.getByText(/Zona horaria: America\/Argentina\/Buenos_Aires\./),
     ).toBeInTheDocument();
     expect(request).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Fecha de la función' }), {
+      target: { value: '2026-11-16' },
+    });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Cine' }), {
+      target: { value: `cine:${'2'.repeat(64)}` },
+    });
+    expect(
+      screen.getByText(/No se encontraron funciones para estos filtros en los datos recibidos/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Cobertura parcial de prueba')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+    expect(screen.getByText('00:30')).toBeInTheDocument();
+    expect(request).toHaveBeenCalledTimes(1);
   });
   it('descarta respuestas tardías al cambiar ciudad y reinicia al cambiar película', async () => {
     contexto.idCiudadSeleccionada = CIUDAD_CINE_FIXTURE.id;

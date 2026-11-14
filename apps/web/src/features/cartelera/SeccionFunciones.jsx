@@ -4,7 +4,7 @@ import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { Skeleton } from '../../components/ui/Skeleton.jsx';
 import { useCiudadCine } from '../../contexts/ciudadCine/CiudadCineContext.js';
 import { SelectorCiudadCine } from './SelectorCiudadCine.jsx';
-import { ListaFunciones } from './ListaFunciones.jsx';
+import { FuncionesFiltradas } from './FuncionesFiltradas.jsx';
 import { useFuncionesCine } from './useFuncionesCine.js';
 
 export function SeccionFunciones({ tmdbId }) {
@@ -65,13 +65,13 @@ export function SeccionFunciones({ tmdbId }) {
               ausencia de exhibición.
             </Alert>
           )}
-          <ListaFunciones cines={data.cines} funciones={data.funciones} />
           <p className="text-xs text-muted">
             Horarios de SerpApi y, cuando está habilitado, Butaca / Cinemark. Consultados:{' '}
             <time dateTime={data.consultadoEn}>{data.consultadoEn}</time>.
           </p>
         </>
       )}
+      <FuncionesFiltradas key={`${tmdbId}:${idCiudadSeleccionada ?? ''}`} data={data} />
     </section>
   );
 }

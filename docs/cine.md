@@ -119,3 +119,17 @@ Referencias: [Showtimes](https://serpapi.com/showtimes-results),
 [términos Cinemark](https://www.cinemark.com.ar/terminos-condiciones).
 Antes de habilitar, revisar derechos de contenido/redistribución y las condiciones
 vigentes del plan de la cuenta. No se garantiza exhaustividad, SLA ni checkout.
+
+## Filtros (#76)
+
+Fecha y cine se aplican localmente con AND sobre todo F1, sin nuevas rutas ni
+solicitudes. Las opciones vienen del conjunto sin filtrar y usan `fechaLocal` e
+ID canónico, no el nombre del cine ni la fecha UTC del navegador. Los homónimos
+muestran dirección. Limpiar recupera el conjunto recibido; cambiar película o
+ciudad reinicia ambos filtros. Actualizaciones que retiran opciones las limpian
+y anuncian el cambio; durante la carga se ocultan controles y resultados viejos.
+
+El vacío de filtros no reemplaza los estados de adquisición; las advertencias
+de cobertura, horizonte y truncamiento permanecen visibles. Filtrar no garantiza
+exhaustividad fuera de los datos recibidos. Paginar F1 en el futuro requiere
+revisar este contrato antes de conservar filtrado local.

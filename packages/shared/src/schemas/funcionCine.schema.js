@@ -73,6 +73,12 @@ export const funcionCineSchema = z
   }, 'La fecha, hora y zona de la función deben coincidir con su inicio');
 
 export const consultaFuncionesCineSchema = z.object({ ciudadId: ciudadCineIdSchema }).strict();
+export const filtrosFuncionesSchema = z
+  .object({
+    fecha: z.union([z.literal(''), fechaCivilCarteleraSchema]),
+    cineId: z.union([z.literal(''), cineIdSchema]),
+  })
+  .strict();
 export const parametrosFuncionesCineSchema = z.object({ tmdbId: tmdbIdSchema }).strict();
 
 export const advertenciaFuncionesSchema = z.object({

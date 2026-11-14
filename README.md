@@ -75,11 +75,12 @@ supabase/
 | `/restablecer-contrasena` |        | Elegir una contraseña nueva desde el enlace del mail                                                 |
 | `/confirmar-mail`         |        | Confirmar el cambio de mail desde el enlace del mail                                                 |
 
-La nav del header lleva a «Mi watchlist», «Mis plataformas» y «Perfil». Sin sesión, `/watchlist`
-invita a iniciar sesión. Con sesión, el avatar abre un menú con «Perfil» y «Cerrar sesión». En el
-perfil, las plataformas se editan con el mismo listado que en `/mis-plataformas`, y las acciones de
-cuenta llevan a cada sección de `/perfil/cuenta`. Los enlaces que llegan por mail vencen a los 30
-minutos. Eliminar la cuenta borra al usuario y todos sus datos.
+La nav del header ofrece la cartelera a cualquier visitante y, con sesión, también lleva a «Mi
+watchlist», «Mis plataformas» y «Perfil». Sin sesión, `/watchlist` invita a iniciar sesión. Con
+sesión, el avatar abre un menú con «Perfil» y «Cerrar sesión». En el perfil, las plataformas se
+editan con el mismo listado que en `/mis-plataformas`, y las acciones de cuenta llevan a cada
+sección de `/perfil/cuenta`. Los enlaces que llegan por mail vencen a los 30 minutos. Eliminar la
+cuenta borra al usuario y todos sus datos.
 
 ## Endpoints
 

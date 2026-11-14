@@ -1,0 +1,171 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { renderRoute } from '../../test/renderRoute.jsx';
+
+const consultadoEn = '2026-11-13T23:00:00.000Z';
+
+const DUNE = {
+  tmdbId: 77,
+  tipo: 'pelicula',
+  nombre: 'Dune',
+  posterUrl: null,
+  anio: 2021,
+  puntuacion: 8.1,
+  region: 'AR',
+  estadoExhibicion: 'cartelera_proveedor',
+  fechaEstrenoAr: '2026-06-08',
+  estadoFecha: 'informada',
+  fuente: {
+    fuenteId: 'tmdb',
+    registroId: '77',
+    url: null,
+    consultadoEn,
+    actualizadoEn: null,
+  },
+};
+
+const PELICULA_SIN_FECHA = {
+  ...DUNE,
+  tmdbId: 78,
+  nombre: null,
+  estadoFecha: 'pendiente',
+  fechaEstrenoAr: null,
+  fuente: { ...DUNE.fuente, registroId: '78' },
+};
+
+function respuestaCartelera(resultados, pagina = 1, totalPaginas = 1) {
+  return {
+    data: {
+      region: 'AR',
+      resultados,
+      pagina,
+      totalResultados: resultados.length,
+      totalPaginas,
+      fuente: {
+        fuenteId: 'tmdb',
+        registroId: null,
+        url: null,
+        consultadoEn,
+        actualizadoEn: null,
+      },
+    },
+  };
+}
+
+function respuestaHttp(contenido, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => contenido,
+  };
+}
+
+function configurarFetchCartelera(responder) {
+  const fetchMock = vi.fn((input) => {
+    const url = new URL(input.toString(), window.location.origin);
+
+    if (url.pathname === '/api/auth/session') {
+      return Promise.resolve(respuestaHttp({ data: { user: null } }));
+    }
+    if (url.pathname === '/api/region') {
+      return Promise.resolve(respuestaHttp({ data: { region: 'AR' } }));
+    }
+    if (url.pathname === '/api/cartelera') {
+      return responder(url);
+    }
+
+    throw new Error(`URL no mockeada: ${url.pathname}`);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('PaginaCartelera', () => {
+  it('muestra carga accesible y luego fecha, atribución y enlace al detalle existente', async () => {
+    let resolver;
+    configurarFetchCartelera(
+      () =>
+        new Promise((resolve) => {
+          resolver = resolve;
+        }),
+    );
+
+    renderRoute('/cartelera');
+
+    expect(screen.getByText('Cargando películas en cartelera…')).toBeVisible();
+    expect(
+      screen.getByText('Cartelera según TMDB; las funciones dependen de cada cine.'),
+    ).toBeVisible();
+
+    await act(async () => resolver(respuestaHttp(respuestaCartelera([DUNE, PELICULA_SIN_FECHA]))));
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeInTheDocument();
+    const enlaceDetalle = screen.getByRole('link', { name: 'Ver detalle de Dune' });
+    expect(enlaceDetalle).toHaveAttribute('href', '/titulos/pelicula/77');
+    expect(screen.getByText('Estreno en Argentina: 8 de junio de 2026')).toHaveAttribute(
+      'dateTime',
+      '2026-06-08',
+    );
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Título no disponible' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Fecha de estreno en Argentina no informada')).toBeInTheDocument();
+    expect(screen.getAllByText(/Datos de títulos provistos por/)).toHaveLength(1);
+  });
+
+  it('distingue cartelera vacía y permite reintentar un error', async () => {
+    const fetchMock = configurarFetchCartelera(
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          respuestaHttp(
+            { error: { code: 'EXTERNAL_SERVICE', message: 'No se pudo consultar TMDB' } },
+            502,
+          ),
+        )
+        .mockResolvedValueOnce(respuestaHttp(respuestaCartelera([]))),
+    );
+
+    renderRoute('/cartelera');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo consultar TMDB');
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByText('No hay información de cartelera disponible.')).toBeVisible();
+    expect(
+      fetchMock.mock.calls.filter(
+        ([input]) => new URL(input.toString()).pathname === '/api/cartelera',
+      ),
+    ).toHaveLength(2);
+  });
+
+  it('acumula páginas por identidad de película sin duplicar tarjetas', async () => {
+    const fetchMock = configurarFetchCartelera((url) => {
+      const pagina = Number(url.searchParams.get('pagina'));
+      return Promise.resolve(
+        respuestaHttp(
+          respuestaCartelera(pagina === 1 ? [DUNE] : [DUNE, PELICULA_SIN_FECHA], pagina, 2),
+        ),
+      );
+    });
+
+    renderRoute('/cartelera');
+    await screen.findByRole('heading', { level: 3, name: 'Dune' });
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 3, name: 'Título no disponible' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Dune' })).toHaveLength(1);
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls
+          .filter(([input]) => new URL(input.toString()).pathname === '/api/cartelera')
+          .map(([input]) => new URL(input.toString()).searchParams.get('pagina')),
+      ).toEqual(['1', '2']);
+    });
+  });
+});

@@ -78,6 +78,14 @@ export function MainLayout() {
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1 gap-y-1 px-2 py-2 sm:gap-3 sm:px-4">
           <LogoInicio className={FOCUS_RING_CLASS_NAME} />
+          <NavLink
+            to={RUTAS.CARTELERA}
+            className={({ isActive }) =>
+              `inline-flex min-h-11 items-center rounded-sm px-2 text-sm transition-colors duration-150 hover:text-foreground ${isActive ? 'font-bold text-foreground' : 'text-muted'} ${FOCUS_RING_CLASS_NAME}`
+            }
+          >
+            Cartelera
+          </NavLink>
           {user && (
             <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
               <Enlaces />

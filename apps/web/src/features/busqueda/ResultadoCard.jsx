@@ -17,7 +17,7 @@ function obtenerEtiquetaEnlace(nombre, plataformas = []) {
   return `Ver detalle de ${nombre}, disponible en ${nombresPlataformas}`;
 }
 
-export function ResultadoCard({ resultado }) {
+export function ResultadoCard({ resultado, contenidoAdicional }) {
   const plataformas = resultado.plataformas ?? [];
   const visibles = plataformas.slice(0, MAX_LOGOS_POR_CARD);
   const ocultas = plataformas.length - visibles.length;
@@ -47,6 +47,7 @@ export function ResultadoCard({ resultado }) {
             {nombre}
           </SectionTitle>
           <DatosTitulo anio={resultado.anio} puntuacion={resultado.puntuacion} />
+          {contenidoAdicional && <p className="text-sm text-muted">{contenidoAdicional}</p>}
           {visibles.length > 0 && (
             <div className="mt-auto flex items-center gap-1.5 border-t border-border pt-3">
               {visibles.map((plataforma) => (

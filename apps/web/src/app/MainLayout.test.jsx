@@ -50,4 +50,10 @@ describe('MainLayout', () => {
     expect(inicio).toHaveAttribute('href', '/');
     expect(inicio.querySelector('img')).toBeInTheDocument();
   });
+
+  it('muestra el acceso público a la cartelera', () => {
+    renderLayout();
+
+    expect(screen.getByRole('link', { name: 'Cartelera' })).toHaveAttribute('href', '/cartelera');
+  });
 });

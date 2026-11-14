@@ -3,6 +3,7 @@ import {
   consultaCarteleraSchema,
   peliculaCarteleraSchema,
   fuenteCarteleraSchema,
+  fuenteSchema,
 } from './cartelera.schema.js';
 
 const fuente = {
@@ -42,6 +43,9 @@ describe('esquema de cartelera', () => {
 
   it('valida la fuente y requiere timestamp UTC con Z', () => {
     expect(fuenteCarteleraSchema.safeParse(fuente).success).toBe(true);
+    expect(fuenteSchema.safeParse({ ...fuente, fuenteId: 'butaca' }).success).toBe(true);
+    expect(fuenteSchema.safeParse({ ...fuente, fuenteId: '' }).success).toBe(false);
+    expect(fuenteCarteleraSchema.safeParse({ ...fuente, fuenteId: 'butaca' }).success).toBe(false);
     expect(
       fuenteCarteleraSchema.safeParse({
         ...fuente,

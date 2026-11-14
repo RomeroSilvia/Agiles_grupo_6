@@ -25,12 +25,16 @@ export const fechaCivilCarteleraSchema = z
 
 const fechaUtcSchema = z.iso.datetime({ offset: false });
 
-export const fuenteCarteleraSchema = z.object({
-  fuenteId: z.literal(FUENTE_ID_TMDB),
+export const fuenteSchema = z.object({
+  fuenteId: z.string().min(1),
   registroId: z.string().nullable(),
   url: z.url({ protocol: /^https?$/ }).nullable(),
   consultadoEn: fechaUtcSchema,
   actualizadoEn: fechaUtcSchema.nullable(),
+});
+
+export const fuenteCarteleraSchema = fuenteSchema.extend({
+  fuenteId: z.literal(FUENTE_ID_TMDB),
 });
 
 export const peliculaCarteleraSchema = z.object({

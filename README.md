@@ -93,7 +93,9 @@ independientemente de la región del perfil. Esta clasificación no confirma sal
 cartelera se cachea una hora; las fechas regionales y el año original consultados por película se
 cachean 24 horas. El año se obtiene del detalle sin región para distinguir la obra de su estreno
 argentino o reestreno. Al volver del detalle, el historial restaura las páginas cargadas de la
-cartelera. La integración limita la concurrencia a ocho solicitudes y no reintenta errores
+cartelera durante una hora desde la primera consulta, sin extender ese plazo al cargar más páginas.
+Si el estado venció o no tiene vencimiento, se vuelve a consultar desde la primera página, también
+al recargar la pantalla. La integración limita la concurrencia a ocho solicitudes y no reintenta errores
 ni respuestas `429`; el endpoint tiene un límite local de 30 solicitudes por IP por minuto.
 TMDB puede modificar sus límites y no garantiza una frecuencia de actualización. Las fechas se
 informan solo cuando TMDB publica para Argentina un estreno en salas limitado o general (tipos 2/3).

@@ -88,9 +88,89 @@ function configurarFetchCartelera(responder) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('PaginaCartelera', () => {
+  it.each([
+    ['vencido', Date.now()],
+    ['sin vencimiento', undefined],
+    ['con vencimiento inválido', 'invalido'],
+  ])('consulta la primera página al recargar un estado %s', async (_caso, expiresAt) => {
+    const responder = vi
+      .fn()
+      .mockResolvedValue(respuestaHttp(respuestaCartelera([PELICULA_SIN_FECHA])));
+    configurarFetchCartelera(responder);
+
+    renderRoute({
+      pathname: '/cartelera',
+      state: {
+        cartelera: { resultados: [DUNE], pagina: 2, totalPaginas: 3, expiresAt },
+      },
+    });
+
+    expect(screen.getByText('Cargando películas en cartelera…')).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { level: 3, name: 'Título no disponible' }),
+    ).toBeVisible();
+    expect(screen.queryByRole('heading', { level: 3, name: 'Dune' })).not.toBeInTheDocument();
+    expect(responder).toHaveBeenCalledOnce();
+    expect(responder.mock.calls[0][0].searchParams.get('pagina')).toBe('1');
+  });
+
+  it('restaura un estado vigente sin extender su vencimiento ni consultar la API', async () => {
+    const expiresAt = Date.now() + 30 * 60 * 1000;
+    const responder = vi.fn();
+    configurarFetchCartelera(responder);
+
+    const router = renderRoute({
+      pathname: '/cartelera',
+      state: {
+        cartelera: { resultados: [DUNE], pagina: 2, totalPaginas: 3, expiresAt },
+      },
+    });
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeVisible();
+    expect(responder).not.toHaveBeenCalled();
+    expect(router.state.location.state.cartelera.expiresAt).toBe(expiresAt);
+  });
+
+  it('vence desde la primera página aunque se carguen más páginas antes de volver del detalle', async () => {
+    const ahora = Date.now();
+    const dateNow = vi.spyOn(Date, 'now').mockReturnValue(ahora);
+    const responder = vi.fn((url) => {
+      const pagina = Number(url.searchParams.get('pagina'));
+      return Promise.resolve(
+        respuestaHttp(respuestaCartelera(pagina === 1 ? [DUNE] : [PELICULA_SIN_FECHA], pagina, 2)),
+      );
+    });
+    configurarFetchCartelera(responder);
+    const router = renderRoute('/cartelera');
+
+    await waitFor(() =>
+      expect(router.state.location.state?.cartelera?.expiresAt).toBe(ahora + 60 * 60 * 1000),
+    );
+    dateNow.mockReturnValue(ahora + 30 * 60 * 1000);
+    fireEvent.click(screen.getByRole('button', { name: 'Cargar más' }));
+    await waitFor(() => expect(router.state.location.state?.cartelera?.pagina).toBe(2));
+    expect(router.state.location.state.cartelera.expiresAt).toBe(ahora + 60 * 60 * 1000);
+    fireEvent.click(screen.getByRole('link', { name: 'Ver detalle de Título no disponible' }));
+    await screen.findByRole('link', { name: 'Volver a la búsqueda' });
+
+    dateNow.mockReturnValue(ahora + 60 * 60 * 1000);
+    await act(async () => router.navigate(-1));
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Dune' })).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { level: 3, name: 'Título no disponible' }),
+    ).not.toBeInTheDocument();
+    expect(responder.mock.calls.map(([url]) => url.searchParams.get('pagina'))).toEqual([
+      '1',
+      '2',
+      '1',
+    ]);
+  });
+
   it('muestra carga accesible y luego fecha, atribución y enlace al detalle existente', async () => {
     let resolver;
     configurarFetchCartelera(

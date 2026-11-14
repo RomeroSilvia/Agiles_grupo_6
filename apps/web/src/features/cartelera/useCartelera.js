@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router';
 import { ApiError } from '../../services/api.service.js';
 import { listarPeliculasEnCartelera } from './cartelera.api.js';
 
+const HISTORY_CACHE_TTL_MS = 60 * 60 * 1000;
+
 function obtenerMensajeError(error) {
   return error instanceof ApiError
     ? error.message
@@ -20,7 +22,10 @@ function acumularPeliculas(actuales, nuevas) {
 export function useCartelera() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [estadoGuardado] = useState(() => location.state?.cartelera);
+  const [estadoGuardado] = useState(() => {
+    const estado = location.state?.cartelera;
+    return Number.isFinite(estado?.expiresAt) && estado.expiresAt > Date.now() ? estado : null;
+  });
   const [resultados, setResultados] = useState(estadoGuardado?.resultados ?? []);
   const [pagina, setPagina] = useState(estadoGuardado?.pagina ?? 0);
   const [totalPaginas, setTotalPaginas] = useState(estadoGuardado?.totalPaginas ?? 0);
@@ -30,6 +35,7 @@ export function useCartelera() {
   const [error, setError] = useState('');
   const abortControllerRef = useRef(null);
   const ultimaPaginaSolicitadaRef = useRef(estadoGuardado?.pagina ?? 1);
+  const expiresAtRef = useRef(estadoGuardado?.expiresAt ?? null);
 
   const solicitarPagina = useCallback((paginaSolicitada) => {
     abortControllerRef.current?.abort();
@@ -55,6 +61,9 @@ export function useCartelera() {
       if (requestError) {
         setError(obtenerMensajeError(requestError));
       } else {
+        if (!acumular) {
+          expiresAtRef.current = Date.now() + HISTORY_CACHE_TTL_MS;
+        }
         setResultados((actuales) =>
           acumular ? acumularPeliculas(actuales, data.resultados) : data.resultados,
         );
@@ -115,7 +124,10 @@ export function useCartelera() {
       {
         replace: true,
         preventScrollReset: true,
-        state: { ...location.state, cartelera: { resultados, pagina, totalPaginas } },
+        state: {
+          ...location.state,
+          cartelera: { resultados, pagina, totalPaginas, expiresAt: expiresAtRef.current },
+        },
       },
     );
   }, [

@@ -51,6 +51,7 @@ describe('perfil.repository', () => {
     });
 
     await expect(perfilRepository.actualizarRegion(USUARIO.id, 'UY')).resolves.toBe('UY');
+    expect(builder.select).toHaveBeenCalledWith('region, rol');
     expect(builder.update).toHaveBeenCalledWith({ region: 'UY' });
     expect(builder.eq).toHaveBeenCalledWith('id', USUARIO.id);
     expect(builder.or).toHaveBeenCalledWith('region.is.null,region.neq.UY');

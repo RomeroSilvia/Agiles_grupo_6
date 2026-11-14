@@ -12,7 +12,10 @@ import { IconButton } from '../components/ui/IconButton.jsx';
 import { BookmarkIcon, MenuIcon, XIcon } from '../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../components/ui/focusRing.js';
 import { MenuUsuario } from './MenuUsuario.jsx';
-import { ENLACE_PANEL_ADMIN } from '../features/administracion/administracion.constants.js';
+import {
+  ENLACE_PANEL_ADMIN,
+  ETIQUETA_ROL_ADMIN,
+} from '../features/administracion/administracion.constants.js';
 import { RUTAS } from './rutas.js';
 
 const ENLACES = [
@@ -53,7 +56,7 @@ function AccionesDeSesion() {
         <MenuUsuario />
         {user.esAdmin && (
           <span className="hidden sm:inline-flex">
-            <Chip className="uppercase">Admin</Chip>
+            <Chip className="uppercase">{ETIQUETA_ROL_ADMIN}</Chip>
           </span>
         )}
       </div>

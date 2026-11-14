@@ -302,7 +302,7 @@ describe('detalle y disponibilidad de TMDB', () => {
               iso_3166_1: 'AR',
               release_dates: [
                 { release_date: '2026-06-08', type: 1 },
-                { release_date: '2026-06-09', type: 2 },
+                { release_date: '2026-06-09T00:00:00.000Z', type: 2 },
                 { release_date: '2026-06-10', type: 3 },
                 { release_date: '2026-06-11', type: 4 },
               ],

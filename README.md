@@ -63,6 +63,7 @@ supabase/
 | Ruta                      | Sesión | Descripción                                                                                          |
 | ------------------------- | :----: | ---------------------------------------------------------------------------------------------------- |
 | `/`                       |        | Búsqueda de películas y series                                                                       |
+| `/cartelera`              |        | Películas que TMDB clasifica actualmente en cartelera argentina                                      |
 | `/titulos/:tipo/:tmdbId`  |        | Detalle de un título con su disponibilidad en la región y, con sesión, la comparación entre regiones |
 | `/watchlist`              |   sí   | Títulos guardados por el usuario                                                                     |
 | `/mis-plataformas`        |   sí   | Elegir las plataformas contratadas                                                                   |
@@ -74,17 +75,33 @@ supabase/
 | `/restablecer-contrasena` |        | Elegir una contraseña nueva desde el enlace del mail                                                 |
 | `/confirmar-mail`         |        | Confirmar el cambio de mail desde el enlace del mail                                                 |
 
-La nav del header lleva a «Mi watchlist», «Mis plataformas» y «Perfil». Sin sesión, `/watchlist`
-invita a iniciar sesión. Con sesión, el avatar abre un menú con «Perfil» y «Cerrar sesión». En el
-perfil, las plataformas se editan con el mismo listado que en `/mis-plataformas`, y las acciones de
-cuenta llevan a cada sección de `/perfil/cuenta`. Los enlaces que llegan por mail vencen a los 30
-minutos. Eliminar la cuenta borra al usuario y todos sus datos.
+La nav del header ofrece la cartelera a cualquier visitante y, con sesión, también lleva a «Mi
+watchlist», «Mis plataformas» y «Perfil». Sin sesión, `/watchlist` invita a iniciar sesión. Con
+sesión, el avatar abre un menú con «Perfil» y «Cerrar sesión». En el perfil, las plataformas se
+editan con el mismo listado que en `/mis-plataformas`, y las acciones de cuenta llevan a cada
+sección de `/perfil/cuenta`. Los enlaces que llegan por mail vencen a los 30 minutos. Eliminar la
+cuenta borra al usuario y todos sus datos.
 
 ## Endpoints
 
 Todas las rutas empiezan con `/api`. Las respuestas exitosas tienen la forma `{ "data": ... }` y los errores `{ "error": { "code", "message" } }`.
 
 La pantalla de detalle también muestra la disponibilidad de TMDB/JustWatch para la región del usuario.
+`GET /api/cartelera?pagina=1` devuelve el catálogo público de películas que TMDB clasifica como
+`now_playing` en Argentina. La consulta admite solo `pagina` (entero de 1 a 500) y usa `AR`,
+independientemente de la región del perfil. Esta clasificación no confirma salas ni horarios. La
+cartelera se cachea una hora; las fechas regionales y el año original consultados por película se
+cachean 24 horas. El año se obtiene del detalle sin región para distinguir la obra de su estreno
+argentino o reestreno. Al volver del detalle, el historial restaura las páginas cargadas de la
+cartelera durante una hora desde la primera consulta, sin extender ese plazo al cargar más páginas.
+Si el estado venció o no tiene vencimiento, se vuelve a consultar desde la primera página, también
+al recargar la pantalla. La integración limita la concurrencia a ocho solicitudes y no reintenta errores
+ni respuestas `429`; el endpoint tiene un límite local de 30 solicitudes por IP por minuto.
+TMDB puede modificar sus límites y no garantiza una frecuencia de actualización. Las fechas se
+informan solo cuando TMDB publica para Argentina un estreno en salas limitado o general (tipos 2/3).
+La aplicación mantiene la atribución requerida a TMDB y no presenta este catálogo como confirmación
+de funciones.
+
 La API expone `GET /api/region`, que consulta la IP desde el backend y devuelve
 `{ data: { region, source } }`. Con sesión también se usa la región de la IP, y si cambió se
 guarda en `perfil.region`, que es la que usan los avisos de la watchlist. El servicio de país usado
@@ -133,6 +150,7 @@ aviso por mail (ver [apps/api/README.md](apps/api/README.md)).
 | GET    | `/busqueda/personas`                                |        | Busca actores o directores. Query: `q` (mínimo 2 letras), `rol`            |
 | GET    | `/busqueda/personas/:id`                            |        | Resuelve una persona por su ID. Query: `rol`                               |
 | GET    | `/busqueda/propias`                                 |   si   | Búsqueda de títulos disponibles en las plataformas del usuario             |
+| GET    | `/cartelera`                                        |        | Películas en cartelera según TMDB en Argentina. Query: `pagina`            |
 | GET    | `/titulos/:tipo/:tmdbId`                            |        | Detalle de una película o serie (`tipo`: `pelicula` o `serie`)             |
 | GET    | `/titulos/:tipo/:tmdbId/disponibilidad`             |        | Plataformas activas por modalidad y enlace de TMDB para la región indicada |
 | GET    | `/titulos/:tipo/:tmdbId/disponibilidad/comparacion` |   si   | Disponibilidad en varias regiones. Query: `regiones` (separadas por coma)  |

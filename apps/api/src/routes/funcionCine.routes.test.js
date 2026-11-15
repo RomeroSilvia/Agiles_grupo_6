@@ -2,209 +2,66 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { CIUDAD_CINE_FIXTURE, crearRespuestaFuncionesFixture } from '@buscador/shared/testing';
 import { createApp } from '../app.js';
-import * as tmdb from '../integrations/tmdb.integration.js';
-import * as serpApi from '../integrations/serpApi.integration.js';
-import * as butaca from '../integrations/butaca.integration.js';
-import * as ciudades from '../services/ciudadCine.service.js';
+import * as funcionCineService from '../services/funcionCine.service.js';
+import { FUNCIONES_CINE_CONFIG } from '../config/funcionesCine.config.js';
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
-
-vi.mock('../integrations/tmdb.integration.js', () => ({ obtenerDetalle: vi.fn() }));
-vi.mock('../integrations/serpApi.integration.js', () => ({
-  obtenerFuncionesSerpApi: vi.fn(),
-  verificarCorrespondenciasSerpApi: vi.fn(),
-}));
-vi.mock('../integrations/butaca.integration.js', () => ({
-  obtenerFuncionesButaca: vi.fn(),
-  estaHabilitadoButaca: vi.fn(),
-}));
-vi.mock('../services/ciudadCine.service.js', () => ({
-  obtenerCiudadCine: vi.fn(),
-  listarCiudadesCine: vi.fn(),
-}));
+vi.mock('../services/funcionCine.service.js', () => ({ obtenerFuncionesPelicula: vi.fn() }));
+const ruta = '/api/cartelera/peliculas/77/funciones';
 let minuto = 0;
-const ruta = `/api/cartelera/peliculas/77/funciones?ciudadId=${CIUDAD_CINE_FIXTURE.id}`;
-const resultadoProveedor = () => {
-  const { cines, funciones, fuentes } = crearRespuestaFuncionesFixture();
-  return { cines, funciones, fuentes, advertencias: [], estadoFuente: 'disponible' };
-};
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(Date.parse('2026-11-14T12:00:00Z') + ++minuto * 60_000);
   vi.spyOn(console, 'error').mockImplementation(() => {});
-  ciudades.obtenerCiudadCine.mockReturnValue({
-    ...CIUDAD_CINE_FIXTURE,
-    serpApiLocation: 'Ciudad de prueba,Argentina',
-    butacaCines: [],
-  });
-  tmdb.obtenerDetalle.mockResolvedValue({ tmdbId: 77, nombre: 'Película de prueba' });
-  serpApi.obtenerFuncionesSerpApi.mockResolvedValue(resultadoProveedor());
-  serpApi.verificarCorrespondenciasSerpApi.mockReturnValue(true);
-  butaca.estaHabilitadoButaca.mockReturnValue(false);
+  funcionCineService.obtenerFuncionesPelicula.mockResolvedValue(crearRespuestaFuncionesFixture());
 });
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
-describe('consulta pública única de funciones', () => {
-  it('conserva las funciones parciales de Butaca sin consultar SerpApi cuando faltan mapeos utilizables', async () => {
-    ciudades.obtenerCiudadCine.mockReturnValue({
-      ...CIUDAD_CINE_FIXTURE,
-      serpApiLocation: 'Ciudad,Argentina',
-      butacaCines: [{ id: 1, slug: 'centro' }],
-    });
-    serpApi.verificarCorrespondenciasSerpApi.mockReturnValue(false);
-    butaca.estaHabilitadoButaca.mockReturnValue(true);
-    butaca.obtenerFuncionesButaca.mockResolvedValue({
-      ...resultadoProveedor(),
-      estadoFuente: 'incompleta',
-      advertencias: [
-        { code: 'INCOMPLETE_DATA', message: 'Una sucursal no respondió.', fuenteId: 'butaca' },
-      ],
-    });
-    const respuesta = await request(createApp()).get(ruta);
+describe('consulta pública de funciones', () => {
+  it('devuelve funciones sin sesión y utiliza solo parámetros validados', async () => {
+    const respuesta = await request(createApp())
+      .get(ruta)
+      .query({ ciudadId: CIUDAD_CINE_FIXTURE.id });
     expect(respuesta.status).toBe(200);
-    expect(respuesta.body.data.estado).toBe('incompleta');
     expect(respuesta.body.data.funciones).toHaveLength(3);
-    expect(serpApi.obtenerFuncionesSerpApi).not.toHaveBeenCalled();
-    expect(serpApi.verificarCorrespondenciasSerpApi).toHaveBeenCalledWith(
-      expect.objectContaining({
-        pelicula: { tmdbId: 77, nombre: 'Película de prueba' },
-        ciudad: expect.objectContaining({ id: CIUDAD_CINE_FIXTURE.id }),
-      }),
-    );
-  });
-  it('informa indisponibilidad sin consultar SerpApi si no hay mapeos ni otra fuente habilitada', async () => {
-    serpApi.verificarCorrespondenciasSerpApi.mockReturnValue(false);
-    const respuesta = await request(createApp()).get(ruta);
-    expect(respuesta.status).toBe(502);
-    expect(serpApi.obtenerFuncionesSerpApi).not.toHaveBeenCalled();
-    expect(butaca.obtenerFuncionesButaca).not.toHaveBeenCalled();
-  });
-  it('consulta una ubicación por verificar y conserva ese diagnóstico aunque la fuente responda', async () => {
-    ciudades.obtenerCiudadCine.mockReturnValueOnce({
-      ...CIUDAD_CINE_FIXTURE,
-      cobertura: 'sin_verificar',
-      serpApiLocation: 'Ciudad,Argentina',
-      butacaCines: [],
-    });
-    const respuesta = await request(createApp()).get(ruta);
-    expect(respuesta.status).toBe(200);
-    expect(serpApi.obtenerFuncionesSerpApi).toHaveBeenCalledOnce();
-    expect(respuesta.body.data.ciudad.cobertura).toBe('sin_verificar');
-    expect(respuesta.body.data.estado).toBe('incompleta');
-    expect(respuesta.body.data.advertencias).toContainEqual(
-      expect.objectContaining({ code: 'INCOMPLETE_DATA', fuenteId: null }),
-    );
-  });
-  it('descarta horarios vencidos de caché y declara el truncamiento sin ocultarlo', async () => {
-    const resultado = resultadoProveedor();
-    resultado.funciones = Array.from({ length: 1002 }, (_, indice) => ({
-      ...resultado.funciones[0],
-      id: `funcion:${indice.toString(16).padStart(64, '0')}`,
-    }));
-    resultado.funciones.push({
-      ...resultado.funciones[0],
-      id: `funcion:${'f'.repeat(64)}`,
-      fechaLocal: '2026-11-14',
-      horaLocal: '00:30',
-      inicio: '2026-11-14T00:30:00-03:00',
-    });
-    serpApi.obtenerFuncionesSerpApi.mockResolvedValueOnce(resultado);
-    const respuesta = await request(createApp()).get(ruta);
-    expect(respuesta.status).toBe(200);
-    expect(respuesta.body.data.funciones).toHaveLength(1000);
-    expect(respuesta.body.data.estado).toBe('incompleta');
-    expect(respuesta.body.data.advertencias).toContainEqual(
-      expect.objectContaining({ code: 'INCOMPLETE_DATA', fuenteId: null }),
-    );
-    expect(
-      respuesta.body.data.funciones.every((funcion) => funcion.fechaLocal === '2026-11-15'),
-    ).toBe(true);
-  });
-  it('devuelve F1 con horarios y procedencia sin autenticación', async () => {
-    const respuesta = await request(createApp()).get(ruta);
-    expect(respuesta.status).toBe(200);
-    expect(respuesta.body.data).toMatchObject({
+    expect(funcionCineService.obtenerFuncionesPelicula).toHaveBeenCalledWith({
       tmdbId: 77,
-      ciudad: CIUDAD_CINE_FIXTURE,
-      estado: 'disponible',
-      desde: '2026-11-14',
-      hasta: '2026-11-21',
-      consultadoEn: '2026-11-14T12:00:00.000Z',
+      ciudadId: CIUDAD_CINE_FIXTURE.id,
     });
-    expect(respuesta.body.data.funciones).toHaveLength(3);
   });
   it.each([
-    '',
-    '?ciudadId=AR',
-    `?ciudadId=${CIUDAD_CINE_FIXTURE.id}&fecha=2026-11-15`,
-    `?ciudadId[]=${CIUDAD_CINE_FIXTURE.id}`,
-    `?ciudadId=${CIUDAD_CINE_FIXTURE.id}&cineId=algo`,
-  ])('rechaza consulta inválida antes de red: %s', async (query) => {
-    const respuesta = await request(createApp()).get(
-      `/api/cartelera/peliculas/77/funciones${query}`,
-    );
-    expect(respuesta.status).toBe(400);
-    expect(serpApi.obtenerFuncionesSerpApi).not.toHaveBeenCalled();
+    {},
+    { ciudadId: 'AR' },
+    { ciudadId: CIUDAD_CINE_FIXTURE.id, fecha: '2026-11-15' },
+    { 'ciudadId[]': CIUDAD_CINE_FIXTURE.id },
+  ])('rechaza consultas inválidas: %j', async (query) => {
+    expect((await request(createApp()).get(ruta).query(query)).status).toBe(400);
+    expect(funcionCineService.obtenerFuncionesPelicula).not.toHaveBeenCalled();
   });
-  it('distingue ciudad desconocida y película inexistente como 404', async () => {
-    ciudades.obtenerCiudadCine.mockImplementationOnce(() => {
-      throw new NotFoundError('Ciudad no soportada');
-    });
-    expect((await request(createApp()).get(ruta)).status).toBe(404);
-    expect(tmdb.obtenerDetalle).not.toHaveBeenCalled();
-    tmdb.obtenerDetalle.mockRejectedValueOnce(new NotFoundError('Película inexistente'));
-    expect((await request(createApp()).get(ruta)).status).toBe(404);
+  it.each([
+    [new NotFoundError('Película inexistente'), 404],
+    [new ExternalServiceError('Cinemark'), 502],
+    [new Error('Configuración inválida'), 500],
+  ])('propaga el estado del error del servicio', async (error, status) => {
+    funcionCineService.obtenerFuncionesPelicula.mockRejectedValue(error);
+    expect(
+      (await request(createApp()).get(ruta).query({ ciudadId: CIUDAD_CINE_FIXTURE.id })).status,
+    ).toBe(status);
   });
-  it('distingue sin cobertura, vacío estructurado e incompletitud sin resultados', async () => {
-    ciudades.obtenerCiudadCine.mockReturnValueOnce({
-      ...CIUDAD_CINE_FIXTURE,
-      cobertura: 'sin_cobertura',
-      butacaCines: [],
-    });
-    expect((await request(createApp()).get(ruta)).body.data.estado).toBe('sin_cobertura');
-    expect(serpApi.obtenerFuncionesSerpApi).not.toHaveBeenCalled();
-    serpApi.obtenerFuncionesSerpApi.mockResolvedValueOnce({
-      ...resultadoProveedor(),
-      cines: [],
-      funciones: [],
-    });
-    expect((await request(createApp()).get(ruta)).body.data.estado).toBe('sin_funciones');
-    serpApi.obtenerFuncionesSerpApi.mockResolvedValueOnce({
-      ...resultadoProveedor(),
-      cines: [],
-      funciones: [],
-      estadoFuente: 'incompleta',
-    });
-    expect((await request(createApp()).get(ruta)).body.data.estado).toBe('incompleta');
-  });
-  it('conserva el complemento autorizado ante cuota agotada y no consulta fuentes deshabilitadas', async () => {
-    const cause = Object.assign(new Error('cuota'), { quota: true });
-    serpApi.obtenerFuncionesSerpApi.mockRejectedValue(new ExternalServiceError('SerpApi', cause));
-    expect((await request(createApp()).get(ruta)).status).toBe(502);
-    expect(butaca.obtenerFuncionesButaca).not.toHaveBeenCalled();
-    ciudades.obtenerCiudadCine.mockReturnValue({
-      ...CIUDAD_CINE_FIXTURE,
-      serpApiLocation: 'Ciudad,Argentina',
-      butacaCines: [{ id: 1, slug: 'centro' }],
-    });
-    butaca.estaHabilitadoButaca.mockReturnValue(true);
-    butaca.obtenerFuncionesButaca.mockResolvedValue(resultadoProveedor());
-    const respuesta = await request(createApp()).get(ruta);
-    expect(respuesta.status).toBe(200);
-    expect(respuesta.body.data.estado).toBe('incompleta');
-    expect(respuesta.body.data.advertencias).toContainEqual(
-      expect.objectContaining({ code: 'QUOTA_EXHAUSTED' }),
-    );
-  });
-  it('responde 502 si todas las fuentes fallan y 429 al superar cinco consultas por minuto', async () => {
-    serpApi.obtenerFuncionesSerpApi.mockRejectedValue(new ExternalServiceError('SerpApi'));
+  it('responde 429 sin consultar el servicio al superar el límite', async () => {
     const app = createApp();
-    for (let indice = 0; indice < 5; indice += 1)
-      expect((await request(app).get(ruta)).status).toBe(502);
-    const limitada = await request(app).get(ruta);
-    expect(limitada.status).toBe(429);
-    expect(limitada.body.error.code).toBe('RATE_LIMITED');
+    for (let i = 0; i < FUNCIONES_CINE_CONFIG.RATE_LIMIT.maxRequests; i += 1) {
+      expect(
+        (await request(app).get(ruta).query({ ciudadId: CIUDAD_CINE_FIXTURE.id })).status,
+      ).toBe(200);
+    }
+    const respuesta = await request(app).get(ruta).query({ ciudadId: CIUDAD_CINE_FIXTURE.id });
+    expect(respuesta.status).toBe(429);
+    expect(respuesta.body.error.code).toBe('RATE_LIMITED');
+    expect(funcionCineService.obtenerFuncionesPelicula).toHaveBeenCalledTimes(
+      FUNCIONES_CINE_CONFIG.RATE_LIMIT.maxRequests,
+    );
   });
 });

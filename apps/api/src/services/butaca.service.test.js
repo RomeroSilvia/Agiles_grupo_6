@@ -52,6 +52,16 @@ const parametros = {
   desde: '2026-11-14',
   hasta: '2026-11-21',
 };
+async function obtenerFuncionesButaca(params) {
+  const { obtenerObservacionesButaca } = await import('./butaca.service.js');
+  const { normalizarObservacionesCine } = await import('./funcionCine.normalizer.js');
+  const { LUGARES_CINE } = await import('../config/funcionesCine.config.js');
+  return normalizarObservacionesCine({
+    ...(await obtenerObservacionesButaca(params)),
+    lugares: LUGARES_CINE,
+  });
+}
+
 describe('complemento Butaca / Cinemark', () => {
   function simularCartelera({
     direccion = 'Calle 123',
@@ -123,7 +133,6 @@ describe('complemento Butaca / Cinemark', () => {
       fallo: (url) =>
         url.pathname.endsWith(`/${endpoint}`) && url.searchParams.get('theater') === id,
     });
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     const resultado = await obtenerFuncionesButaca(consultaSucursales);
     expect(resultado.funciones).toHaveLength(2);
     expect(resultado.funciones.map((funcion) => funcion.fuentes[0].registroId).sort()).toEqual(
@@ -143,7 +152,6 @@ describe('complemento Butaca / Cinemark', () => {
         sucursales,
         fallo: (url) => url.pathname.endsWith(`/${endpoint}`),
       });
-      const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
       await expect(obtenerFuncionesButaca(consultaSucursales)).rejects.toMatchObject({
         code: 'EXTERNAL_SERVICE',
       });
@@ -165,7 +173,6 @@ describe('complemento Butaca / Cinemark', () => {
         ? Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
         : consultar(url),
     );
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     const resultado = await obtenerFuncionesButaca(consultaSucursales);
     expect(resultado.funciones).toEqual([]);
     expect(resultado.estadoFuente).toBe('incompleta');
@@ -174,7 +181,6 @@ describe('complemento Butaca / Cinemark', () => {
     config.habilitado = true;
     config.verificado = true;
     const fetchMock = simularCartelera();
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     const consulta = {
       ...parametros,
       pelicula: {
@@ -206,7 +212,6 @@ describe('complemento Butaca / Cinemark', () => {
             : consultar(url),
         );
       }
-      const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
       const resultado = await obtenerFuncionesButaca({
         ...parametros,
         pelicula: {
@@ -235,7 +240,6 @@ describe('complemento Butaca / Cinemark', () => {
           })
         : consultar(url),
     );
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     const resultado = await obtenerFuncionesButaca(parametros);
     expect(resultado.funciones).toEqual([]);
     expect(resultado.estadoFuente).toBe('incompleta');
@@ -260,7 +264,6 @@ describe('complemento Butaca / Cinemark', () => {
         }),
       };
     });
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     const resultado = await obtenerFuncionesButaca(consultaSucursales);
     expect(resultado.funciones).toHaveLength(sucursales.length);
     expect(resultado.estadoFuente).toBe('disponible');
@@ -271,7 +274,6 @@ describe('complemento Butaca / Cinemark', () => {
     config.habilitado = true;
     config.verificado = true;
     const fetchMock = simularCartelera({ direccion: 'Otra sucursal 999' });
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     const resultado = await obtenerFuncionesButaca(parametros);
     expect(resultado.funciones).toEqual([]);
     expect(resultado.estadoFuente).toBe('incompleta');
@@ -281,7 +283,6 @@ describe('complemento Butaca / Cinemark', () => {
     config.habilitado = true;
     config.verificado = true;
     const fetchMock = simularCartelera({ duracion: 90 });
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     const resultado = await obtenerFuncionesButaca({
       ...parametros,
       pelicula: {
@@ -296,7 +297,6 @@ describe('complemento Butaca / Cinemark', () => {
   it('no consulta una fuente deshabilitada ni habilitada sin verificación', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     await expect(obtenerFuncionesButaca(parametros)).rejects.toMatchObject({
       code: 'EXTERNAL_SERVICE',
     });
@@ -341,7 +341,6 @@ describe('complemento Butaca / Cinemark', () => {
       }),
     }));
     vi.stubGlobal('fetch', fetchMock);
-    const { obtenerFuncionesButaca } = await import('./butaca.integration.js');
     const respuesta = await obtenerFuncionesButaca(parametros);
     expect(respuesta.funciones[0]).toMatchObject({
       horaLocal: '00:30',
@@ -361,7 +360,7 @@ describe('complemento Butaca / Cinemark', () => {
     config.habilitado = true;
     config.verificado = true;
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }));
-    const { listarCinesButaca } = await import('./butaca.integration.js');
+    const { listarCinesButaca } = await import('../integrations/butaca.integration.js');
     await expect(listarCinesButaca()).rejects.toMatchObject({ code: 'EXTERNAL_SERVICE' });
   });
 });

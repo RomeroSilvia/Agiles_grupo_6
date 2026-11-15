@@ -9,7 +9,7 @@ import {
 import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 import {
   crearRespuestaDetallePeliculaSchema,
-  respuestaFechasEstrenoSchema,
+  respuestaIdsCarteleraSchema,
   respuestaTmdbCarteleraSchema,
   respuestaVentanaEstrenosSchema,
 } from '../models/cartelera.model.js';
@@ -75,10 +75,6 @@ const cartelerasCache = createTtlCache({
   maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
 });
 const fechasEstrenoCache = createTtlCache({
-  ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
-  maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
-});
-const aniosOriginalesCache = createTtlCache({
   ttlMs: TMDB_CONFIG.CACHE_TTL_MS,
   maxEntries: TMDB_CONFIG.CACHE_MAX_ENTRIES,
 });
@@ -203,13 +199,7 @@ export function descubrirTitulos({ tipo, anio, generoIds, pagina }) {
 }
 
 function obtenerAnioOriginalPelicula(tmdbId) {
-  return aniosOriginalesCache.getOrSet(String(tmdbId), async () => {
-    const detalle = validateExternalResponse(
-      crearRespuestaDetallePeliculaSchema(tmdbId),
-      await tmdbRequest(`/movie/${tmdbId}`),
-    );
-    return obtenerAnio(detalle.release_date);
-  });
+  return obtenerFechasEstrenoArgentina({ tmdbId }).then(({ anio }) => anio);
 }
 
 export function listarPeliculasEnCartelera({ pagina }) {
@@ -251,16 +241,26 @@ export function obtenerFechaEstrenoArgentina({ tmdbId }) {
 
 export function obtenerFechasEstrenoArgentina({ tmdbId }) {
   return fechasEstrenoCache.getOrSet(String(tmdbId), async () => {
-    const respuesta = validateExternalResponse(
-      respuestaFechasEstrenoSchema,
-      await tmdbRequest(`/movie/${tmdbId}/release_dates`),
-    );
+    let detalle;
+    try {
+      detalle = validateExternalResponse(
+        crearRespuestaDetallePeliculaSchema(tmdbId),
+        await tmdbRequest(`/movie/${tmdbId}`, { append_to_response: 'release_dates' }),
+      );
+    } catch (error) {
+      if (error instanceof ExternalServiceError && error.cause?.status === 404) {
+        return { anio: null, fechas: [], consultadoEn: new Date().toISOString() };
+      }
+      throw error;
+    }
+    const respuesta = detalle.release_dates;
     const fechasArgentina = respuesta.results
       .filter(({ iso_3166_1 }) => iso_3166_1 === REGION_CARTELERA)
       .flatMap(({ release_dates }) => release_dates)
       .filter(({ type }) => TIPOS_ESTRENO_SALA_TMDB.includes(type));
 
     return {
+      anio: obtenerAnio(detalle.release_date),
       fechas: [...new Set(fechasArgentina.map(({ release_date }) => release_date))].sort(),
       consultadoEn: new Date().toISOString(),
     };
@@ -277,7 +277,7 @@ export async function listarCandidatosEstrenos({ origen, desde, hasta, pagina })
       ...(origen === 'upcoming'
         ? {}
         : {
-            with_release_type: '2|3',
+            with_release_type: TIPOS_ESTRENO_SALA_TMDB.join('|'),
             include_adult: false,
             include_video: false,
             'release_date.gte': desde,
@@ -294,7 +294,10 @@ export async function listarCandidatosEstrenos({ origen, desde, hasta, pagina })
     totalPaginas: respuesta?.total_pages,
     consultadoEn: new Date().toISOString(),
   });
-  const esperados = Math.min(20, Math.max(0, datos.totalResultados - (pagina - 1) * 20));
+  const esperados = Math.min(
+    TMDB_CONFIG.RESULTADOS_POR_PAGINA,
+    Math.max(0, datos.totalResultados - (pagina - 1) * TMDB_CONFIG.RESULTADOS_POR_PAGINA),
+  );
   if (datos.pagina !== pagina || datos.resultados.length !== esperados) {
     throw new ExternalServiceError(
       'TMDB',
@@ -305,10 +308,6 @@ export async function listarCandidatosEstrenos({ origen, desde, hasta, pagina })
     validateExternalResponse(respuestaVentanaEstrenosSchema, respuesta?.dates);
   }
   return datos;
-}
-
-export function obtenerAnioEstrenoOriginal(tmdbId) {
-  return obtenerAnioOriginalPelicula(tmdbId);
 }
 
 export function obtenerCreditosPersona({ personaId, tipo }) {
@@ -414,7 +413,7 @@ export async function obtenerDetalle(tipo, tmdbId, { incluirIdentidadCine = fals
         datos.title,
         datos.original_title,
         ...(datos.alternative_titles?.titles ?? [])
-          .filter((item) => item.iso_3166_1 === 'AR')
+          .filter((item) => item.iso_3166_1 === REGION_CARTELERA)
           .map((item) => item.title),
       ].filter(Boolean),
       anio: obtenerAnio(datos.release_date),
@@ -472,4 +471,32 @@ async function consultarOfertas(tipo, tmdbId) {
 
 export function obtenerOfertas({ tipo, tmdbId }) {
   return ofertasCache.getOrSet(`${tipo}:${tmdbId}`, () => consultarOfertas(tipo, tmdbId));
+}
+
+export function listarIdsPeliculasEnCartelera() {
+  return cartelerasCache.getOrSet(`ids:${REGION_CARTELERA}`, async () => {
+    const ids = new Set();
+    let totalPaginas = 1;
+    for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
+      const respuesta = validateExternalResponse(
+        respuestaIdsCarteleraSchema,
+        await tmdbRequest('/movie/now_playing', { region: REGION_CARTELERA, page: pagina }),
+      );
+      if (
+        respuesta.page !== pagina ||
+        (respuesta.total_pages > pagina && !respuesta.results.length)
+      ) {
+        throw new ExternalServiceError('TMDB', new Error('Cartelera incompleta'));
+      }
+      if (respuesta.total_pages > CARTELERA_CONFIG.MAX_PAGINAS_INDICE) {
+        throw new ExternalServiceError(
+          'TMDB',
+          new Error('La cartelera supera el presupuesto de consulta'),
+        );
+      }
+      totalPaginas = respuesta.total_pages;
+      for (const pelicula of respuesta.results) ids.add(pelicula.id);
+    }
+    return [...ids];
+  });
 }

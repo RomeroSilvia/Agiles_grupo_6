@@ -58,17 +58,21 @@ describe('TMDB para próximos estrenos', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        results: [
-          { iso_3166_1: 'US', release_dates: [{ type: 3, release_date: '2027-01-01' }] },
-          {
-            iso_3166_1: 'AR',
-            release_dates: [
-              { type: 4, release_date: '2027-01-02' },
-              { type: 3, release_date: '2027-02-02' },
-              { type: 2, release_date: '2027-01-08' },
-            ],
-          },
-        ],
+        id: 8976,
+        release_date: '1999-01-01',
+        release_dates: {
+          results: [
+            { iso_3166_1: 'US', release_dates: [{ type: 3, release_date: '2027-01-01' }] },
+            {
+              iso_3166_1: 'AR',
+              release_dates: [
+                { type: 4, release_date: '2027-01-02' },
+                { type: 3, release_date: '2027-02-02' },
+                { type: 2, release_date: '2027-01-08' },
+              ],
+            },
+          ],
+        },
       }),
     });
     vi.stubGlobal('fetch', fetchMock);

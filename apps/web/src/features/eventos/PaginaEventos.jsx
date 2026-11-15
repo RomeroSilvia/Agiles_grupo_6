@@ -11,7 +11,7 @@ import { ListaEventos } from './ListaEventos.jsx';
 export function PaginaEventos() {
   const [params, setParams] = useSearchParams();
   const resultado = consultaEventosSchema.safeParse({
-    categoria: params.get('categoria') ?? 'all',
+    categoria: params.get('categoria') ?? 'todas',
     fecha: params.get('fecha') ?? 'todas',
   });
   const { categoria, fecha } = resultado.success ? resultado.data : consultaEventosSchema.parse({});
@@ -88,7 +88,7 @@ export function PaginaEventos() {
             ))}
           </Select>
         </div>
-        {(categoria !== 'all' || fecha !== 'todas') && (
+        {(categoria !== 'todas' || fecha !== 'todas') && (
           <Button variant="outline" fullWidth={false} onClick={() => setParams({})}>
             Ver todos
           </Button>

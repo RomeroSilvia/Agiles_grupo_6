@@ -25,13 +25,15 @@ de AllEvents ni se envía la clave a otro proveedor.
 
 `GET /api/eventos` acepta `categoria`, `fecha` y `pagina`, validados con Zod
 compartido. La ciudad está fijada en el backend. Las categorías admitidas se
-declaran en `eventos.constants.js`; los períodos son `todas`, `hoy`, `manana` y
+declaran en `eventos.constants.js` con IDs propios en español (`todas`,
+`musica`, `teatro`, `gastronomia`, entre otras); la integración las traduce
+al proveedor. Los períodos son `todas`, `hoy`, `manana` y
 `fin_de_semana`. No se combinan categorías específicas con períodos específicos,
 siguiendo las restricciones de la fuente. Parámetros desconocidos se rechazan.
 
 La respuesta `{ data }` incluye los eventos normalizados, la página siguiente,
 la fuente y su fecha de adquisición. Se sigue `next_page`, sin deducir totales
-desde `count`. Hay hasta 20 páginas consultables; alcanzar ese límite conserva
+desde `count`. Hay hasta 5 páginas consultables; alcanzar ese límite conserva
 resultados y avisa que la lista puede estar incompleta. Los IDs repetidos se
 unifican. Una respuesta inválida de proveedor es un 502; publicaciones inválidas
 individuales se descartan con un aviso de incompletitud.
@@ -39,10 +41,14 @@ individuales se descartan con un aviso de incompletitud.
 Las lecturas tienen caché de una hora por categoría/período/página, promesas
 compartidas, 100 entradas y dos solicitudes externas concurrentes. Se admiten
 diez solicitudes por minuto y cliente, y hasta 200 lecturas externas por día UTC
-y proceso, sin reintentos ni precarga automáticos. Reiniciar o usar varias
+y proceso, reservando las últimas 50 lecturas para primeras páginas. Las páginas
+posteriores no consumen esa reserva. Sin reintentos ni precarga automáticos. Reiniciar o usar varias
 instancias reinicia/multiplica ese presupuesto: no es una cuota distribuida.
 La caché propia de API.SH puede conservar información anterior; no se fuerza
 `fresh=1`. No se agregan cron, dependencias, tablas ni escrituras en Supabase.
+
+`fromAllEvents()`, en el model, convierte los campos externos a objetos de dominio.
+El servicio aplica filtros de negocio y deduplicación.
 
 Se excluyen publicaciones identificadas como virtuales, canceladas, de otras
 localidades/países y aquellas cuya fecha final informada ya pasó en La Plata.

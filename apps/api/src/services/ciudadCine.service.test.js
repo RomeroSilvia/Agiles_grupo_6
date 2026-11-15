@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ciudadCineIdSchema } from '@buscador/shared/schemas';
 import { DIRECTORIO_CIUDADES_CINE } from '../config/ciudadesCine.config.js';
-import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
+import { NotFoundError, ValidationError } from '../errors/index.js';
 import { listarCiudadesCine, obtenerCiudadCine } from './ciudadCine.service.js';
 
 vi.mock('../config/ciudadesCine.config.js', () => ({
@@ -25,15 +25,13 @@ function crearCiudad({ id, nombre, provincia, cobertura = 'disponible' }) {
     zonaHoraria: 'America/Argentina/Buenos_Aires',
     cobertura,
     fuente: {
-      fuenteId: 'serpapi',
+      fuenteId: 'butaca',
       registroId: 'registro-1',
       url: null,
       consultadoEn: evidencia.consultadoEn,
       actualizadoEn: null,
     },
-    serpApiLocation: cobertura !== 'sin_cobertura' ? `${nombre},Argentina` : null,
-    butacaCines: [],
-    evidenciaPorFuente: { serpApi: evidencia, butaca: null },
+    butacaCines: cobertura !== 'sin_cobertura' ? [{ id: 1, slug: 'centro' }] : [],
   };
 }
 
@@ -116,7 +114,7 @@ describe('servicio de ciudades de cine', () => {
 
   it('rechaza ciudades duplicadas para una misma provincia', () => {
     DIRECTORIO_CIUDADES_CINE.ciudades = [cordoba, { ...cordoba, id: santaFe.id }];
-    expect(() => listarCiudadesCine()).toThrow(ExternalServiceError);
+    expect(() => listarCiudadesCine()).toThrow('El directorio contiene ciudades duplicadas');
   });
 
   it('responde una lista vacía si el directorio está configurado sin ciudades verificadas', () => {

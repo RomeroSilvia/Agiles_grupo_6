@@ -42,16 +42,16 @@ describe('Cooltura en La Plata', () => {
     renderPagina();
     await screen.findByRole('heading', { name: EVENTO_FIXTURE.nombre });
     fireEvent.change(screen.getByRole('combobox', { name: 'Qué te gusta' }), {
-      target: { value: 'theatre' },
+      target: { value: 'teatro' },
     });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock.mock.calls[1][0].searchParams.get('categoria')).toBe('theatre');
+    expect(fetchMock.mock.calls[1][0].searchParams.get('categoria')).toBe('teatro');
     fireEvent.change(screen.getByRole('combobox', { name: 'Cuándo salimos' }), {
       target: { value: 'fin_de_semana' },
     });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(fetchMock.mock.calls[2][0].searchParams.get('fecha')).toBe('fin_de_semana');
-    expect(screen.getByRole('combobox', { name: 'Qué te gusta' })).toHaveValue('all');
+    expect(screen.getByRole('combobox', { name: 'Qué te gusta' })).toHaveValue('todas');
   });
   it('acumula páginas sin repetir eventos', async () => {
     const otro = { ...EVENTO_FIXTURE, id: 'evento-2', nombre: 'Festival del barrio' };
@@ -107,7 +107,7 @@ describe('Cooltura en La Plata', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
     fireEvent.change(screen.getByRole('combobox', { name: 'Qué te gusta' }), {
-      target: { value: 'music' },
+      target: { value: 'musica' },
     });
     expect(await screen.findByRole('heading', { name: 'Música en la plaza' })).toBeInTheDocument();
     await act(async () => {

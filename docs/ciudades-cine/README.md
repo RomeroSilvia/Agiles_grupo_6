@@ -4,14 +4,18 @@ El endpoint público `GET /api/cartelera/ciudades` publica ciudades argentinas c
 
 ## Estado actual
 
-El directorio se mantiene en `apps/api/src/config/ciudadesCine.config.js` y contiene La Plata, CABA, Córdoba y Mar del Plata. CABA y Córdoba tienen cobertura Cinemark verificada con ocho sucursales en total; La Plata y Mar del Plata permiten consultar SerpApi con cobertura `sin_verificar`. Ver [estado y evidencia](../cine.md). Una configuración deshabilitada o inválida devuelve `502 EXTERNAL_SERVICE`; una lista vacía `200` solo corresponde cuando fue revisada y no tiene ciudades publicables.
+El directorio publica 17 localidades con cobertura Cinemark comprobada (24
+complejos). La Plata y Mar del Plata conservan sus IDs internos sin cobertura.
+Ver [estado y evidencia](../cine.md). Una configuración propia inválida responde
+`500 INTERNAL`; una lista vacía 200 corresponde a un directorio válido sin
+ciudades publicables.
 
 ## Requisitos para publicar una ciudad
 
 - Asignar una vez un ID opaco `ar:<UUID>`; no derivarlo del nombre ni cambiarlo al renombrar la ciudad.
 - Verificar municipio y provincia para desambiguar nombres homónimos, una zona horaria IANA y el alcance geográfico que usará cada proveedor.
-- Registrar por separado la ubicación canónica de SerpApi y los pares `{ id, slug }` de complejos de Butaca que correspondan a esa ciudad. No usar slugs de barrios o complejos como IDs de ciudad.
-- Guardar evidencia y fecha de consulta por fuente. La referencia pública `fuente` debe coincidir con esa evidencia.
+- Registrar los pares `{ id, slug }` de complejos de Butaca que correspondan a esa ciudad. No usar slugs de barrios o complejos como IDs de ciudad.
+- Guardar la evidencia descriptiva en docs y su referencia de procedencia en el directorio, sin duplicarla por ciudad.
 - Marcar `disponible` solo cuando haya evidencia de horarios y un mapeo de proveedor. `sin_verificar` permite consultar una ubicación geográfica revisada sin prometer horarios. Usar `sin_cobertura` para una ciudad conocida cuya cobertura no pueda ofrecerse; no implica que no haya funciones.
 - Mantener en backend los identificadores y mapeos de proveedores. El contrato público solo entrega el ID propio, el nombre, la provincia, la zona horaria, la cobertura y la referencia de procedencia.
 

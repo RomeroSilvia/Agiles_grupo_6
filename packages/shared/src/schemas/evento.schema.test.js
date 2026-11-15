@@ -4,18 +4,19 @@ import { consultaEventosSchema, enlaceEventoSchema, imagenEventoSchema } from '.
 describe('contratos de eventos', () => {
   it('ofrece próximos eventos y valida una consulta por fecha o categoría', () => {
     expect(consultaEventosSchema.parse({})).toEqual({
-      categoria: 'all',
+      categoria: 'todas',
       fecha: 'todas',
       pagina: 1,
     });
-    expect(consultaEventosSchema.parse({ categoria: 'theatre', pagina: '2' }).pagina).toBe(2);
+    expect(consultaEventosSchema.parse({ categoria: 'teatro', pagina: '2' }).pagina).toBe(2);
     expect(consultaEventosSchema.safeParse({ fecha: 'fin_de_semana' }).success).toBe(true);
   });
   it.each([
     { ciudad: 'Rosario' },
     { categoria: 'inexistente' },
-    { pagina: 21 },
-    { categoria: 'music', fecha: 'hoy' },
+    { pagina: 6 },
+    { categoria: 'music' },
+    { categoria: 'musica', fecha: 'hoy' },
   ])('rechaza parámetros fuera del alcance: %j', (params) => {
     expect(consultaEventosSchema.safeParse(params).success).toBe(false);
   });

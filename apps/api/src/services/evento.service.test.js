@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as allEventsIntegration from '../integrations/allEvents.integration.js';
 import { listarEventos } from './evento.service.js';
-import { respuestaAllEventsSchema } from '../models/evento.model.js';
+import { respuestaAllEventsSchema, fromAllEvents } from '../models/evento.model.js';
 
 vi.mock('../integrations/allEvents.integration.js', () => ({ listarEventosAllEvents: vi.fn() }));
 const evento = {
@@ -13,11 +13,11 @@ const evento = {
   venue: { name: 'Teatro de prueba' },
   price: 'Free',
 };
-const params = { categoria: 'all', fecha: 'todas', pagina: 1 };
+const params = { categoria: 'todas', fecha: 'todas', pagina: 1 };
 function simularEventos(events, next_page = null) {
   allEventsIntegration.listarEventosAllEvents.mockResolvedValue({
-    events,
-    next_page,
+    eventos: events.map(fromAllEvents),
+    siguientePagina: next_page,
     incompleta: false,
     consultadoEn: '2026-11-14T12:00:00Z',
   });
@@ -78,6 +78,6 @@ describe('eventos presenciales de La Plata', () => {
         next_page: null,
         events: [evento, { id: '2' }],
       }),
-    ).toMatchObject({ events: [evento], incompleta: true });
+    ).toMatchObject({ eventos: [fromAllEvents(evento)], incompleta: true });
   });
 });

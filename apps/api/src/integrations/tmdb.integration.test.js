@@ -306,7 +306,9 @@ describe('detalle y disponibilidad de TMDB', () => {
             total_pages: 1,
           }),
         )
-        .mockResolvedValueOnce(respuestaFetch({ id: 21, release_date: '2021-09-15' }));
+        .mockResolvedValueOnce(
+          respuestaFetch({ id: 21, release_date: '2021-09-15', release_dates: { results: [] } }),
+        );
       vi.stubGlobal('fetch', fetchMock);
 
       const primera = await listarPeliculasEnCartelera({ pagina: 1 });
@@ -349,7 +351,7 @@ describe('detalle y disponibilidad de TMDB', () => {
                 total_results: 2,
                 total_pages: 2,
               }
-            : { id: 914, release_date: '2021-09-15' },
+            : { id: 914, release_date: '2021-09-15', release_dates: { results: [] } },
         ),
       );
       vi.stubGlobal('fetch', fetchMock);
@@ -381,7 +383,13 @@ describe('detalle y disponibilidad de TMDB', () => {
                 total_pages: 1,
               }),
             )
-            .mockResolvedValueOnce(respuestaFetch({ id: tmdbId, release_date: releaseDate })),
+            .mockResolvedValueOnce(
+              respuestaFetch({
+                id: tmdbId,
+                release_date: releaseDate,
+                release_dates: { results: [] },
+              }),
+            ),
         );
 
         const respuesta = await listarPeliculasEnCartelera({ pagina });
@@ -402,7 +410,9 @@ describe('detalle y disponibilidad de TMDB', () => {
         .mockResolvedValueOnce(respuestaFetch(cartelera))
         .mockResolvedValueOnce({ ok: false, status: 503 })
         .mockResolvedValueOnce(respuestaFetch(cartelera))
-        .mockResolvedValueOnce(respuestaFetch({ id: 913, release_date: '2021-09-15' }));
+        .mockResolvedValueOnce(
+          respuestaFetch({ id: 913, release_date: '2021-09-15', release_dates: { results: [] } }),
+        );
       vi.stubGlobal('fetch', fetchMock);
 
       await expect(listarPeliculasEnCartelera({ pagina: 9 })).rejects.toMatchObject({
@@ -454,21 +464,25 @@ describe('detalle y disponibilidad de TMDB', () => {
     it('selecciona la primera fecha argentina de tipo 2 o 3 sin cambiar el día civil', async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         respuestaFetch({
-          results: [
-            {
-              iso_3166_1: 'US',
-              release_dates: [{ release_date: '2026-01-01', type: 3 }],
-            },
-            {
-              iso_3166_1: 'AR',
-              release_dates: [
-                { release_date: '2026-06-08', type: 1 },
-                { release_date: '2026-06-09T00:00:00.000Z', type: 2 },
-                { release_date: '2026-06-10', type: 3 },
-                { release_date: '2026-06-11', type: 4 },
-              ],
-            },
-          ],
+          id: 321,
+          release_date: null,
+          release_dates: {
+            results: [
+              {
+                iso_3166_1: 'US',
+                release_dates: [{ release_date: '2026-01-01', type: 3 }],
+              },
+              {
+                iso_3166_1: 'AR',
+                release_dates: [
+                  { release_date: '2026-06-08', type: 1 },
+                  { release_date: '2026-06-09T00:00:00.000Z', type: 2 },
+                  { release_date: '2026-06-10', type: 3 },
+                  { release_date: '2026-06-11', type: 4 },
+                ],
+              },
+            ],
+          },
         }),
       );
       vi.stubGlobal('fetch', fetchMock);
@@ -476,7 +490,7 @@ describe('detalle y disponibilidad de TMDB', () => {
       const primera = await obtenerFechaEstrenoArgentina({ tmdbId: 321 });
       const segunda = await obtenerFechaEstrenoArgentina({ tmdbId: 321 });
 
-      expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe('/3/movie/321/release_dates');
+      expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe('/3/movie/321');
       expect(primera.fechaEstrenoAr).toBe('2026-06-09');
       expect(segunda.consultadoEn).toBe(primera.consultadoEn);
       expect(fetchMock).toHaveBeenCalledOnce();
@@ -493,12 +507,16 @@ describe('detalle y disponibilidad de TMDB', () => {
         'fetch',
         vi.fn().mockResolvedValue(
           respuestaFetch({
-            results: [
-              {
-                iso_3166_1: 'AR',
-                release_dates: [{ release_date: '2026-02-31', type: 3 }],
-              },
-            ],
+            id: 655,
+            release_date: null,
+            release_dates: {
+              results: [
+                {
+                  iso_3166_1: 'AR',
+                  release_dates: [{ release_date: '2026-02-31', type: 3 }],
+                },
+              ],
+            },
           }),
         ),
       );

@@ -5,7 +5,6 @@ import { listarProximosEstrenos } from './cartelera.service.js';
 vi.mock('../integrations/tmdb.integration.js', () => ({
   listarCandidatosEstrenos: vi.fn(),
   obtenerFechasEstrenoArgentina: vi.fn(),
-  obtenerAnioEstrenoOriginal: vi.fn(),
 }));
 const pelicula = (tmdbId) => ({
   tmdbId,
@@ -18,8 +17,8 @@ const pelicula = (tmdbId) => ({
 const consultadoEn = '2026-11-14T12:00:00.000Z';
 beforeEach(() => {
   vi.clearAllMocks();
-  tmdb.obtenerAnioEstrenoOriginal.mockResolvedValue(1999);
   tmdb.obtenerFechasEstrenoArgentina.mockImplementation(async ({ tmdbId }) => ({
+    anio: 1999,
     fechas: [tmdbId % 2 ? '2027-01-03' : '2027-01-02'],
     consultadoEn,
   }));

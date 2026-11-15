@@ -14,6 +14,18 @@ const cache = createTtlCache({
 });
 const limitar = createConcurrencyLimiter(2);
 const FECHAS_PROVEEDOR = { hoy: 'today', manana: 'tomorrow', fin_de_semana: 'weekend' };
+const CATEGORIAS_PROVEEDOR = Object.freeze({
+  todas: 'all',
+  musica: 'music',
+  teatro: 'theatre',
+  arte: 'art',
+  festivales: 'festivals',
+  talleres: 'workshops',
+  humor: 'comedy',
+  infancias: 'kids',
+  deportes: 'sports',
+  gastronomia: 'food-drinks',
+});
 const formateadorFecha = new Intl.DateTimeFormat('en-CA', {
   timeZone: ZONA_HORARIA_EVENTOS,
   year: 'numeric',
@@ -37,7 +49,10 @@ export function listarEventosAllEvents({ categoria, fecha, pagina }) {
         diaPresupuesto = diaActual;
         solicitudesDelDia = 0;
       }
-      if (solicitudesDelDia >= EVENTOS_CONFIG.MAX_REQUESTS_PER_DAY) {
+      const limite =
+        EVENTOS_CONFIG.MAX_REQUESTS_PER_DAY -
+        (pagina > 1 ? EVENTOS_CONFIG.FIRST_PAGE_RESERVED_REQUESTS : 0);
+      if (solicitudesDelDia >= limite) {
         throw new ExternalServiceError(
           'los eventos de La Plata: se alcanzó el límite diario de consultas',
         );
@@ -46,8 +61,8 @@ export function listarEventosAllEvents({ categoria, fecha, pagina }) {
       url.searchParams.set('city', 'la-plata');
       url.searchParams.set('page', String(pagina));
       url.searchParams.set('raw', '0');
-      if (categoria !== 'all') {
-        url.searchParams.set('category', categoria);
+      if (categoria !== 'todas') {
+        url.searchParams.set('category', CATEGORIAS_PROVEEDOR[categoria]);
       }
       if (fecha !== 'todas') {
         url.searchParams.set('date', FECHAS_PROVEEDOR[fecha]);
@@ -63,14 +78,14 @@ export function listarEventosAllEvents({ categoria, fecha, pagina }) {
         'los eventos de La Plata en AllEvents',
       );
       if (
-        respuesta.page !== pagina ||
-        (respuesta.next_page !== null && respuesta.next_page <= pagina)
+        respuesta.pagina !== pagina ||
+        (respuesta.siguientePagina !== null && respuesta.siguientePagina <= pagina)
       ) {
         throw new ExternalServiceError(
           'los eventos de La Plata: paginación inválida del proveedor',
         );
       }
-      return { ...respuesta, consultadoEn: respuesta.fetched_at ?? new Date().toISOString() };
+      return respuesta;
     }),
   );
 }

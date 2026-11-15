@@ -17,7 +17,7 @@ describe('controles de filtros de funciones', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'No se encontraron funciones para estos filtros en los datos recibidos',
     );
-    expect(screen.getByRole('option', { name: '2026-11-15' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '15 de noviembre de 2026' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
     expect(screen.getByText('00:30')).toBeInTheDocument();
   });

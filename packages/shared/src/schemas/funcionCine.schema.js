@@ -1,3 +1,7 @@
+import {
+  HORIZONTE_FUNCIONES_CINE_DIAS,
+  MAX_FUNCIONES_CINE,
+} from '../constants/cartelera.constants.js';
 import { z } from 'zod';
 import { tmdbIdSchema } from './busqueda.schema.js';
 import {
@@ -10,7 +14,8 @@ import { httpUrlSchema } from './url.schema.js';
 
 export const cineIdSchema = z.string().regex(/^cine:[a-f0-9]{64}$/);
 export const funcionCineIdSchema = z.string().regex(/^funcion:[a-f0-9]{64}$/);
-const fuentesSchema = z.array(fuenteSchema).min(1);
+const fuenteFuncionesSchema = fuenteSchema.extend({ nombre: z.string().trim().min(1).optional() });
+const fuentesSchema = z.array(fuenteFuncionesSchema).min(1);
 const textoOpcionalSchema = z.string().trim().min(1).nullable();
 
 export const cineSchema = z
@@ -100,10 +105,10 @@ export const respuestaFuncionesCineSchema = z
     desde: fechaCivilCarteleraSchema,
     hasta: fechaCivilCarteleraSchema,
     cines: z.array(cineSchema),
-    funciones: z.array(funcionCineSchema).max(1000),
+    funciones: z.array(funcionCineSchema).max(MAX_FUNCIONES_CINE),
     estado: z.enum(['disponible', 'sin_funciones', 'sin_cobertura', 'incompleta']),
     advertencias: z.array(advertenciaFuncionesSchema),
-    fuentes: z.array(fuenteSchema),
+    fuentes: z.array(fuenteFuncionesSchema),
     consultadoEn: z.iso.datetime(),
   })
   .strict()
@@ -120,7 +125,7 @@ export const respuestaFuncionesCineSchema = z
       cines.size !== data.cines.length ||
       ids.size !== data.funciones.length ||
       data.desde > data.hasta ||
-      data.hasta > sumarDiasCivil(data.desde, 7) ||
+      data.hasta > sumarDiasCivil(data.desde, HORIZONTE_FUNCIONES_CINE_DIAS) ||
       data.cines.some(
         (cine) => cine.ciudadId !== data.ciudad.id || cine.zonaHoraria !== data.ciudad.zonaHoraria,
       ) ||

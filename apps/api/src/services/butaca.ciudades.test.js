@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import evidencia from '../../../../docs/evidencia/cinemark-ciudades-2026-11-14.json';
 import { DIRECTORIO_CIUDADES_CINE } from '../config/ciudadesCine.config.js';
-import { obtenerFuncionesButaca } from './butaca.integration.js';
+import { obtenerObservacionesButaca } from './butaca.service.js';
+import { normalizarObservacionesCine } from './funcionCine.normalizer.js';
+import { LUGARES_CINE } from '../config/funcionesCine.config.js';
 
 vi.mock('../config/env.config.js', () => ({ env: { BUTACA_ENABLED: 'true' } }));
 
@@ -53,7 +55,7 @@ describe('consultas Cinemark de las localidades agregadas', () => {
       }));
       vi.stubGlobal('fetch', fetchMock);
 
-      const resultado = await obtenerFuncionesButaca({
+      const observaciones = await obtenerObservacionesButaca({
         pelicula: {
           tmdbId: 77,
           identidadCine: { nombres: ['Película de prueba'], anio: 2026, duracion: 100 },
@@ -63,6 +65,7 @@ describe('consultas Cinemark de las localidades agregadas', () => {
         hasta: '2026-11-21',
       });
 
+      const resultado = normalizarObservacionesCine({ ...observaciones, lugares: LUGARES_CINE });
       expect(resultado.estadoFuente).toBe('disponible');
       expect(resultado.funciones).toHaveLength(ciudad.butacaCines.length);
       expect(resultado.funciones).toEqual(

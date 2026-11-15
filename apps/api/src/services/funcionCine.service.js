@@ -5,11 +5,15 @@ import {
 } from '@buscador/shared/schemas';
 import * as ciudadCineService from './ciudadCine.service.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
-import * as serpApiIntegration from '../integrations/serpApi.integration.js';
+import * as butacaService from './butaca.service.js';
 import * as butacaIntegration from '../integrations/butaca.integration.js';
-import { FUNCIONES_CINE_CONFIG } from '../config/funcionesCine.config.js';
+import { FUNCIONES_CINE_CONFIG, LUGARES_CINE } from '../config/funcionesCine.config.js';
 import { ExternalServiceError } from '../errors/index.js';
-import { combinarFuncionesCine, obtenerFechaLocalCine } from './funcionCine.normalizer.js';
+import {
+  combinarFuncionesCine,
+  obtenerFechaLocalCine,
+  normalizarObservacionesCine,
+} from './funcionCine.normalizer.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 
 const limitar = createConcurrencyLimiter(FUNCIONES_CINE_CONFIG.MAX_CONCURRENT_REQUESTS);
@@ -27,7 +31,7 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
     ),
   );
   const desde = obtenerFechaLocalCine(new Date(), ciudad.zonaHoraria);
-  const hasta = sumarDiasCivil(desde, 7);
+  const hasta = sumarDiasCivil(desde, FUNCIONES_CINE_CONFIG.HORIZONTE_DIAS);
   const base = {
     tmdbId,
     tipo: 'pelicula',
@@ -48,15 +52,10 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
   }
   const parametros = { pelicula, ciudad: configuracion, desde, hasta };
   const proveedores = [];
-  if (serpApiIntegration.verificarCorrespondenciasSerpApi(parametros))
-    proveedores.push({
-      fuenteId: 'serpapi',
-      consultar: () => serpApiIntegration.obtenerFuncionesSerpApi(parametros),
-    });
   if (configuracion.butacaCines.length && butacaIntegration.estaHabilitadoButaca())
     proveedores.push({
       fuenteId: 'butaca',
-      consultar: () => butacaIntegration.obtenerFuncionesButaca(parametros),
+      consultar: () => butacaService.obtenerObservacionesButaca(parametros),
     });
   if (!proveedores.length)
     throw new ExternalServiceError(
@@ -67,14 +66,11 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
   );
   const exitosas = respuestas
     .filter((respuesta) => respuesta.status === 'fulfilled')
-    .map((respuesta) => respuesta.value);
+    .map((respuesta) => normalizarObservacionesCine({ ...respuesta.value, lugares: LUGARES_CINE }));
   if (!exitosas.length) {
-    const cuotaAgotada = respuestas.some((respuesta) => respuesta.reason?.cause?.quota);
-    throw new ExternalServiceError(
-      cuotaAgotada
-        ? 'las funciones: cupo de SerpApi agotado; probá más adelante'
-        : 'las funciones: ninguna fuente habilitada respondió',
-    );
+    const error = respuestas.find((respuesta) => respuesta.status === 'rejected')?.reason;
+    if (error && !(error instanceof ExternalServiceError)) throw error;
+    throw new ExternalServiceError('las funciones: ninguna fuente habilitada respondió');
   }
   const resultado = combinarFuncionesCine(exitosas);
   if (ciudad.cobertura === 'sin_verificar') {
@@ -85,22 +81,6 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
       fuenteId: null,
     });
   }
-  respuestas.forEach((respuesta, indice) => {
-    if (respuesta.status === 'rejected')
-      resultado.advertencias.push({
-        code: respuesta.reason?.cause?.quota ? 'QUOTA_EXHAUSTED' : 'SOURCE_UNAVAILABLE',
-        message: respuesta.reason?.cause?.quota
-          ? 'Se agotó el cupo de SerpApi; se conservan datos de otras fuentes.'
-          : 'Una fuente no está disponible; los resultados pueden estar incompletos.',
-        fuenteId: proveedores[indice].fuenteId,
-      });
-  });
-  if (configuracion.butacaCines.length && !butacaIntegration.estaHabilitadoButaca())
-    resultado.advertencias.push({
-      code: 'SOURCE_UNAVAILABLE',
-      message: 'El complemento Cinemark no está habilitado; la cobertura es parcial.',
-      fuenteId: 'butaca',
-    });
   resultado.funciones = resultado.funciones.filter(
     (funcion) => Date.parse(funcion.inicio) > Date.now(),
   );
@@ -108,8 +88,7 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
     resultado.funciones = resultado.funciones.slice(0, FUNCIONES_CINE_CONFIG.MAX_FUNCIONES);
     resultado.advertencias.push({
       code: 'INCOMPLETE_DATA',
-      message:
-        'Se alcanzó el límite de 1.000 funciones; se muestran los datos recibidos hasta ese límite.',
+      message: `Se alcanzó el límite de ${FUNCIONES_CINE_CONFIG.MAX_FUNCIONES.toLocaleString('es-AR')} funciones; se muestran los datos recibidos hasta ese límite.`,
       fuenteId: null,
     });
   }

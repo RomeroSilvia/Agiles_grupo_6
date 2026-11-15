@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
-import { ExternalServiceError } from '../errors/index.js';
 import * as ciudadCineService from '../services/ciudadCine.service.js';
 
 vi.mock('../services/ciudadCine.service.js', () => ({
@@ -53,14 +52,14 @@ describe('GET /api/cartelera/ciudades', () => {
 
   it('propaga los errores de configuración del directorio', async () => {
     ciudadCineService.listarCiudadesCine.mockImplementationOnce(() => {
-      throw new ExternalServiceError('el directorio de ciudades', new Error('Sin cobertura'));
+      throw new Error('Sin cobertura');
     });
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const response = await request(createApp()).get('/api/cartelera/ciudades');
 
-    expect(response.status).toBe(502);
-    expect(response.body.error.code).toBe('EXTERNAL_SERVICE');
+    expect(response.status).toBe(500);
+    expect(response.body.error.code).toBe('INTERNAL');
     consoleError.mockRestore();
   });
 });

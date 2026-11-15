@@ -1,4 +1,32 @@
 import { z } from 'zod';
+import { enlaceEventoSchema, imagenEventoSchema } from '@buscador/shared/schemas';
+
+const fechaSchema = z.iso.date();
+const inicioSchema = z.iso.datetime({ offset: true });
+const texto = (valor) => valor?.trim() || null;
+
+export function fromAllEvents(evento) {
+  const inicio = inicioSchema.safeParse(evento.start);
+  const fin = inicioSchema.safeParse(evento.end);
+  return {
+    id: evento.id,
+    nombre: evento.name,
+    url: enlaceEventoSchema.safeParse(evento.url).data ?? null,
+    imagenUrl: imagenEventoSchema.safeParse(evento.image).data ?? null,
+    fecha: fechaSchema.safeParse(evento.start).data ?? null,
+    inicio: inicio.success ? inicio.data : null,
+    fechaFin: fechaSchema.safeParse(evento.end).data ?? null,
+    fin: fin.success ? fin.data : null,
+    fechaTexto: texto(evento.date_label),
+    lugar: texto(evento.venue?.name),
+    direccion: texto(evento.venue?.street),
+    ciudad: texto(evento.venue?.city),
+    pais: texto(evento.venue?.country),
+    virtual: Boolean(evento.online || /online/i.test(evento.attendance_mode ?? '')),
+    cancelado: /cancelled|canceled/i.test(evento.status ?? ''),
+    precioTexto: /^free$/i.test(evento.price?.trim() ?? '') ? 'Gratis' : texto(evento.price),
+  };
+}
 
 // El listado puede ofrecer solo date_label y el nombre del lugar, sin fecha ISO.
 const eventoAllEventsSchema = z.object({
@@ -34,8 +62,13 @@ export const respuestaAllEventsSchema = z
   .transform(({ events, ...resto }) => {
     const eventos = events.map((evento) => eventoAllEventsSchema.safeParse(evento));
     return {
-      ...resto,
-      events: eventos.filter((evento) => evento.success).map((evento) => evento.data),
+      ciudad: resto.city,
+      pagina: resto.page,
+      siguientePagina: resto.next_page,
+      consultadoEn: resto.fetched_at ?? new Date().toISOString(),
+      eventos: eventos
+        .filter((evento) => evento.success)
+        .map((evento) => fromAllEvents(evento.data)),
       incompleta: eventos.some((evento) => !evento.success),
     };
   });

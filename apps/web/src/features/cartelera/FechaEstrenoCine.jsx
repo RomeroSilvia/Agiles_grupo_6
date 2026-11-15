@@ -1,11 +1,14 @@
-const FORMATEADOR = new Intl.DateTimeFormat('es-AR', { dateStyle: 'long', timeZone: 'UTC' });
+import { formatearFechaCine } from './fechasCine.js';
 
-export function FechaEstrenoCine({ pelicula }) {
+export function FechaEstrenoCine({
+  pelicula,
+  pendiente = 'Fecha pendiente de confirmación. Sin fecha, fuera del período fechado.',
+}) {
   return pelicula.fechaEstrenoAr ? (
     <time dateTime={pelicula.fechaEstrenoAr}>
-      Estreno en Argentina: {FORMATEADOR.format(new Date(`${pelicula.fechaEstrenoAr}T12:00:00Z`))}
+      Estreno en Argentina: {formatearFechaCine(pelicula.fechaEstrenoAr)}
     </time>
   ) : (
-    <span>Fecha pendiente de confirmación. Sin fecha, fuera del período fechado.</span>
+    <span>{pendiente}</span>
   );
 }

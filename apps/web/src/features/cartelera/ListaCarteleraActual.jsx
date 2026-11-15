@@ -7,23 +7,7 @@ import { ResultadoCard } from '../busqueda/ResultadoCard.jsx';
 import { CardsCargando, GrillaResultados } from '../busqueda/ResultadosBusqueda.jsx';
 import { useCartelera } from './useCartelera.js';
 
-const FORMATEADOR_FECHA = new Intl.DateTimeFormat('es-AR', {
-  dateStyle: 'long',
-  timeZone: 'UTC',
-});
-
-function contenidoFecha(pelicula) {
-  if (!pelicula.fechaEstrenoAr) {
-    return 'Fecha de estreno en Argentina no informada';
-  }
-
-  const fecha = new Date(`${pelicula.fechaEstrenoAr}T00:00:00.000Z`);
-  return (
-    <time dateTime={pelicula.fechaEstrenoAr}>
-      Estreno en Argentina: {FORMATEADOR_FECHA.format(fecha)}
-    </time>
-  );
-}
+import { FechaEstrenoCine } from './FechaEstrenoCine.jsx';
 
 export function ListaCarteleraActual() {
   const {
@@ -77,7 +61,12 @@ export function ListaCarteleraActual() {
               <ResultadoCard
                 key={`${pelicula.tipo}:${pelicula.tmdbId}`}
                 resultado={pelicula}
-                contenidoAdicional={contenidoFecha(pelicula)}
+                contenidoAdicional={
+                  <FechaEstrenoCine
+                    pelicula={pelicula}
+                    pendiente="Fecha de estreno en Argentina no informada"
+                  />
+                }
               />
             ))}
             {isLoadingMore && <CardsCargando />}

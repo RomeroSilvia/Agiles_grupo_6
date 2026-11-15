@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { formatearFechaCine, formatearConsultaCine } from './fechasCine.js';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
@@ -9,7 +11,8 @@ import { AccionSitioCine } from './AccionSitioCine.jsx';
 import { useFuncionesCine } from './useFuncionesCine.js';
 
 export function SeccionFunciones({ tmdbId }) {
-  const { idCiudadSeleccionada, loading: cargandoCiudades } = useCiudadCine();
+  const [cambiarCiudad, setCambiarCiudad] = useState(false);
+  const { idCiudadSeleccionada, ciudadSeleccionada, loading: cargandoCiudades } = useCiudadCine();
   const { data, loading, error, consultar } = useFuncionesCine({
     tmdbId,
     ciudadId: cargandoCiudades ? null : idCiudadSeleccionada,
@@ -17,7 +20,16 @@ export function SeccionFunciones({ tmdbId }) {
   return (
     <section aria-labelledby="funciones-cine-titulo" className="space-y-4">
       <SectionTitle id="funciones-cine-titulo">Cines y funciones</SectionTitle>
-      <SelectorCiudadCine />
+      {idCiudadSeleccionada && !cambiarCiudad ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p>Ciudad: {ciudadSeleccionada?.nombre}</p>
+          <Button variant="outline" fullWidth={false} onClick={() => setCambiarCiudad(true)}>
+            Cambiar ciudad
+          </Button>
+        </div>
+      ) : (
+        <SelectorCiudadCine onSeleccionar={() => setCambiarCiudad(false)} />
+      )}
       {!idCiudadSeleccionada && (
         <p className="text-sm text-muted">
           Elegí una ciudad para consultar funciones de esta película.
@@ -43,9 +55,8 @@ export function SeccionFunciones({ tmdbId }) {
       {data && (
         <>
           <p className="text-sm text-muted">
-            Horizonte informado: {data.desde} a {data.hasta}. Zona horaria:{' '}
-            {data.ciudad.zonaHoraria}. Cobertura de las fuentes consultadas; puede no incluir todos
-            los cines.
+            Funciones del {formatearFechaCine(data.desde)} al {formatearFechaCine(data.hasta)}.
+            Horarios locales de {data.ciudad.nombre}. La cobertura puede no incluir todos los cines.
           </p>
           {data.advertencias.map((aviso, indice) => (
             <Alert key={`${aviso.code}:${indice}`} tone="info">
@@ -67,8 +78,13 @@ export function SeccionFunciones({ tmdbId }) {
             </Alert>
           )}
           <p className="text-xs text-muted">
-            Horarios de SerpApi y, cuando está habilitado, Butaca / Cinemark. Consultados:{' '}
-            <time dateTime={data.consultadoEn}>{data.consultadoEn}</time>.
+            Horarios de{' '}
+            {data.fuentes.map((fuente) => fuente.nombre ?? 'la fuente consultada').join(', ')}.
+            Consultados:{' '}
+            <time dateTime={data.consultadoEn}>
+              {formatearConsultaCine(data.consultadoEn, data.ciudad.zonaHoraria)}
+            </time>
+            .
           </p>
         </>
       )}

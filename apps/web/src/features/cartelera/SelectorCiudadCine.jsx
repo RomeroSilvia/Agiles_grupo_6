@@ -5,7 +5,7 @@ import { Select } from '../../components/ui/Select.jsx';
 import { Skeleton } from '../../components/ui/Skeleton.jsx';
 import { useCiudadCine } from '../../contexts/ciudadCine/CiudadCineContext.js';
 
-export function SelectorCiudadCine() {
+export function SelectorCiudadCine({ onSeleccionar }) {
   const {
     ciudades,
     idCiudadSeleccionada,
@@ -48,7 +48,10 @@ export function SelectorCiudadCine() {
           <Select
             id="ciudad-cine"
             value={idCiudadSeleccionada ?? ''}
-            onChange={(event) => seleccionarCiudad(event.target.value)}
+            onChange={(event) => {
+              seleccionarCiudad(event.target.value);
+              onSeleccionar?.();
+            }}
           >
             <option value="">Seleccioná una ciudad</option>
             {ciudades.map((ciudad) => (

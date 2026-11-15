@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { URL_SITIO_CINEMARK } from '../constants/cartelera.constants.js';
 import { httpUrlSchema } from './url.schema.js';
 import { cineIdSchema, funcionCineIdSchema } from './funcionCine.schema.js';
 import { tmdbIdSchema } from './busqueda.schema.js';
@@ -23,20 +24,6 @@ const reglasSchema = z.array(
     ),
 );
 
-function decodificar(valor) {
-  let actual = valor;
-  for (let intento = 0; intento < 3; intento += 1) {
-    try {
-      const siguiente = decodeURIComponent(actual);
-      if (siguiente === actual) break;
-      actual = siguiente;
-    } catch {
-      return '';
-    }
-  }
-  return actual;
-}
-
 function tieneControles(valor, incluirEspacios = false) {
   return [...valor].some((caracter) => {
     const codigo = caracter.codePointAt(0);
@@ -47,53 +34,34 @@ function tieneControles(valor, incluirEspacios = false) {
 }
 
 function esSeguro(valor, reglas) {
-  if (typeof valor !== 'string' || valor.trim() !== valor || tieneControles(valor, true))
-    return false;
-  const resultado = httpUrlSchema.safeParse(valor);
-  if (!resultado.success) return false;
-  const url = new URL(valor);
-  if (url.username || url.password || url.port || url.hash) return false;
-  const host = url.hostname;
-  if (
-    host === 'localhost' ||
-    /(?:^|\.)(?:localhost|local|internal|lan|home)$/.test(host) ||
-    /^[\d.]+$/.test(host) ||
-    host.includes(':') ||
-    host.includes('[') ||
-    host.includes(']')
-  )
-    return false;
-  if (
-    !reglas.some(
-      (regla) =>
-        new URL(regla.url).hostname === host &&
-        (url.protocol === 'https:' || (url.protocol === 'http:' && regla.permitirHttp)),
+  // Se autorizan destinos completos: no se aceptan variantes de path ni query.
+  if (!URL.canParse(valor)) return false;
+  return reglas.some((regla) => new URL(regla.url).href === new URL(valor).href);
+}
+
+function esReglaSegura(regla) {
+  const url = new URL(regla.url);
+  return (
+    !url.username &&
+    !url.password &&
+    !url.port &&
+    !url.hash &&
+    (url.protocol === 'https:' || (url.protocol === 'http:' && regla.permitirHttp)) &&
+    !tieneControles(regla.url, true) &&
+    !/^(?:localhost|[\d.]+)$/.test(url.hostname) &&
+    !url.hostname.includes(':') &&
+    !/\/(?:redirect|redir|go|out|url|jump)(?:[/._-]|$)/i.test(url.pathname) &&
+    ![...url.searchParams].some(
+      ([key, value]) =>
+        /(?:token|secret|password|authorization|api[_-]?key|url|redirect|return|next|continue|target|dest|callback)/i.test(
+          key,
+        ) || /(?:https?:|javascript:|data:|\/\/)/i.test(value),
     )
-  )
-    return false;
-  const path = decodificar(url.pathname);
-  if (
-    !path ||
-    tieneControles(decodificar(valor)) ||
-    /\/(?:redirect|redir|go|out|url|jump)(?:[/._-]|$)/i.test(path)
-  )
-    return false;
-  for (const [key, value] of url.searchParams) {
-    if (
-      /(?:token|secret|password|authorization|api[_-]?key)/i.test(key) ||
-      /^(?:url|redirect|return|next|continue|target|dest|callback)/i.test(key) ||
-      /(?:https?:|javascript:|data:|\/\/)/i.test(decodificar(value))
-    )
-      return false;
-  }
-  return reglas.some(
-    (regla) =>
-      new URL(regla.url).href === url.href && (url.protocol === 'https:' || regla.permitirHttp),
   );
 }
 
 export function crearPoliticaEnlacesCine(reglasRevisadas) {
-  const reglas = reglasSchema.parse(reglasRevisadas);
+  const reglas = reglasSchema.parse(reglasRevisadas).filter(esReglaSegura);
   // Se inspecciona el texto original antes de que Zod normalice una URL.
   const schema = z
     .string()
@@ -129,7 +97,7 @@ const politica = crearPoliticaEnlacesCine([
   {
     tipo: 'sitio',
     fuenteId: 'butaca',
-    url: 'https://www.cinemark.com.ar/',
+    url: URL_SITIO_CINEMARK,
     cineId: null,
     funcionId: null,
     tmdbId: null,

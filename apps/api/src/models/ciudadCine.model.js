@@ -1,17 +1,8 @@
 import { z } from 'zod';
 import { ciudadCineSchema } from '@buscador/shared/schemas';
 
-const evidenciaFuenteSchema = z.object({
-  evidencia: z.string().trim().min(1),
-  registroId: z.string().nullable(),
-  url: z.url({ protocol: /^https?$/ }).nullable(),
-  consultadoEn: z.iso.datetime({ offset: false }),
-  actualizadoEn: z.iso.datetime({ offset: false }).nullable(),
-});
-
 export const ciudadCineConfiguracionSchema = ciudadCineSchema
   .extend({
-    serpApiLocation: z.string().trim().min(1).nullable(),
     butacaCines: z.array(
       z
         .object({
@@ -20,39 +11,10 @@ export const ciudadCineConfiguracionSchema = ciudadCineSchema
         })
         .strict(),
     ),
-    evidenciaPorFuente: z
-      .object({
-        serpApi: evidenciaFuenteSchema.nullable(),
-        butaca: evidenciaFuenteSchema.nullable(),
-      })
-      .strict(),
   })
   .strict()
   .refine(
-    ({ evidenciaPorFuente }) =>
-      evidenciaPorFuente.serpApi !== null || evidenciaPorFuente.butaca !== null,
-    'La ciudad requiere evidencia de al menos una fuente',
-  )
-  .refine(
-    ({ cobertura, serpApiLocation, butacaCines }) =>
-      cobertura === 'sin_cobertura' || serpApiLocation !== null || butacaCines.length > 0,
-    'La ciudad consultable requiere un mapeo de proveedor',
-  )
-  .refine(({ fuente, evidenciaPorFuente }) => {
-    const evidencia = evidenciaPorFuente[fuente.fuenteId === 'serpapi' ? 'serpApi' : 'butaca'];
-    return (
-      evidencia !== null &&
-      evidencia !== undefined &&
-      fuente.registroId === evidencia.registroId &&
-      fuente.url === evidencia.url &&
-      fuente.consultadoEn === evidencia.consultadoEn &&
-      fuente.actualizadoEn === evidencia.actualizadoEn &&
-      ['serpapi', 'butaca'].includes(fuente.fuenteId)
-    );
-  }, 'La procedencia pública debe coincidir con la evidencia de su fuente')
-  .refine(
-    ({ serpApiLocation, butacaCines, evidenciaPorFuente }) =>
-      (serpApiLocation === null || evidenciaPorFuente.serpApi !== null) &&
-      (butacaCines.length === 0 || evidenciaPorFuente.butaca !== null),
-    'Cada mapeo de proveedor requiere su propia evidencia',
+    ({ cobertura, butacaCines, fuente }) =>
+      cobertura === 'sin_cobertura' || (butacaCines.length > 0 && fuente.fuenteId === 'butaca'),
+    'La ciudad consultable requiere sucursales y procedencia del proveedor',
   );

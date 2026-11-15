@@ -73,31 +73,10 @@ describe('directorio inicial de ciudades consultables', () => {
       ]),
     );
   });
-  it('no habilita SerpApi sin evidencia geográfica propia de las nuevas localidades', () => {
-    const nuevas = DIRECTORIO_CIUDADES_CINE.ciudades.filter(
-      (ciudad) => !['CABA', 'Córdoba', 'La Plata', 'Mar del Plata'].includes(ciudad.nombre),
+  it('rechaza una ciudad consultable sin sucursales verificadas', () => {
+    const ciudad = DIRECTORIO_CIUDADES_CINE.ciudades.find((item) => item.butacaCines.length);
+    expect(ciudadCineConfiguracionSchema.safeParse({ ...ciudad, butacaCines: [] }).success).toBe(
+      false,
     );
-    expect(nuevas).toHaveLength(15);
-    for (const ciudad of nuevas) {
-      expect(ciudad.serpApiLocation).toBeNull();
-      expect(ciudad.evidenciaPorFuente.serpApi).toBeNull();
-    }
-  });
-  it('rechaza una localidad nueva que pierde la evidencia de sus sucursales', () => {
-    const ciudad = DIRECTORIO_CIUDADES_CINE.ciudades.find((item) => item.nombre === 'Godoy Cruz');
-    expect(
-      ciudadCineConfiguracionSchema.safeParse({
-        ...ciudad,
-        evidenciaPorFuente: { serpApi: null, butaca: null },
-      }).success,
-    ).toBe(false);
-  });
-  it('rechaza una ciudad por verificar si pierde el mapeo consultable', () => {
-    expect(
-      ciudadCineConfiguracionSchema.safeParse({
-        ...DIRECTORIO_CIUDADES_CINE.ciudades[0],
-        serpApiLocation: null,
-      }).success,
-    ).toBe(false);
   });
 });

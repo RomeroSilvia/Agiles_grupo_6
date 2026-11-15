@@ -5,8 +5,11 @@
 `GET /api/cartelera/estrenos` consulta Upcoming AR y Discover Movie de TMDB,
 verifica fechas regionales AR de tipo 2/3 y ordena por fecha e ID antes de paginar
 de a 20. Predeterminado: mañana en Buenos Aires y 90 días inclusivos. El año
-pertenece a la obra original, incluso en reestrenos. La ventana publicada por
-Upcoming se valida; no confirma por sí sola un anuncio argentino.
+pertenece a la obra original, incluso en reestrenos. Año y fechas se adquieren juntos con
+`/movie/{id}?append_to_response=release_dates` y caché compartida. Un 404 puntual
+da año null y fechas vacías sin hacer fallar toda la consulta. Los demás errores
+permiten reintentar. ESTRENOS_CONFIG centraliza límites y caché.
+La ventana publicada por Upcoming se valida; no confirma por sí sola un anuncio argentino.
 
 Presupuesto por adquisición: 10 páginas entre ambas operaciones y 200 películas
 únicas; excederlo o fallar una página produce 502, sin publicar totales parciales.
@@ -27,43 +30,22 @@ frecuencia de actualización del catálogo.
 ## Ciudades (#74)
 
 Se reutilizan el directorio C2, endpoint público estricto y Context que ya estaban
-en esta rama. El selector se conecta a las dos vistas de cartelera y conserva el
-ID en sessionStorage; no modifica país de streaming ni perfil. Cada mapeo exige
-evidencia de su propio proveedor. La procedencia S1 comparte esquema con cartelera.
+en esta rama. El selector aparece únicamente en el detalle de películas con
+exhibición consultable. Una ciudad elegida se presenta como «Ciudad: …» con la
+acción «Cambiar ciudad». El ID se conserva en sessionStorage; no modifica región
+ni perfil. La evidencia descriptiva se documenta aquí sin duplicarla por ciudad.
 
-El 14/11/2026 se hicieron consultas SerpApi acotadas con Resident Evil (TMDB
-1423191), tomado de Now Playing AR, en Buenos Aires/CABA, La Plata y Córdoba.
-Respondieron HTTP 200/Success sin `showtimes`. Ver
-[muestras sanitizadas](evidencia/serpapi-2026-11-14.json), con fecha y parámetros;
-se excluyeron claves, URLs de búsqueda autenticadas y contenido ajeno a horarios.
-Hubo cuatro búsquedas en total: se repitió Córdoba para corregir la codificación
-del nombre en el shell. No se automatizan comprobaciones que gasten cupo.
-
-La implementación inicial dejó el directorio vacío: una respuesta sin estructura
-no demuestra ausencia de exhibición ni cobertura. A pedido de la persona responsable,
-el alcance inicial se ajustó para permitir consultas en La Plata, CABA, Córdoba y
-Mar del Plata, conservando explícitamente la cobertura `sin_verificar`.
-
-Las cuatro ubicaciones se verificaron mediante la API pública de Locations de
-SerpApi, escogiendo registros urbanos AR vigentes (`target_type=City`), no provincias
-ni registros obsoletos. Ver [evidencia geográfica](evidencia/ciudades-serpapi-2026-11-14.json).
-Esta verificación no confirma horarios. CABA usa el registro urbano de Buenos Aires,
-con coordenadas de la ciudad; Córdoba usa el registro vigente de Córdoba capital.
-Las consultas del directorio no requieren API key ni búsquedas Google.
-
-`sin_verificar` permite selección, restauración y consulta explícita con un aviso
-visible; toda respuesta de funciones conserva `incompleta` hasta verificar cobertura.
-`sin_cobertura` continúa deshabilitada. `disponible` se reserva para cobertura
-comprobada. Los UUID públicos asignados son permanentes y no dependen del proveedor.
-No hay que editar `.env` para ver las ciudades: reiniciar la API y recargar la web
-si estaban abiertas. Los nombres canónicos del proveedor permanecen solo en backend.
+Butaca/Cinemark es la única fuente activa. Se retiraron integración, clave,
+configuración y evidencia de SerpApi, que no tenía correspondencias utilizables.
+Reincorporar otro proveedor requiere un PR con cobertura comprobada y presupuesto
+persistente si corresponde. No existe un cupo mensual SerpApi en esta versión.
 
 La verificación posterior habilitó cobertura Cinemark en CABA (seis sucursales)
 y Córdoba (Nuevo Centro y Patio Olmos). Los IDs, slugs y direcciones están en
 `cinesCinemark.config.js`; se contrastaron con el directorio oficial, no con el
 campo `city` del BFF, que llama «Interior» a Córdoba y mezcla regiones en CABA.
 La Plata y Mar del Plata siguen sin fuente de horarios confirmada: no figuran en
-ese directorio. Un directorio eliminado o inválido devuelve 502; uno configurado
+ese directorio. Un directorio propio inválido devuelve 500 INTERNAL; uno configurado
 sin entradas devuelve una lista vacía.
 
 La ampliación del 14/11/2026 incorpora Avellaneda, Boulogne, Malvinas Argentinas,
@@ -77,8 +59,7 @@ Malvinas Argentinas conserva el ámbito solicitado del partido.
 Se contrastaron IDs, slugs, direcciones y mapas del directorio oficial, y se
 comprobaron lecturas anónimas de películas y horarios de las 16 sucursales
 incorporadas. Ver [evidencia de la ampliación](evidencia/cinemark-ciudades-2026-11-14.json).
-Las nuevas localidades usan exclusivamente Cinemark: `serpApiLocation=null`
-porque no se verificaron ubicaciones propias de SerpApi, y no consumen su cupo.
+Las nuevas localidades usan exclusivamente Cinemark.
 El selector existente recibe las opciones desde la API sin cambios de interfaz.
 Se conservan los cuatro IDs anteriores, incluidos La Plata y Mar del Plata.
 El listado público y el selector muestran únicamente las 17 localidades con
@@ -92,7 +73,16 @@ futuras verificaciones. Reiniciar la API y recargar la web actualiza la lista.
 Es pública y estricta; no acepta fecha, cine, país ni URLs. El detalle de películas
 ofrece una consulta explícita; los cambios de ciudad después de consultar cancelan
 la solicitud previa y vuelven a consultar. Las series no muestran esta sección.
+`GET /api/cartelera/peliculas/:tmdbId/exhibicion` confirma si la película figura
+en Now Playing AR o tiene una fecha argentina en los próximos 90 días. Solo una
+confirmación positiva muestra la sección, también al entrar desde un enlace directo.
+El índice se cachea una hora y admite hasta diez páginas; las adquisiciones fallidas
+o incompletas no se cachean. La interfaz presenta fechas y horas locales y recibe
+el nombre de la fuente desde la API, sin exponer zonas IANA ni timestamps crudos.
 La ciudad se valida antes de cualquier integración; TMDB confirma que la obra existe.
+La integración solo adquiere y valida cines, películas y sesiones.
+El servicio de Butaca resuelve identidad y devuelve observaciones;
+funcionCine.service normaliza y arma la respuesta sin inversiones de capas.
 
 F1 entrega todos los registros normalizados, sin páginas, entre hoy local y los
 próximos siete días inclusive. Se excluyen funciones pasadas aun al leer caché.
@@ -123,12 +113,6 @@ lo que dura la caché de funciones. No se adjudican sesiones solo por el título
 Títulos traducidos sin alias AR, reestrenos y duraciones incompatibles necesitan
 una correspondencia revisada; si no existe, el resultado informa incompletitud.
 
-SerpApi conserva la estructura documentada por días/establecimientos; la variante
-por películas sin identificación de cine se declara incompleta. No extrae horarios
-de snippets. Días relativos y fechas sin año se resuelven únicamente en la ventana
-de ocho fechas y deben concordar con el día de semana. Google no se usa como sitio
-oficial ni enlace de compra.
-
 Butaca usa un adaptador ESM anónimo basado en el código revisado (commit
 `595f908f3092e423b27839c650e2eae248e2b256`), con [licencia MIT](licenses/butaca.txt).
 Solo permite GET a cines, películas y horarios del BFF de Cinemark, header
@@ -154,25 +138,19 @@ los formatos en un texto ordenado, sin duplicar la función. Si ese mismo ID tra
 horarios, salas o idiomas contradictorios, se descarta esa sesión y se informa
 incompletitud; las otras sesiones se conservan.
 
-Cachés por proceso/película/ciudad/día/versión: SerpApi una hora, Butaca quince
-minutos, 100 entradas por proveedor y promesas compartidas. Máximo dos consultas
-de proveedores concurrentes, cinco solicitudes por minuto y cliente, 1.000
-funciones por respuesta (truncamiento explícito). Presupuesto SerpApi conservador
-por proceso: 250/mes UTC y 50/hora; 429/cupo externo detiene nuevas consultas hasta
-el siguiente mes, sin reintento automático. La cuenta externa es la autoridad;
-con reinicios o varias instancias esto no equivale a una cuota distribuida.
+Cachés por proceso de quince minutos, 100 entradas y promesas compartidas.
+Máximo dos consultas concurrentes, cinco solicitudes por minuto y cliente,
+timeout de quince segundos y 1.000 funciones con advertencia de truncamiento.
+Los valores viven en FUNCIONES_CINE_CONFIG.
 No hay precarga, cron, renovación de pago ni persistencia en Supabase.
 
 Sin fuentes habilitables o si todas fallan: 502. Una fuente parcial o caída con
 otra respuesta útil conserva resultados e informa `incompleta`, incluso ante
 cuota agotada. `sin_funciones` solo corresponde a una respuesta estructurada vacía;
 no significa «no se exhibe». `sin_cobertura` identifica una ciudad conocida cuyo
-directorio lo indique. Una advertencia de SerpApi no elimina funciones válidas
-devueltas por Cinemark.
+directorio lo indique.
 
-Referencias: [Showtimes](https://serpapi.com/showtimes-results),
-[parámetros SerpApi](https://serpapi.com/search-api), [términos](https://serpapi.com/legal),
-[Butaca CONTRACT](https://github.com/crafter-station/butaca/blob/595f908f3092e423b27839c650e2eae248e2b256/CONTRACT.md),
+Referencias: [Butaca CONTRACT](https://github.com/crafter-station/butaca/blob/595f908f3092e423b27839c650e2eae248e2b256/CONTRACT.md),
 [términos Cinemark](https://www.cinemark.com.ar/terminos-condiciones).
 No se garantiza exhaustividad, SLA ni checkout.
 
@@ -228,15 +206,13 @@ La validación local no certifica disponibilidad ni redirecciones futuras del se
 
 Se ejecutaron `npm run check` y `npm run build`. Las pruebas automatizadas usan
 fixtures y mocks, sin Supabase ni APIs externas reales. Las comprobaciones manuales
-incluyeron TMDB, SerpApi y lecturas anónimas Cinemark; no hubo migraciones ni
+incluyeron TMDB y lecturas anónimas Cinemark; no hubo migraciones ni
 escrituras de datos.
 
 El endpoint completo de funciones se probó con Godzilla Minus Zero (TMDB 1381071)
 y fuentes reales: HTTP 200 con 149 funciones futuras en seis cines de CABA y 37 en
 dos de Córdoba, dentro del horizonte local. La identidad se resolvió automáticamente
-por título, año 2026 y duración 135 minutos. Estas dos consultas SerpApi adicionales
-no devolvieron estructura de horarios: F1 conserva los horarios Cinemark y advierte
-que esa otra fuente está incompleta. Son conteos de la adquisición del 14/11/2026,
+por título, año 2026 y duración 135 minutos. Son conteos históricos del 14/11/2026,
 no valores permanentes ni funciones inventadas para los tests.
 
 Para reproducir en desarrollo: reiniciar `npm run dev`, abrir el detalle de

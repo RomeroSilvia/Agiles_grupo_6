@@ -9,3 +9,8 @@ export async function listarEstrenos(req, res) {
   const data = await carteleraService.listarProximosEstrenos(req.validated.query);
   res.json({ data });
 }
+
+export async function obtenerExhibicion(req, res) {
+  const data = await carteleraService.obtenerExhibicionPelicula(req.validated.params);
+  res.json({ data });
+}

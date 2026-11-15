@@ -1,22 +1,19 @@
 import { z } from 'zod';
 import { ciudadCineIdSchema, respuestaCiudadesCineSchema } from '@buscador/shared/schemas';
 import { DIRECTORIO_CIUDADES_CINE } from '../config/ciudadesCine.config.js';
-import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
+import { NotFoundError, ValidationError } from '../errors/index.js';
 import { ciudadCineConfiguracionSchema } from '../models/ciudadCine.model.js';
 
 function cargarCiudadesCine() {
   if (!DIRECTORIO_CIUDADES_CINE.configurado) {
-    throw new ExternalServiceError(
-      'el directorio de ciudades',
-      new Error('El directorio no tiene cobertura verificada'),
-    );
+    throw new Error('El directorio no tiene cobertura verificada');
   }
 
   const resultado = z
     .array(ciudadCineConfiguracionSchema)
     .safeParse(DIRECTORIO_CIUDADES_CINE.ciudades);
   if (!resultado.success) {
-    throw new ExternalServiceError('el directorio de ciudades', resultado.error);
+    throw resultado.error;
   }
 
   const ciudades = resultado.data;
@@ -25,10 +22,7 @@ function cargarCiudadesCine() {
   for (const ciudad of ciudades) {
     const claveNombre = `${ciudad.provincia.toLocaleLowerCase('es-AR')}:${ciudad.nombre.toLocaleLowerCase('es-AR')}`;
     if (ids.has(ciudad.id) || nombresPorProvincia.has(claveNombre)) {
-      throw new ExternalServiceError(
-        'el directorio de ciudades',
-        new Error('El directorio contiene ciudades duplicadas'),
-      );
+      throw new Error('El directorio contiene ciudades duplicadas');
     }
     ids.add(ciudad.id);
     nombresPorProvincia.add(claveNombre);
@@ -57,7 +51,7 @@ export function listarCiudadesCine() {
 
   const resultado = respuestaCiudadesCineSchema.safeParse({ pais: 'AR', ciudades });
   if (!resultado.success) {
-    throw new ExternalServiceError('el directorio de ciudades', resultado.error);
+    throw resultado.error;
   }
 
   return resultado.data;

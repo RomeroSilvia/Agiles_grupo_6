@@ -11,8 +11,6 @@ import {
   consolidarSesionesButaca,
   corresponderCarteleraButaca,
   normalizarObservacionesCine,
-  resolverFechaSerpApi,
-  resolverHoraSerpApi,
 } from './funcionCine.normalizer.js';
 
 const lugares = [
@@ -204,18 +202,6 @@ describe('normalización de funciones', () => {
       expect(resultado.funciones).toEqual([]);
       expect(resultado.estadoFuente).toBe('incompleta');
     }
-  });
-  it('resuelve fechas relativas, contradicciones y cambio de año sin inventar un año', () => {
-    expect(
-      resolverFechaSerpApi({ day: 'Tomorrow', date: 'Jan 1' }, '2026-12-31', '2027-01-07'),
-    ).toBe('2027-01-01');
-    expect(
-      resolverFechaSerpApi({ day: 'Today', date: 'Jan 1' }, '2026-12-31', '2027-01-07'),
-    ).toBeNull();
-    expect(resolverFechaSerpApi({ day: 'jueves' }, '2026-12-31', '2027-01-07')).toBeNull();
-    expect(resolverHoraSerpApi('12:30am')).toBe('00:30');
-    expect(resolverHoraSerpApi('7:15pm')).toBe('19:15');
-    expect(resolverHoraSerpApi('13:15pm')).toBeNull();
   });
   it('deduplica observaciones y conserva fuentes sin fusionar salas distintas', () => {
     const primaria = { ...FUNCIONES_FIXTURE[0], sala: '1' };

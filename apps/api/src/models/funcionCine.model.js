@@ -14,7 +14,7 @@ export const lugaresCineConfiguracionSchema = z
         fuentes: z
           .array(
             z.object({
-              fuenteId: z.enum(['serpapi', 'butaca']),
+              fuenteId: z.string().min(1),
               registroId: z.string().nullable(),
               nombre: z.string().optional(),
               direccion: z.string().optional(),
@@ -33,7 +33,7 @@ export const lugaresCineConfiguracionSchema = z
 export const correspondenciasPeliculasCineSchema = z.array(
   z
     .object({
-      fuenteId: z.enum(['serpapi', 'butaca']),
+      fuenteId: z.string().min(1),
       registroId: z.string().nullable(),
       nombre: z.string().trim().min(1),
       tmdbId: tmdbIdSchema,
@@ -42,41 +42,6 @@ export const correspondenciasPeliculasCineSchema = z.array(
     })
     .strict(),
 );
-
-const showingSchema = z.object({
-  time: z.array(z.string()),
-  type: z.string().nullish(),
-});
-const teatroSerpSchema = z.object({
-  name: z.string().min(1),
-  address: z.string().nullish(),
-  link: z.string().nullish(),
-  showing: z.array(showingSchema),
-});
-export const respuestaSerpApiSchema = z
-  .object({
-    error: z.string().optional(),
-    search_metadata: z.object({ status: z.string() }).optional(),
-    knowledge_graph: z
-      .object({ title: z.string().optional(), kgmid: z.string().optional() })
-      .optional(),
-    showtimes: z
-      .array(
-        z.object({
-          day: z.string().nullish(),
-          date: z.string().nullish(),
-          theaters: z.array(teatroSerpSchema).optional(),
-          movies: z
-            .array(z.object({ name: z.string().min(1), showing: z.array(showingSchema) }))
-            .optional(),
-        }),
-      )
-      .optional(),
-  })
-  .refine(
-    (respuesta) => Boolean(respuesta.error) || respuesta.search_metadata?.status === 'Success',
-    'La respuesta debe acreditar éxito o informar un error',
-  );
 
 export const respuestaCinesButacaSchema = z.object({
   data: z.array(

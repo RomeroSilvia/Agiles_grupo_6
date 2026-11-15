@@ -4,7 +4,7 @@ import {
   parametrosFuncionesCineSchema,
   respuestaFuncionesCineSchema,
 } from '@buscador/shared/schemas';
-import { request } from '../../services/api.service.js';
+import { obtenerFuncionesPelicula } from './cartelera.api.js';
 
 export function useFuncionesCine({ tmdbId, ciudadId }) {
   const clave = `${tmdbId}:${ciudadId ?? ''}`;
@@ -23,8 +23,9 @@ export function useFuncionesCine({ tmdbId, ciudadId }) {
     const params = parametrosFuncionesCineSchema.safeParse({ tmdbId });
     const query = consultaFuncionesCineSchema.safeParse({ ciudadId });
     if (!params.success || !query.success) return undefined;
-    request(`/cartelera/peliculas/${params.data.tmdbId}/funciones`, {
-      params: query.data,
+    obtenerFuncionesPelicula({
+      tmdbId: params.data.tmdbId,
+      ciudadId: query.data.ciudadId,
       signal: controller.signal,
     })
       .then((respuesta) => {

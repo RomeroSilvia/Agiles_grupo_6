@@ -3,5 +3,6 @@ export const EVENTOS_CONFIG = Object.freeze({
   CACHE_MAX_ENTRIES: 100,
   TIMEOUT_MS: 120_000,
   MAX_REQUESTS_PER_DAY: 200,
+  FIRST_PAGE_RESERVED_REQUESTS: 50,
   RATE_LIMIT: Object.freeze({ maxRequests: 10, windowMs: 60_000 }),
 });

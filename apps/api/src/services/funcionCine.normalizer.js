@@ -3,11 +3,9 @@ import {
   lugaresCineConfiguracionSchema,
   correspondenciasPeliculasCineSchema,
 } from '../models/funcionCine.model.js';
-import { validateExternalResponse } from '../utils/validateExternalResponse.js';
 import {
   fechaCivilCarteleraSchema,
   funcionCineSchema,
-  sumarDiasCivil,
   validarEnlaceCine,
 } from '@buscador/shared/schemas';
 
@@ -45,60 +43,6 @@ export function crearInicioLocalCine(fecha, hora, zonaHoraria) {
       .find(({ type }) => type === 'timeZoneName')
       .value.replace('GMT', '') || '+00:00';
   return `${fecha}T${hora}:00${offset}`;
-}
-
-export function resolverHoraSerpApi(valor) {
-  const hora = String(valor).trim().toLowerCase().replace(/\s+/g, '').replaceAll('.', '');
-  const partes = /^(\d{1,2}):([0-5]\d)(am|pm)?$/.exec(hora);
-  if (!partes) return null;
-  let horas = Number(partes[1]);
-  if (partes[3]) {
-    if (horas < 1 || horas > 12) return null;
-    horas = (horas % 12) + (partes[3] === 'pm' ? 12 : 0);
-  }
-  return horas <= 23 ? `${String(horas).padStart(2, '0')}:${partes[2]}` : null;
-}
-
-export function resolverFechaSerpApi({ day, date }, desde, hasta) {
-  const dia = normalizarTextoCine(day);
-  const fecha = normalizarTextoCine(date);
-  const relativos = { today: 0, hoy: 0, tomorrow: 1, manana: 1 };
-  const coincidencias = [];
-  for (let indice = 0; indice <= 7; indice += 1) {
-    const candidato = sumarDiasCivil(desde, indice);
-    if (candidato > hasta) break;
-    const instante = new Date(`${candidato}T12:00:00Z`);
-    const formatos = ['es-AR', 'en-US'].flatMap((locale) => {
-      const mes = new Intl.DateTimeFormat(locale, { timeZone: 'UTC', month: 'short' }).format(
-        instante,
-      );
-      const mesLargo = new Intl.DateTimeFormat(locale, { timeZone: 'UTC', month: 'long' }).format(
-        instante,
-      );
-      const numero = String(instante.getUTCDate());
-      return [
-        `${mes} ${numero}`,
-        `${numero} ${mes}`,
-        `${numero} de ${mesLargo}`,
-        `${mesLargo} ${numero}`,
-        `${numero} ${mesLargo}`,
-        `${numero}/${instante.getUTCMonth() + 1}`,
-      ].map(normalizarTextoCine);
-    });
-    const dias = ['es-AR', 'en-US'].flatMap((locale) =>
-      ['long', 'short'].map((weekday) =>
-        normalizarTextoCine(
-          new Intl.DateTimeFormat(locale, { timeZone: 'UTC', weekday }).format(instante),
-        ),
-      ),
-    );
-    const coincideDia =
-      !dia || (Object.hasOwn(relativos, dia) ? relativos[dia] === indice : dias.includes(dia));
-    const coincideFecha =
-      !fecha || fecha === normalizarTextoCine(candidato) || formatos.includes(fecha);
-    if ((dia || fecha) && coincideDia && coincideFecha) coincidencias.push(candidato);
-  }
-  return coincidencias.length === 1 ? coincidencias[0] : null;
 }
 
 export function corresponderPeliculaCine({
@@ -220,16 +164,8 @@ export function normalizarObservacionesCine({
   correspondencias,
   estructuraPresente = true,
 }) {
-  lugares = validateExternalResponse(
-    lugaresCineConfiguracionSchema,
-    lugares,
-    'la configuración de cines',
-  );
-  correspondencias = validateExternalResponse(
-    correspondenciasPeliculasCineSchema,
-    correspondencias,
-    'las correspondencias de películas',
-  );
+  lugares = lugaresCineConfiguracionSchema.parse(lugares);
+  correspondencias = correspondenciasPeliculasCineSchema.parse(correspondencias);
   const cines = new Map();
   const funciones = [];
   const advertencias = [];

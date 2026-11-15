@@ -49,9 +49,7 @@ describe('SeccionFunciones', () => {
     expect(await screen.findByText('00:30')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: 'Cine Central' })).toHaveLength(2);
     expect(screen.getByText('Cobertura parcial de prueba')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Zona horaria: America\/Argentina\/Buenos_Aires\./),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Horarios locales de Ciudad de prueba/)).toBeInTheDocument();
     expect(request).toHaveBeenCalledTimes(1);
     fireEvent.change(screen.getByRole('combobox', { name: 'Fecha de la función' }), {
       target: { value: '2026-11-16' },

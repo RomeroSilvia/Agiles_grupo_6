@@ -1,14 +1,14 @@
 export const CATEGORIAS_EVENTOS = Object.freeze([
-  { id: 'all', nombre: 'Todas las categorías' },
-  { id: 'music', nombre: 'Música' },
-  { id: 'theatre', nombre: 'Teatro' },
-  { id: 'art', nombre: 'Arte' },
-  { id: 'festivals', nombre: 'Festivales' },
-  { id: 'workshops', nombre: 'Talleres' },
-  { id: 'comedy', nombre: 'Humor' },
-  { id: 'kids', nombre: 'Para las infancias' },
-  { id: 'sports', nombre: 'Deportes' },
-  { id: 'food-drinks', nombre: 'Gastronomía' },
+  { id: 'todas', nombre: 'Todas las categorías' },
+  { id: 'musica', nombre: 'Música' },
+  { id: 'teatro', nombre: 'Teatro' },
+  { id: 'arte', nombre: 'Arte' },
+  { id: 'festivales', nombre: 'Festivales' },
+  { id: 'talleres', nombre: 'Talleres' },
+  { id: 'humor', nombre: 'Humor' },
+  { id: 'infancias', nombre: 'Para las infancias' },
+  { id: 'deportes', nombre: 'Deportes' },
+  { id: 'gastronomia', nombre: 'Gastronomía' },
 ]);
 
 export const PERIODOS_EVENTOS = Object.freeze([
@@ -19,4 +19,4 @@ export const PERIODOS_EVENTOS = Object.freeze([
 ]);
 
 export const ZONA_HORARIA_EVENTOS = 'America/Argentina/Buenos_Aires';
-export const PAGINA_MAXIMA_EVENTOS = 20;
+export const PAGINA_MAXIMA_EVENTOS = 5;

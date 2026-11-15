@@ -7,12 +7,12 @@ import {
 
 export const consultaEventosSchema = z
   .object({
-    categoria: z.enum(CATEGORIAS_EVENTOS.map(({ id }) => id)).default('all'),
+    categoria: z.enum(CATEGORIAS_EVENTOS.map(({ id }) => id)).default('todas'),
     fecha: z.enum(PERIODOS_EVENTOS.map(({ id }) => id)).default('todas'),
     pagina: z.coerce.number().int().min(1).max(PAGINA_MAXIMA_EVENTOS).default(1),
   })
   .strict()
-  .refine(({ categoria, fecha }) => categoria === 'all' || fecha === 'todas', {
+  .refine(({ categoria, fecha }) => categoria === 'todas' || fecha === 'todas', {
     message: 'Elegí una categoría o un período para consultar eventos',
     path: ['categoria'],
   });

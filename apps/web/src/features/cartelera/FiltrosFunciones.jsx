@@ -1,3 +1,4 @@
+import { formatearFechaCine } from './fechasCine.js';
 import { useId } from 'react';
 import { Button } from '../../components/ui/Button.jsx';
 import { Select } from '../../components/ui/Select.jsx';
@@ -20,7 +21,7 @@ export function FiltrosFunciones({ fechas, cines, fecha, cineId, cambiarFiltros,
             <option value="">Todas las fechas</option>
             {fechas.map((opcion) => (
               <option key={opcion} value={opcion}>
-                {opcion}
+                {formatearFechaCine(opcion)}
               </option>
             ))}
           </Select>

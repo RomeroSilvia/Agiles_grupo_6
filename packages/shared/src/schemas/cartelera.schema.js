@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  HORIZONTE_ESTRENOS_DIAS,
   ESTADOS_EXHIBICION,
   ESTADOS_FECHA,
   FUENTE_ID_TMDB,
@@ -98,7 +99,11 @@ export const consultaEstrenosSchema = z
   .strict()
   .transform(({ desde, hasta, pagina }) => {
     const inicio = desde ?? sumarDiasCivil(obtenerHoyArgentina(), 1);
-    return { desde: inicio, hasta: hasta ?? sumarDiasCivil(inicio, 89), pagina };
+    return {
+      desde: inicio,
+      hasta: hasta ?? sumarDiasCivil(inicio, HORIZONTE_ESTRENOS_DIAS - 1),
+      pagina,
+    };
   })
   .superRefine(({ desde, hasta }, ctx) => {
     if (desde <= obtenerHoyArgentina()) {
@@ -108,11 +113,11 @@ export const consultaEstrenosSchema = z
         message: 'La fecha inicial debe ser posterior a hoy en Argentina',
       });
     }
-    if (hasta < desde || hasta > sumarDiasCivil(desde, 89)) {
+    if (hasta < desde || hasta > sumarDiasCivil(desde, HORIZONTE_ESTRENOS_DIAS - 1)) {
       ctx.addIssue({
         code: 'custom',
         path: ['hasta'],
-        message: 'El período debe abarcar entre 1 y 90 días',
+        message: `El período debe abarcar entre 1 y ${HORIZONTE_ESTRENOS_DIAS} días`,
       });
     }
   });
@@ -121,3 +126,5 @@ export const respuestaEstrenosSchema = respuestaCarteleraSchema.extend({
   desde: fechaCivilCarteleraSchema,
   hasta: fechaCivilCarteleraSchema,
 });
+
+export const respuestaExhibicionCineSchema = z.object({ consultable: z.boolean() }).strict();

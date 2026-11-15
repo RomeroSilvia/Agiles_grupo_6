@@ -5,22 +5,17 @@ import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { ResultadoCard } from '../busqueda/ResultadoCard.jsx';
 import { CardsCargando, GrillaResultados } from '../busqueda/ResultadosBusqueda.jsx';
+import { formatearFechaCivil } from '../../utils/formatearFecha.js';
 import { useCartelera } from './useCartelera.js';
-
-const FORMATEADOR_FECHA = new Intl.DateTimeFormat('es-AR', {
-  dateStyle: 'long',
-  timeZone: 'UTC',
-});
 
 function contenidoFecha(pelicula) {
   if (!pelicula.fechaEstrenoAr) {
     return 'Fecha de estreno en Argentina no informada';
   }
 
-  const fecha = new Date(`${pelicula.fechaEstrenoAr}T00:00:00.000Z`);
   return (
     <time dateTime={pelicula.fechaEstrenoAr}>
-      Estreno en Argentina: {FORMATEADOR_FECHA.format(fecha)}
+      Estreno en Argentina: {formatearFechaCivil(pelicula.fechaEstrenoAr)}
     </time>
   );
 }

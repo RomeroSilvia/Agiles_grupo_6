@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  ArrowRight,
   ArrowUpRight,
   Bookmark,
   ChartNoAxesColumn,
@@ -73,6 +74,7 @@ export const MailIcon = createIcon(Mail);
 export const KeyIcon = createIcon(Key);
 export const TrashIcon = createIcon(Trash);
 export const ArrowLeftIcon = createIcon(ArrowLeft);
+export const ArrowRightIcon = createIcon(ArrowRight);
 export const ArrowUpRightIcon = createIcon(ArrowUpRight);
 export const FiltersIcon = createIcon(SlidersHorizontal);
 export const GlobeIcon = createIcon(Globe);

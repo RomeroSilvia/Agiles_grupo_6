@@ -10,6 +10,7 @@ export function useRemoteOptions({ clave, habilitado, solicitar, esperaMs = 0, m
     cargado: false,
     isLoading: false,
     error: '',
+    codigoError: null,
   });
 
   useEffect(() => {
@@ -26,11 +27,20 @@ export function useRemoteOptions({ clave, habilitado, solicitar, esperaMs = 0, m
         cargado: false,
         isLoading: true,
         error: '',
+        codigoError: null,
       });
       solicitar({ signal: controller.signal })
         .then((datos) => {
           if (!controller.signal.aborted) {
-            setRespuesta({ clave, intento, datos, cargado: true, isLoading: false, error: '' });
+            setRespuesta({
+              clave,
+              intento,
+              datos,
+              cargado: true,
+              isLoading: false,
+              error: '',
+              codigoError: null,
+            });
           }
         })
         .catch((error) => {
@@ -42,6 +52,7 @@ export function useRemoteOptions({ clave, habilitado, solicitar, esperaMs = 0, m
               cargado: false,
               isLoading: false,
               error: error instanceof ApiError ? error.message : mensajeError,
+              codigoError: error instanceof ApiError ? error.code : null,
             });
           }
         });
@@ -61,6 +72,7 @@ export function useRemoteOptions({ clave, habilitado, solicitar, esperaMs = 0, m
     cargado: respuestaActual && respuesta.cargado,
     isLoading: habilitado && (!respuestaActual || respuesta.isLoading),
     error: respuestaActual ? respuesta.error : '',
+    codigoError: respuestaActual ? respuesta.codigoError : null,
     reintentar,
   };
 }

@@ -6,10 +6,22 @@ const SIZES = {
   md: 'px-3 py-1.5 text-sm',
 };
 
-export function Chip({ size = 'sm', onRemove, removeLabel, className = '', children }) {
+const VARIANTS = {
+  filled: 'bg-chip text-chip-foreground',
+  outline: 'border border-border text-muted',
+};
+
+export function Chip({
+  size = 'sm',
+  variant = 'filled',
+  onRemove,
+  removeLabel,
+  className = '',
+  children,
+}) {
   return (
     <span
-      className={`inline-flex max-w-full items-center gap-1.5 rounded-full bg-chip font-medium text-chip-foreground ${SIZES[size]} ${className}`}
+      className={`inline-flex max-w-full items-center gap-1.5 rounded-full font-medium ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
     >
       {children}
       {onRemove && (

@@ -42,25 +42,25 @@ export const routes = [
           { path: RUTAS.MIS_PLATAFORMAS, Component: PaginaMisPlataformas },
           { path: RUTAS.PERFIL, Component: PaginaPerfil },
           { path: RUTAS.CUENTA, Component: PaginaCuenta },
+        ],
+      },
+      {
+        Component: SoloAdmin,
+        children: [
           {
-            Component: SoloAdmin,
+            path: RUTAS.ADMIN,
+            Component: PaginaAdministracion,
             children: [
+              { index: true, loader: () => redirect(RUTAS.ADMIN_METRICAS) },
               {
-                path: RUTAS.ADMIN,
-                Component: PaginaAdministracion,
-                children: [
-                  { index: true, loader: () => redirect(RUTAS.ADMIN_METRICAS) },
-                  {
-                    path: PESTANA_METRICAS.to,
-                    Component: PestanaMetricas,
-                    handle: { pestanaAdmin: PESTANA_METRICAS },
-                  },
-                  {
-                    path: PESTANA_USUARIOS.to,
-                    Component: PestanaUsuarios,
-                    handle: { pestanaAdmin: PESTANA_USUARIOS },
-                  },
-                ],
+                path: PESTANA_METRICAS.to,
+                Component: PestanaMetricas,
+                handle: { pestanaAdmin: PESTANA_METRICAS },
+              },
+              {
+                path: PESTANA_USUARIOS.to,
+                Component: PestanaUsuarios,
+                handle: { pestanaAdmin: PESTANA_USUARIOS },
               },
             ],
           },

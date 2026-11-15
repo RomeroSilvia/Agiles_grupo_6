@@ -2,6 +2,7 @@ export const API_ERROR_CODES = Object.freeze({
   CONFLICT: 'CONFLICT',
   FORBIDDEN: 'FORBIDDEN',
   INVALID_LINK: 'INVALID_LINK',
+  UNAUTHENTICATED: 'UNAUTHENTICATED',
 });
 
 export class ApiError extends Error {

@@ -18,6 +18,12 @@ describe('Chip', () => {
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
 
+  it('acepta la variante con borde', () => {
+    render(<Chip variant="outline">Sin confirmar</Chip>);
+
+    expect(screen.getByText('Sin confirmar')).toHaveClass('border');
+  });
+
   it('sin onRemove es solo una etiqueta', () => {
     render(<Chip>Película</Chip>);
 

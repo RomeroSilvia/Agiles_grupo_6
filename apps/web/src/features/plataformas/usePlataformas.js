@@ -1,39 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import { request } from '../../services/api.service.js';
 import { usePlataformasPropias } from '../../contexts/plataformasPropias/PlataformasPropiasContext.js';
+import { useCatalogoPlataformas } from './useCatalogoPlataformas.js';
 
 export function usePlataformas() {
   const propias = usePlataformasPropias();
-  const [plataformas, setPlataformas] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorCatalogo, setErrorCatalogo] = useState('');
+  const {
+    plataformas,
+    loading,
+    error: errorCatalogo,
+    reintentar: reintentarCatalogo,
+  } = useCatalogoPlataformas();
   const [errorGuardado, setErrorGuardado] = useState('');
-  const [intentoCatalogo, setIntentoCatalogo] = useState(0);
   const [propiasFallaronAlEntrar] = useState(() => Boolean(propias.error));
-
-  useEffect(() => {
-    let cancelled = false;
-    request('/plataformas')
-      .then((catalogo) => {
-        if (!cancelled) {
-          setPlataformas(catalogo);
-          setErrorCatalogo('');
-        }
-      })
-      .catch((cause) => {
-        if (!cancelled) {
-          setErrorCatalogo(cause.message);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [intentoCatalogo]);
 
   const { alternar: alternarPropia, recargar: recargarPropias, error: errorPropias } = propias;
 
@@ -58,14 +36,12 @@ export function usePlataformas() {
   const reintentar = useCallback(() => {
     setErrorGuardado('');
     if (errorCatalogo) {
-      setErrorCatalogo('');
-      setLoading(true);
-      setIntentoCatalogo((actual) => actual + 1);
+      reintentarCatalogo();
     }
     if (errorPropias) {
       recargarPropias();
     }
-  }, [errorCatalogo, errorPropias, recargarPropias]);
+  }, [errorCatalogo, errorPropias, recargarPropias, reintentarCatalogo]);
 
   const errorCarga = errorCatalogo || errorPropias;
 

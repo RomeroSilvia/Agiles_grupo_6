@@ -71,7 +71,7 @@ supabase/
 | `/perfil/cuenta`          |   sí   | Cambiar el mail, cambiar la contraseña y eliminar la cuenta                                          |
 | `/admin`                  | admin  | Panel de administración: lleva a `/admin/metricas`                                                   |
 | `/admin/metricas`         | admin  | Pestaña «Métricas» del panel                                                                         |
-| `/admin/usuarios`         | admin  | Pestaña «Usuarios» del panel                                                                         |
+| `/admin/usuarios`         | admin  | Pestaña «Usuarios» del panel: listado paginado con búsqueda por mail y filtros por región y estado   |
 | `/iniciar-sesion`         |        | Inicio de sesión (solo sin sesión)                                                                   |
 | `/registro`               |        | Registro (solo sin sesión)                                                                           |
 | `/recuperar-contrasena`   |        | Pedir un enlace por mail para restablecer la contraseña (solo sin sesión)                            |
@@ -88,8 +88,16 @@ cuenta borra al usuario y todos sus datos.
 Las pantallas `admin` son solo para usuarios con rol de administrador (el rol se asigna desde la
 base, ver [supabase/README.md](supabase/README.md)). Para ellos, la nav y el menú de celular suman
 «Administración» y el header muestra el chip «ADMIN». Sin sesión, `/admin` lleva a iniciar sesión;
-con sesión y sin el rol, muestra un error de acceso. Ocultar el panel es solo una comodidad: el
-control real lo hace la API.
+con sesión y sin el rol, muestra un error de acceso. Mientras se carga la sesión, las rutas del
+panel no muestran nada, para no dejar ver la pantalla antes de saber si la cuenta es admin. Ocultar
+el panel es solo una comodidad: el control real lo hace la API.
+
+La pestaña «Usuarios» muestra, por usuario, el mail, la región, las plataformas elegidas, la
+cantidad de títulos en la watchlist, la fecha de registro y el estado («Activo» si confirmó el mail
+y «Sin confirmar» si no). Se puede buscar por mail con coincidencias parciales y filtrar por región
+y por estado; los filtros y la página quedan en la URL y, al cambiar un filtro, se vuelve a la
+página 1. El listado muestra 10 usuarios por página y el total de resultados. Las cuentas que se
+crean desde la app nacen con el mail confirmado, así que hoy todas figuran como «Activo».
 
 ## Endpoints
 
@@ -171,6 +179,7 @@ aviso por mail (ver [apps/api/README.md](apps/api/README.md)).
 | GET    | `/watchlist/:tipo/:tmdbId`                          |   si   | Indica si el título está en la watchlist                                   |
 | PUT    | `/watchlist/:tipo/:tmdbId`                          |   si   | Agrega un título a la watchlist                                            |
 | DELETE | `/watchlist/:tipo/:tmdbId`                          |   si   | Quita un título de la watchlist                                            |
+| GET    | `/admin/usuarios`                                   | admin  | Usuarios paginados. Query: `mail`, `region`, `estado`, `pagina`            |
 
 Los endpoints con sesión responden `401` (`UNAUTHENTICATED`) si no hay un usuario logueado.
 
@@ -182,6 +191,14 @@ responde `401` (`UNAUTHENTICATED`) sin sesión y `403` (`FORBIDDEN`) si el usuar
 administrador. El rol se lee de la base en cada request, así que quitarlo corta el acceso enseguida.
 Todas las respuestas, también las de error, llevan `Cache-Control: no-store` para que los datos del
 panel no queden en la caché del navegador ni de un proxy.
+
+`GET /api/admin/usuarios` devuelve `{ usuarios, total, pagina, totalPaginas }`, de a 10 usuarios.
+`mail` busca coincidencias parciales (vacío es sin filtro), `region` es una de las regiones
+soportadas, `estado` es `activo` o `sin_confirmar` y `pagina` va de 1 a 10.000; cualquier otro valor o
+parámetro responde `400`. Una página sin filas devuelve la lista vacía con el `total` real. Cada
+usuario trae `{ id, email, region, plataformaIds, titulosWatchlist, creadoEn, estado }`; las
+plataformas vienen como ids y la web las cruza con `GET /api/plataformas`. `region` es `null` si
+todavía no se detectó; la web muestra «—» y el filtro por región no incluye a esos usuarios.
 
 En `/api/busqueda`, `q` se puede omitir cuando se indica `tipo`, `anio`, `genero`, `actor` o
 `director`. En `/api/busqueda/propias`, la disponibilidad en las plataformas del usuario también

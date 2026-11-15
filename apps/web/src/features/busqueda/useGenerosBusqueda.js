@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { listarGenerosBusqueda } from './busqueda.api.js';
-import { useRemoteOptions } from '../../hooks/useRemoteOptions.js';
+import { useRemoteData } from '../../hooks/useRemoteData.js';
 
 const MENSAJE_ERROR = 'No se pudieron cargar los géneros. Probá de nuevo más tarde.';
 
@@ -13,7 +13,7 @@ export function useGenerosBusqueda({ cargarInicialmente = false } = {}) {
     }
     return generos;
   }, []);
-  const respuesta = useRemoteOptions({
+  const respuesta = useRemoteData({
     clave: 'generos',
     habilitado,
     solicitar,

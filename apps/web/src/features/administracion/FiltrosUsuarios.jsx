@@ -1,18 +1,22 @@
-import { ESTADOS_USUARIO, REGIONES_SOPORTADAS } from '@buscador/shared/constants';
+import {
+  ESTADOS_USUARIO,
+  MAX_LARGO_BUSQUEDA_MAIL,
+  REGIONES_SOPORTADAS,
+} from '@buscador/shared/constants';
 import { SearchField } from '../../components/ui/SearchField.jsx';
 import { Select } from '../../components/ui/Select.jsx';
-import { ETIQUETAS_ESTADO_USUARIO, MAX_LARGO_MAIL_BUSQUEDA } from './administracion.constants.js';
+import { ETIQUETAS_ESTADO_USUARIO } from './administracion.constants.js';
 
-export function FiltrosUsuarios({ mail, region, estado, onCambiarFiltro }) {
+export function FiltrosUsuarios({ mail, region, estado, onCambiarMail, onCambiarFiltro }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-[1fr_auto_auto]">
       <div className="col-span-2 md:col-span-1">
         <SearchField
           aria-label="Buscar por mail"
           placeholder="Buscar por mail…"
-          maxLength={MAX_LARGO_MAIL_BUSQUEDA}
+          maxLength={MAX_LARGO_BUSQUEDA_MAIL}
           value={mail}
-          onChange={(event) => onCambiarFiltro('mail', event.target.value)}
+          onChange={(event) => onCambiarMail(event.target.value)}
         />
       </div>
       <Select

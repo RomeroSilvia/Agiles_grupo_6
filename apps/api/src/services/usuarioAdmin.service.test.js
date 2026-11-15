@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { USUARIOS_POR_PAGINA } from '@buscador/shared/constants';
-import { env } from '../config/env.config.js';
 import * as usuarioAdminRepository from '../repositories/usuarioAdmin.repository.js';
 import * as usuarioAdminService from './usuarioAdmin.service.js';
 
@@ -35,7 +34,7 @@ describe('usuarioAdmin.service', () => {
     });
   });
 
-  it('muestra la región por defecto a los usuarios sin región detectada', async () => {
+  it('deja la región en null si no se detectó', async () => {
     usuarioAdminRepository.listarUsuarios.mockResolvedValue({
       total: 1,
       usuarios: [{ ...USUARIO, region: null }],
@@ -43,7 +42,7 @@ describe('usuarioAdmin.service', () => {
 
     const { usuarios } = await usuarioAdminService.listarUsuarios({ pagina: 1 });
 
-    expect(usuarios[0].region).toBe(env.DEFAULT_REGION);
+    expect(usuarios[0].region).toBeNull();
   });
 
   it('sin usuarios devuelve cero páginas', async () => {

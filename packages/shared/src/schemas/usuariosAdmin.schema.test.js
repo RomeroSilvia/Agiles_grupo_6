@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PAGINA_MAXIMA_USUARIOS } from '../constants/index.js';
+import { MAX_LARGO_BUSQUEDA_MAIL, PAGINA_MAXIMA_USUARIOS } from '../constants/index.js';
 import { usuariosAdminSchema } from './usuariosAdmin.schema.js';
 
 describe('usuariosAdminSchema', () => {
@@ -20,7 +20,7 @@ describe('usuariosAdminSchema', () => {
       { pagina: '0' },
       { pagina: String(PAGINA_MAXIMA_USUARIOS + 1) },
       { pagina: '1.5' },
-      { mail: 'a'.repeat(101) },
+      { mail: 'a'.repeat(MAX_LARGO_BUSQUEDA_MAIL + 1) },
       { orden: 'mail' },
     ]) {
       expect(usuariosAdminSchema.safeParse(query).success).toBe(false);

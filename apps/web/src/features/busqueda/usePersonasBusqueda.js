@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { personaBusquedaSchema } from '@buscador/shared/schemas';
 import { DEBOUNCE_BUSQUEDA_PERSONAS_MS } from './busqueda.constants.js';
 import { buscarPersonasBusqueda } from './busqueda.api.js';
-import { useRemoteOptions } from '../../hooks/useRemoteOptions.js';
+import { useRemoteData } from '../../hooks/useRemoteData.js';
 
 const MENSAJE_ERROR = 'No se pudieron buscar personas. Probá de nuevo.';
 
@@ -19,7 +19,7 @@ export function usePersonasBusqueda({ consulta, rol, seleccionada }) {
     },
     [q, rol],
   );
-  const respuesta = useRemoteOptions({
+  const respuesta = useRemoteData({
     clave: `${rol}:${q}`,
     habilitado: validacion.success && !seleccionada,
     solicitar,

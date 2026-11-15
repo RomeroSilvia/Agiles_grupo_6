@@ -33,6 +33,16 @@ const NACHO = {
   estado: 'sin_confirmar',
 };
 
+const SIN_REGION = {
+  id: 'b7d8e1c2-0000-4000-8000-000000000003',
+  email: 'sin.region@mail.com',
+  region: null,
+  plataformaIds: [],
+  titulosWatchlist: 0,
+  creadoEn: '2026-09-01T15:30:00.000Z',
+  estado: 'activo',
+};
+
 const LISTADO = { usuarios: [ANA, NACHO], total: 12, pagina: 1, totalPaginas: 2 };
 
 function mockApi({ usuarios = async () => LISTADO, sesion = async () => ({ user: ADMIN }) } = {}) {
@@ -92,6 +102,19 @@ describe('Pestaña de usuarios del panel de administración', () => {
     expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
   });
 
+  it('un usuario sin región detectada muestra «—» en la región', async () => {
+    mockApi({
+      usuarios: async () => ({ usuarios: [SIN_REGION], total: 1, pagina: 1, totalPaginas: 1 }),
+    });
+    renderRoute('/admin/usuarios');
+
+    const tabla = await screen.findByRole('table', { name: 'Usuarios registrados' });
+    const fila = within(tabla).getByRole('row', { name: /sin\.region@mail\.com/ });
+
+    expect(within(fila).getAllByText('—')).toHaveLength(2);
+    expect(within(fila).queryByText('AR')).not.toBeInTheDocument();
+  });
+
   it('buscar por mail pide el listado filtrado desde la página 1', async () => {
     mockApi();
     const router = renderRoute('/admin/usuarios?pagina=2');
@@ -101,6 +124,57 @@ describe('Pestaña de usuarios del panel de administración', () => {
 
     await waitFor(() => expect(ultimoPedidoDeUsuarios()).toMatchObject({ mail: 'ana', pagina: 1 }));
     expect(router.state.location.search).toBe('?mail=ana');
+  });
+
+  it('escribir el mail hace un solo pedido cuando se termina de escribir', async () => {
+    mockApi();
+    renderRoute('/admin/usuarios');
+    await screen.findByRole('table', { name: 'Usuarios registrados' });
+
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por mail' }), 'ana');
+
+    await waitFor(() => expect(ultimoPedidoDeUsuarios()).toMatchObject({ mail: 'ana' }));
+    expect(pedidosDeUsuarios().filter((params) => params.mail)).toEqual([
+      { mail: 'ana', region: undefined, estado: undefined, pagina: 1 },
+    ]);
+  });
+
+  it('al volver a la pestaña sin filtros, el buscador se vacía', async () => {
+    mockApi();
+    const router = renderRoute('/admin/usuarios?mail=ana');
+    await screen.findByRole('table', { name: 'Usuarios registrados' });
+    const buscador = screen.getByRole('searchbox', { name: 'Buscar por mail' });
+    expect(buscador).toHaveValue('ana');
+
+    await userEvent.click(screen.getByRole('link', { name: 'Usuarios' }));
+
+    await waitFor(() => expect(buscador).toHaveValue(''));
+    expect(router.state.location.search).toBe('');
+    expect(ultimoPedidoDeUsuarios()).toMatchObject({ mail: undefined, pagina: 1 });
+  });
+
+  it('un parámetro inválido o desconocido en la URL no descarta los demás filtros', async () => {
+    mockApi();
+    renderRoute('/admin/usuarios?mail=ana&pagina=abc&utm=x');
+    await screen.findByRole('table', { name: 'Usuarios registrados' });
+
+    expect(ultimoPedidoDeUsuarios()).toEqual({
+      mail: 'ana',
+      region: undefined,
+      estado: undefined,
+      pagina: 1,
+    });
+    expect(screen.getByRole('searchbox', { name: 'Buscar por mail' })).toHaveValue('ana');
+  });
+
+  it('una página mayor al total lleva a la última página', async () => {
+    mockApi({
+      usuarios: async ({ pagina }) => ({ ...LISTADO, pagina }),
+    });
+    const router = renderRoute('/admin/usuarios?pagina=5');
+
+    await waitFor(() => expect(ultimoPedidoDeUsuarios()).toMatchObject({ pagina: 2 }));
+    expect(router.state.location.search).toBe('?pagina=2');
   });
 
   it('cambiar un filtro vuelve a la página 1 y se combina con la búsqueda', async () => {
@@ -184,5 +258,23 @@ describe('Pestaña de usuarios del panel de administración', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'No tenés acceso a esta sección' }),
     ).toBeInTheDocument();
+  });
+
+  it('si la sesión venció, recarga la sesión y lleva a iniciar sesión', async () => {
+    let conSesion = true;
+    mockApi({
+      sesion: async () => (conSesion ? { user: ADMIN } : null),
+      usuarios: async () => {
+        conSesion = false;
+        throw new ApiError({
+          status: 401,
+          code: 'UNAUTHENTICATED',
+          message: 'Tenés que iniciar sesión',
+        });
+      },
+    });
+    const router = renderRoute('/admin/usuarios');
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/iniciar-sesion'));
   });
 });

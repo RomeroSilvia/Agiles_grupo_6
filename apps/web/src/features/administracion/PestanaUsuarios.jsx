@@ -37,7 +37,8 @@ function UsuariosCargando() {
 
 export function PestanaUsuarios() {
   const { reloadSession } = useSession();
-  const { filtros, mailIngresado, cambiarFiltro, cambiarPagina } = useFiltrosUsuarios();
+  const { filtros, mailIngresado, cambiarMail, cambiarFiltro, cambiarPagina } =
+    useFiltrosUsuarios();
   const { datos, isLoading, error, codigoError, reintentar } = useUsuariosAdmin(filtros);
   const catalogo = useCatalogoPlataformas();
 
@@ -68,6 +69,7 @@ export function PestanaUsuarios() {
         mail={mailIngresado}
         region={filtros.region}
         estado={filtros.estado}
+        onCambiarMail={cambiarMail}
         onCambiarFiltro={cambiarFiltro}
       />
 

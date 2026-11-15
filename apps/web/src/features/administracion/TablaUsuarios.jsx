@@ -45,7 +45,7 @@ function FilaUsuario({ usuario, plataformasPorId }) {
         </span>
       </th>
       <td className={CELDA_CLASS_NAME}>
-        <Chip>{region}</Chip>
+        {region ? <Chip>{region}</Chip> : <span className="text-muted">—</span>}
       </td>
       <td className={`${CELDA_CLASS_NAME} order-last col-span-3`}>
         <PlataformasUsuario plataformas={plataformas} email={email} />

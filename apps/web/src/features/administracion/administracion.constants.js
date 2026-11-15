@@ -25,8 +25,6 @@ export const RUTA_API_USUARIOS_ADMIN = '/admin/usuarios';
 
 export const DEBOUNCE_BUSQUEDA_MAIL_MS = 300;
 
-export const MAX_LARGO_MAIL_BUSQUEDA = 100;
-
 export const ETIQUETAS_ESTADO_USUARIO = Object.freeze({
   [ESTADO_USUARIO.ACTIVO]: 'Activo',
   [ESTADO_USUARIO.SIN_CONFIRMAR]: 'Sin confirmar',

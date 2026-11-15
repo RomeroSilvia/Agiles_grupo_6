@@ -197,9 +197,8 @@ panel no queden en la caché del navegador ni de un proxy.
 letras, `estado` es `activo` o `sin_confirmar` y `pagina` va de 1 a 10.000; cualquier otro valor o
 parámetro responde `400`. Una página sin filas devuelve la lista vacía con el `total` real. Cada
 usuario trae `{ id, email, region, plataformaIds, titulosWatchlist, creadoEn, estado }`; las
-plataformas vienen como ids y la web las cruza con `GET /api/plataformas`. A los usuarios sin región
-detectada se les muestra `DEFAULT_REGION`, pero el filtro por región compara con la región guardada,
-así que no los incluye.
+plataformas vienen como ids y la web las cruza con `GET /api/plataformas`. `region` es `null` si
+todavía no se detectó; la web muestra «—» y el filtro por región no incluye a esos usuarios.
 
 En `/api/busqueda`, `q` se puede omitir cuando se indica `tipo`, `anio`, `genero`, `actor` o
 `director`. En `/api/busqueda/propias`, la disponibilidad en las plataformas del usuario también

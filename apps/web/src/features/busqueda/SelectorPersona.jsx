@@ -4,7 +4,7 @@ import { Alert } from '../../components/ui/Alert.jsx';
 import { SearchField } from '../../components/ui/SearchField.jsx';
 import { FIELD_LABEL_CLASS_NAME } from '../../components/ui/fieldClassName.js';
 import { cardClassName } from '../../components/ui/surface.js';
-import { useRemoteOptions } from '../../hooks/useRemoteOptions.js';
+import { useRemoteData } from '../../hooks/useRemoteData.js';
 import { obtenerPersonaBusqueda } from './busqueda.api.js';
 import { usePersonasBusqueda } from './usePersonasBusqueda.js';
 
@@ -37,7 +37,7 @@ export function SelectorPersona({
     ({ signal }) => obtenerPersonaBusqueda({ id: idPersona, rol, signal }),
     [idPersona, rol],
   );
-  const respuestaPersona = useRemoteOptions({
+  const respuestaPersona = useRemoteData({
     clave: `${rol}:${persona?.id ?? ''}`,
     habilitado: necesitaNombre,
     solicitar: solicitarPersona,

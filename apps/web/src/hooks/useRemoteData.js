@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '../services/api.service.js';
 
-export function useRemoteOptions({ clave, habilitado, solicitar, esperaMs = 0, mensajeError }) {
+export function useRemoteData({ clave, habilitado, solicitar, esperaMs = 0, mensajeError }) {
   const [intento, setIntento] = useState(0);
   const [respuesta, setRespuesta] = useState({
     clave: null,

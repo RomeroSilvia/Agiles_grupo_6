@@ -56,7 +56,8 @@ export async function listarEventos({ categoria, fecha, pagina }) {
     provincia: 'Buenos Aires',
     zonaHoraria: ZONA_HORARIA_EVENTOS,
     pagina,
-    siguientePagina: respuesta.next_page <= PAGINA_MAXIMA_EVENTOS ? respuesta.next_page : null,
+    siguientePagina:
+      respuesta.siguientePagina <= PAGINA_MAXIMA_EVENTOS ? respuesta.siguientePagina : null,
     resultados: [...resultados.values()],
     incompleta,
     fuente: {

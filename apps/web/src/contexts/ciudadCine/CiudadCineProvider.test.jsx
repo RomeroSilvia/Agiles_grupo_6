@@ -125,6 +125,37 @@ describe('CiudadCineProvider', () => {
     );
     expect(window.sessionStorage.getItem('streamly.ciudadCine')).toBeNull();
   });
+  it('explica la retirada de una ciudad guardada aunque el directorio ya no la incluya', async () => {
+    window.sessionStorage.setItem('streamly.ciudadCine', ciudadSinCobertura.id);
+    fetch.mockResolvedValue(respuestaCiudades([ciudadDisponible]));
+    render(
+      <CiudadCineProvider>
+        <Consumidor />
+      </CiudadCineProvider>,
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'La ciudad guardada ya no tiene cobertura verificada. Elegí otra ciudad.',
+    );
+    expect(screen.getByText('Sin ciudad')).toBeInTheDocument();
+    expect(window.sessionStorage.getItem('streamly.ciudadCine')).toBeNull();
+  });
+  it('explica la pérdida de cobertura y el fallo al quitar la selección del almacenamiento', async () => {
+    window.sessionStorage.setItem('streamly.ciudadCine', ciudadSinCobertura.id);
+    fetch.mockResolvedValue(respuestaCiudades([]));
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('Storage bloqueado');
+    });
+    render(
+      <CiudadCineProvider>
+        <Consumidor />
+      </CiudadCineProvider>,
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'La ciudad guardada ya no tiene cobertura verificada.',
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('No pudimos guardar la selección');
+    expect(screen.getByText('Sin ciudad')).toBeInTheDocument();
+  });
 
   it('mantiene la selección en memoria si sessionStorage no está disponible', async () => {
     vi.spyOn(window, 'sessionStorage', 'get').mockImplementation(() => {

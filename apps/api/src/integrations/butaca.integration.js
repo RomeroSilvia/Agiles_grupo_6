@@ -27,7 +27,7 @@ async function consultarButaca(path, params, schema) {
     throw new ExternalServiceError('Butaca: complemento no habilitado o sin verificación');
   const url = new URL(BASE_URL + path);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
-  return validateExternalResponse(
+  const data = validateExternalResponse(
     schema,
     await fetchJson(url, {
       service: 'Butaca / Cinemark',
@@ -36,6 +36,7 @@ async function consultarButaca(path, params, schema) {
     }),
     'Butaca / Cinemark',
   ).data;
+  return { data, consultadoEn: new Date().toISOString() };
 }
 
 export function listarCinesButaca() {

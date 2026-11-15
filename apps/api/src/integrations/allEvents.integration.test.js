@@ -34,6 +34,20 @@ afterEach(() => {
 });
 
 describe('integración AllEvents mediante API.SH', () => {
+  it('conserva la página siguiente del proveedor hasta la respuesta pública del servicio', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ...respuesta, next_page: 2 }),
+      }),
+    );
+    const { listarEventos } = await import('../services/evento.service.js');
+    expect(await listarEventos({ categoria: 'todas', fecha: 'todas', pagina: 1 })).toMatchObject({
+      siguientePagina: 2,
+      incompleta: false,
+    });
+  });
   it.each(['hoy', 'manana', 'fin_de_semana'])(
     'renueva la consulta de %s al cruzar la medianoche de La Plata',
     async (fecha) => {

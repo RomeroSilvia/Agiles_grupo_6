@@ -73,16 +73,10 @@ export function CiudadCineProvider({ children }) {
 
         if (!guardada.disponible) {
           setAviso('No pudimos restaurar una ciudad guardada. Elegí una ciudad para continuar.');
-        } else if (ciudadGuardada?.cobertura === 'sin_cobertura') {
+        } else if (guardada.id && !permiteConsultarCiudadCine(ciudadGuardada)) {
           const avisoCobertura =
             'La ciudad guardada ya no tiene cobertura verificada. Elegí otra ciudad.';
           setAviso(guardarCiudad(null) ? avisoCobertura : `${avisoCobertura} ${MENSAJE_STORAGE}`);
-        } else if (guardada.id && !ciudadGuardada) {
-          setAviso(
-            guardarCiudad(null)
-              ? ''
-              : 'No pudimos quitar la ciudad guardada de esta pestaña; elegí una ciudad para continuar.',
-          );
         } else {
           setAviso('');
         }

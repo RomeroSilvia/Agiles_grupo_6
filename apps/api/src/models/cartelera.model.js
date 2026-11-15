@@ -54,5 +54,6 @@ export function crearRespuestaDetallePeliculaSchema(tmdbId) {
 export const respuestaIdsCarteleraSchema = z.object({
   page: z.number().int().positive(),
   total_pages: z.number().int().nonnegative(),
+  total_results: z.number().int().nonnegative(),
   results: z.array(z.object({ id: peliculaCarteleraSchema.shape.tmdbId })),
 });

@@ -14,10 +14,10 @@ const evento = {
   price: 'Free',
 };
 const params = { categoria: 'todas', fecha: 'todas', pagina: 1 };
-function simularEventos(events, next_page = null) {
+function simularEventos(events, siguientePagina = null) {
   allEventsIntegration.listarEventosAllEvents.mockResolvedValue({
     eventos: events.map(fromAllEvents),
-    siguientePagina: next_page,
+    siguientePagina,
     incompleta: false,
     consultadoEn: '2026-11-14T12:00:00Z',
   });
@@ -30,6 +30,10 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('eventos presenciales de La Plata', () => {
+  it('conserva la siguiente página normalizada por la integración', async () => {
+    simularEventos([evento], 2);
+    expect(await listarEventos(params)).toMatchObject({ siguientePagina: 2, incompleta: false });
+  });
   it('conserva fechas textuales sin inventar año u horario y elimina duplicados', async () => {
     simularEventos([evento, evento]);
     const data = await listarEventos(params);

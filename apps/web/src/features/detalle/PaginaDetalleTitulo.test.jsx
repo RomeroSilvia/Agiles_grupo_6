@@ -20,6 +20,10 @@ const ciudadContext = vi.hoisted(() => ({
 vi.mock('../../contexts/ciudadCine/CiudadCineContext.js', () => ({
   useCiudadCine: () => ciudadContext,
 }));
+vi.mock('../cartelera/cartelera.api.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  obtenerExhibicionPelicula: vi.fn(async () => ({ consultable: false })),
+}));
 
 const SIN_SESION = { user: null, loading: false };
 const CON_SESION = { user: { id: 'u1', email: 'ana@mail.com' }, loading: false };

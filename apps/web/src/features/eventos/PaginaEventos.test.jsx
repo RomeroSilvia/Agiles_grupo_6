@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { PaginaEventos } from './PaginaEventos.jsx';
 import { EVENTO_FIXTURE, crearRespuestaEventos } from './eventos.fixture.js';
@@ -26,10 +26,13 @@ describe('Cooltura en La Plata', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(http(crearRespuestaEventos())));
     renderPagina();
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Desconectá la pantalla y conectá Cooltura.' }),
+      screen.getByRole('heading', { level: 1, name: 'La próxima historia la podés vivir afuera' }),
     ).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: EVENTO_FIXTURE.nombre })).toBeInTheDocument();
-    expect(screen.getByText('25 de noviembre de 2026')).toBeInTheDocument();
+    const tituloEvento = await screen.findByRole('heading', { name: EVENTO_FIXTURE.nombre });
+    expect(tituloEvento).toBeInTheDocument();
+    expect(
+      within(tituloEvento.closest('article')).getByText('25 de noviembre de 2026'),
+    ).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /Ver Teatro bajo las estrellas en AllEvents/ });
     expect(link).toHaveAttribute('href', EVENTO_FIXTURE.url);
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');

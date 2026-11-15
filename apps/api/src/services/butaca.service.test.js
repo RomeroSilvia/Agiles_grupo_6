@@ -199,6 +199,71 @@ describe('complemento Butaca / Cinemark', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
   it.each([false, true])(
+    'conserva la fecha de adquisición al cambiar el día consultado (sin películas: %s)',
+    async (sinPeliculas) => {
+      config.habilitado = true;
+      config.verificado = true;
+      vi.setSystemTime('2026-11-15T02:55:00Z');
+      const fetchMock = simularCartelera();
+      if (sinPeliculas) {
+        const consultar = fetchMock.getMockImplementation();
+        fetchMock.mockImplementation((url) =>
+          url.pathname.endsWith('/movies')
+            ? Promise.resolve({ ok: true, json: async () => ({ data: [] }) })
+            : consultar(url),
+        );
+      }
+      const { obtenerObservacionesButaca } = await import('./butaca.service.js');
+      const consulta = {
+        ...parametros,
+        pelicula: {
+          tmdbId: 77,
+          identidadCine: { nombres: ['Nueva película'], anio: 2026, duracion: 115 },
+        },
+      };
+      const anterior = await obtenerObservacionesButaca(consulta);
+      vi.setSystemTime('2026-11-15T03:01:00Z');
+      const actual = await obtenerObservacionesButaca({
+        ...consulta,
+        desde: '2026-11-15',
+        hasta: '2026-11-22',
+      });
+      expect(actual.fuente.consultadoEn).toBe('2026-11-15T02:55:00.000Z');
+      expect(actual.fuente.consultadoEn).toBe(anterior.fuente.consultadoEn);
+      expect(actual.observaciones).toEqual(anterior.observaciones);
+      expect(fetchMock).toHaveBeenCalledTimes(sinPeliculas ? 2 : 3);
+
+      vi.setSystemTime('2026-11-15T03:17:00Z');
+      const renovada = await obtenerObservacionesButaca({
+        ...consulta,
+        desde: '2026-11-15',
+        hasta: '2026-11-22',
+      });
+      expect(renovada.fuente.consultadoEn).toBe('2026-11-15T03:17:00.000Z');
+      expect(fetchMock).toHaveBeenCalledTimes(sinPeliculas ? 4 : 6);
+    },
+  );
+  it('usa la adquisición más antigua al combinar respuestas con distinta antigüedad', async () => {
+    config.habilitado = true;
+    config.verificado = true;
+    vi.setSystemTime('2026-11-15T02:55:00Z');
+    const fetchMock = simularCartelera();
+    const { listarCinesButaca } = await import('../integrations/butaca.integration.js');
+    await listarCinesButaca();
+    vi.setSystemTime('2026-11-15T03:01:00Z');
+    const { obtenerObservacionesButaca } = await import('./butaca.service.js');
+    const resultado = await obtenerObservacionesButaca({
+      ...parametros,
+      pelicula: {
+        tmdbId: 77,
+        identidadCine: { nombres: ['Nueva película'], anio: 2026, duracion: 115 },
+      },
+    });
+    expect(resultado.fuente.consultadoEn).toBe('2026-11-15T02:55:00.000Z');
+    expect(resultado.observaciones).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+  it.each([false, true])(
     'devuelve cero funciones sin advertencias si la película está ausente (cartelera vacía: %s)',
     async (vacia) => {
       config.habilitado = true;

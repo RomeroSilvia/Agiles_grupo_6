@@ -45,6 +45,26 @@ describe('GET /api/eventos', () => {
       pagina: 1,
     });
   });
+  it('publica la siguiente página normalizada y permite continuar la consulta', async () => {
+    const primera = await allEventsIntegration.listarEventosAllEvents();
+    allEventsIntegration.listarEventosAllEvents.mockClear();
+    allEventsIntegration.listarEventosAllEvents
+      .mockResolvedValueOnce({ ...primera, siguientePagina: 2 })
+      .mockResolvedValueOnce({ ...primera, eventos: [] });
+    const app = createApp();
+    const response = await request(app).get('/api/eventos');
+    expect(response.body.data).toMatchObject({ siguientePagina: 2, incompleta: false });
+    const siguiente = await request(app)
+      .get('/api/eventos')
+      .query({ pagina: response.body.data.siguientePagina });
+    expect(siguiente.status).toBe(200);
+    expect(siguiente.body.data).toMatchObject({ pagina: 2, siguientePagina: null });
+    expect(allEventsIntegration.listarEventosAllEvents).toHaveBeenLastCalledWith({
+      categoria: 'todas',
+      fecha: 'todas',
+      pagina: 2,
+    });
+  });
   it.each([
     { ciudad: 'Rosario' },
     { pagina: 0 },

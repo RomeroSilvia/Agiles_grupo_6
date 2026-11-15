@@ -477,14 +477,21 @@ export function listarIdsPeliculasEnCartelera() {
   return cartelerasCache.getOrSet(`ids:${REGION_CARTELERA}`, async () => {
     const ids = new Set();
     let totalPaginas = 1;
+    let totalResultados;
     for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
       const respuesta = validateExternalResponse(
         respuestaIdsCarteleraSchema,
         await tmdbRequest('/movie/now_playing', { region: REGION_CARTELERA, page: pagina }),
       );
+      const esperados = Math.min(
+        TMDB_CONFIG.RESULTADOS_POR_PAGINA,
+        Math.max(0, respuesta.total_results - (pagina - 1) * TMDB_CONFIG.RESULTADOS_POR_PAGINA),
+      );
       if (
         respuesta.page !== pagina ||
-        (respuesta.total_pages > pagina && !respuesta.results.length)
+        respuesta.results.length !== esperados ||
+        (pagina > 1 &&
+          (respuesta.total_pages !== totalPaginas || respuesta.total_results !== totalResultados))
       ) {
         throw new ExternalServiceError('TMDB', new Error('Cartelera incompleta'));
       }
@@ -495,7 +502,11 @@ export function listarIdsPeliculasEnCartelera() {
         );
       }
       totalPaginas = respuesta.total_pages;
+      totalResultados = respuesta.total_results;
       for (const pelicula of respuesta.results) ids.add(pelicula.id);
+    }
+    if (ids.size !== totalResultados) {
+      throw new ExternalServiceError('TMDB', new Error('Cartelera incompleta'));
     }
     return [...ids];
   });

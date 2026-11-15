@@ -24,7 +24,8 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
   return cache.getOrSet(
     `${pelicula.tmdbId}:${ciudad.id}:${desde}:${FUNCIONES_CINE_CONFIG.VERSION_MAPEOS}`,
     async () => {
-      const cines = await butacaIntegration.listarCinesButaca();
+      const { data: cines, consultadoEn } = await butacaIntegration.listarCinesButaca();
+      const fechasConsulta = [consultadoEn];
       const observaciones = [];
       const correspondencias = [...CORRESPONDENCIAS_PELICULAS_CINE];
       let estructuraPresente = true;
@@ -50,7 +51,9 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
           continue;
         }
         try {
-          const peliculas = await butacaIntegration.listarPeliculasButaca(cine.id);
+          const consultaPeliculas = await butacaIntegration.listarPeliculasButaca(cine.id);
+          const peliculas = consultaPeliculas.data;
+          fechasConsulta.push(consultaPeliculas.consultadoEn);
           const revisadas = peliculas.filter((item) =>
             corresponderPeliculaCine({
               fuenteId: 'butaca',
@@ -99,11 +102,12 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
             if (identidadPendiente) estructuraPresente = false;
           }
           for (const candidata of candidatas) {
-            const horarios = await butacaIntegration.listarFuncionesButaca({
+            const consultaHorarios = await butacaIntegration.listarFuncionesButaca({
               corporateId: candidata.corporateId,
               cineId: cine.id,
             });
-            const sesiones = consolidarSesionesButaca(horarios);
+            fechasConsulta.push(consultaHorarios.consultadoEn);
+            const sesiones = consolidarSesionesButaca(consultaHorarios.data);
             if (sesiones.incompleta) estructuraPresente = false;
             for (const horario of sesiones.horarios) {
               if (
@@ -149,7 +153,7 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
         registroId: null,
         nombre: 'Butaca / Cinemark',
         url: `${FUNCIONES_CINE_CONFIG.BUTACA_BASE_URL}/cinema/showtimes`,
-        consultadoEn: new Date().toISOString(),
+        consultadoEn: fechasConsulta.sort()[0],
         actualizadoEn: null,
       };
       return {

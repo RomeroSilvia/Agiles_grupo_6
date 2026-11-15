@@ -50,24 +50,33 @@ describe('adquisición de fechas e índice de exhibición', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
   it('adquiere todas las páginas del índice y comparte la caché', async () => {
+    const ids = Array.from({ length: 21 }, (_, i) => i + 1);
     const fetchMock = vi.fn().mockImplementation(async (url) =>
       response({
         page: Number(url.searchParams.get('page')),
         total_pages: 2,
-        results: [{ id: Number(url.searchParams.get('page')) }],
+        total_results: 21,
+        results: ids
+          .slice(
+            (Number(url.searchParams.get('page')) - 1) * 20,
+            Number(url.searchParams.get('page')) * 20,
+          )
+          .map((id) => ({ id })),
       }),
     );
     vi.stubGlobal('fetch', fetchMock);
     const { listarIdsPeliculasEnCartelera } = await import('./tmdb.integration.js');
-    expect(await listarIdsPeliculasEnCartelera()).toEqual([1, 2]);
-    expect(await listarIdsPeliculasEnCartelera()).toEqual([1, 2]);
+    expect(await listarIdsPeliculasEnCartelera()).toEqual(ids);
+    expect(await listarIdsPeliculasEnCartelera()).toEqual(ids);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
   it('no cachea un índice incompleto ni publica un subconjunto', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(response({ page: 1, total_pages: 2, results: [] }))
-      .mockResolvedValueOnce(response({ page: 1, total_pages: 1, results: [{ id: 77 }] }));
+      .mockResolvedValueOnce(response({ page: 1, total_pages: 2, total_results: 21, results: [] }))
+      .mockResolvedValueOnce(
+        response({ page: 1, total_pages: 1, total_results: 1, results: [{ id: 77 }] }),
+      );
     vi.stubGlobal('fetch', fetchMock);
     const { listarIdsPeliculasEnCartelera } = await import('./tmdb.integration.js');
     await expect(listarIdsPeliculasEnCartelera()).rejects.toMatchObject({
@@ -75,5 +84,51 @@ describe('adquisición de fechas e índice de exhibición', () => {
     });
     expect(await listarIdsPeliculasEnCartelera()).toEqual([77]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  it.each([
+    ['vacía', []],
+    ['parcial', [{ id: 21 }]],
+    ['repetida', [{ id: 1 }, { id: 22 }]],
+  ])(
+    'rechaza una última página %s y vuelve a adquirir el índice completo al reintentar',
+    async (_caso, ultimaPagina) => {
+      const primera = {
+        page: 1,
+        total_pages: 2,
+        total_results: 22,
+        results: Array.from({ length: 20 }, (_, i) => ({ id: i + 1 })),
+      };
+      const segunda = {
+        page: 2,
+        total_pages: 2,
+        total_results: 22,
+        results: [{ id: 21 }, { id: 22 }],
+      };
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(response(primera))
+        .mockResolvedValueOnce(response({ ...segunda, results: ultimaPagina }))
+        .mockResolvedValueOnce(response(primera))
+        .mockResolvedValueOnce(response(segunda));
+      vi.stubGlobal('fetch', fetchMock);
+      const { listarIdsPeliculasEnCartelera } = await import('./tmdb.integration.js');
+      await expect(listarIdsPeliculasEnCartelera()).rejects.toMatchObject({
+        code: 'EXTERNAL_SERVICE',
+      });
+      const ids = await listarIdsPeliculasEnCartelera();
+      expect(ids).toEqual(Array.from({ length: 22 }, (_, i) => i + 1));
+      expect(await listarIdsPeliculasEnCartelera()).toEqual(ids);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+    },
+  );
+  it('acepta y cachea un índice vacío confirmado', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(response({ page: 1, total_pages: 0, total_results: 0, results: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { listarIdsPeliculasEnCartelera } = await import('./tmdb.integration.js');
+    expect(await listarIdsPeliculasEnCartelera()).toEqual([]);
+    expect(await listarIdsPeliculasEnCartelera()).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });

@@ -7,6 +7,7 @@ import { Chip } from '../../components/ui/Chip.jsx';
 import { MapPinIcon } from '../../components/ui/icons.jsx';
 import catedralLaPlata from '../../assets/catedral-la-plata.jpg';
 import { ListaEventos } from './ListaEventos.jsx';
+import { EspecialAniversario } from './EspecialAniversario.jsx';
 
 export function PaginaEventos() {
   const [params, setParams] = useSearchParams();
@@ -29,14 +30,15 @@ export function PaginaEventos() {
             <MapPinIcon className="size-3.5" /> La Plata, Buenos Aires
           </Chip>
         </div>
+        <EspecialAniversario />
         <div className="mt-6 flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
           <div className="max-w-2xl space-y-4">
             <h1 className="font-display text-3xl leading-tight font-extrabold tracking-tight sm:text-5xl">
-              Desconectá la pantalla y conectá <span className="text-panel-accent">Cooltura</span>.
+              La próxima historia la podés <span className="text-panel-accent">vivir afuera</span>
             </h1>
             <p className="max-w-xl text-base text-panel-muted sm:text-lg">
-              La próxima historia la podés vivir afuera. Descubrí música, teatro, arte y encuentros
-              para salir en La Plata.
+              Descubrí música, teatro, arte y encuentros para salir en La Plata. Elegí tu próximo
+              plan con Cooltura.
             </p>
           </div>
           <img

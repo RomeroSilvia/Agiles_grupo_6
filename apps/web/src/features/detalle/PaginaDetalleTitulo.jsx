@@ -28,14 +28,12 @@ import { useDisponibilidad } from './useDisponibilidad.js';
 import { useDistincionPropias } from './useDistincionPropias.js';
 import { RUTAS } from '../../app/rutas.js';
 import { useWatchlistTitle } from '../watchlist/useWatchlistTitle.js';
-import { useExhibicionCine } from '../cartelera/useExhibicionCine.js';
-import { SeccionFunciones } from '../cartelera/SeccionFunciones.jsx';
+import { SeccionExhibicionCine } from '../cartelera/SeccionExhibicionCine.jsx';
 
 export function PaginaDetalleTitulo() {
   const { tipo, tmdbId } = useParams();
   const { region, source, loading: regionLoading } = useRegion();
   const { titulo, isLoading, error, errorCode } = useDetalleTitulo({ tipo, tmdbId });
-  const exhibicionConsultable = useExhibicionCine({ tipo: titulo?.tipo, tmdbId });
   const {
     ofertas,
     enlaceTmdb,
@@ -250,7 +248,7 @@ export function PaginaDetalleTitulo() {
           </div>
         </div>
       </Card>
-      {exhibicionConsultable && <SeccionFunciones key={tmdbId} tmdbId={tmdbId} />}
+      <SeccionExhibicionCine key={`${tipo}:${tmdbId}`} tipo={titulo.tipo} tmdbId={tmdbId} />
     </section>
   );
 }

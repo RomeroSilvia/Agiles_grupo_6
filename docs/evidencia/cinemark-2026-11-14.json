@@ -1,0 +1,234 @@
+{
+  "consultadoEn": "2026-11-14T18:49:31.000Z",
+  "metodo": "GET an?nimo con country: AR; sin API key, auth, asientos ni ?rdenes",
+  "directorioUrl": "https://bff.cinemark.com.ar/api/cinema/theaters?limit=100",
+  "sitioOficial": "https://www.cinemark.com.ar/cines",
+  "cines": [
+    {
+      "id": 103,
+      "name": "Abasto",
+      "slug": "abasto",
+      "address": "Aguero 665, Abasto Shopping",
+      "city": "CABA",
+      "region": "Ciudad de Buenos Aires"
+    },
+    {
+      "id": 734,
+      "name": "Caballito",
+      "slug": "caballito",
+      "address": "Av. La Plata 96, Caballito",
+      "city": "CABA",
+      "region": "Ciudad de Buenos Aires"
+    },
+    {
+      "id": 111,
+      "name": "DOT",
+      "slug": "dot",
+      "address": "Vedia 3626, Shopping DOT",
+      "city": "CABA",
+      "region": "Ciudad de Buenos Aires"
+    },
+    {
+      "id": 105,
+      "name": "Nuevo Centro",
+      "slug": "nuevocentro",
+      "address": "Duarte Quiros 1400, Nuevo Centro Shopping",
+      "city": "Interior",
+      "region": "Córdoba"
+    },
+    {
+      "id": 733,
+      "name": "Palermo",
+      "slug": "palermo",
+      "address": "Beruti 3399, Palermo CABA",
+      "city": "CABA",
+      "region": "Ciudad de Buenos Aires"
+    },
+    {
+      "id": 2016,
+      "name": "Parque Brown",
+      "slug": "parquebrown",
+      "address": "Av. Gral. Francisco Fernández, de la Cruz 4602",
+      "city": "CABA",
+      "region": "Buenos Aires"
+    },
+    {
+      "id": 106,
+      "name": "Patio Olmos",
+      "slug": "patioolmos",
+      "address": "Av. Vélez Sarfield 361, Patio Olmos",
+      "city": "Interior",
+      "region": "Córdoba"
+    },
+    {
+      "id": 730,
+      "name": "Puerto Madero",
+      "slug": "puertomadero",
+      "address": "Av Alicia Moreau de Justo 1920, Puerto Madero",
+      "city": "CABA",
+      "region": "Ciudad de Buenos Aires"
+    }
+  ],
+  "muestras": [
+    {
+      "url": "https://bff.cinemark.com.ar/api/cinema/showtimes?movieCorporateId=114046&theater=103",
+      "estadoHttp": 200,
+      "cantidadRegistros": 53,
+      "funciones": [
+        {
+          "sessionId": "189738",
+          "corporateId": "114046",
+          "movieName": "EBENEZER: LOS FANTASMAS DE NAVIDAD",
+          "theaterId": "103",
+          "theaterRoom": "2",
+          "sessionDateTime": "2026-11-14T16:20:00.000Z",
+          "sessionDisplayDate": "2026-11-14",
+          "sessionFormat": "2D"
+        },
+        {
+          "sessionId": "189883",
+          "corporateId": "114046",
+          "movieName": "EBENEZER: LOS FANTASMAS DE NAVIDAD",
+          "theaterId": "103",
+          "theaterRoom": "9",
+          "sessionDateTime": "2026-11-14T17:00:00.000Z",
+          "sessionDisplayDate": "2026-11-14",
+          "sessionFormat": "DBOX 2D"
+        }
+      ]
+    },
+    {
+      "url": "https://bff.cinemark.com.ar/api/cinema/showtimes?movieCorporateId=114046&theater=105",
+      "estadoHttp": 200,
+      "cantidadRegistros": 36,
+      "funciones": [
+        {
+          "sessionId": "106515",
+          "corporateId": "114046",
+          "movieName": "EBENEZER: LOS FANTASMAS DE NAVIDAD",
+          "theaterId": "105",
+          "theaterRoom": "3",
+          "sessionDateTime": "2026-11-14T16:30:00.000Z",
+          "sessionDisplayDate": "2026-11-14",
+          "sessionFormat": "DBOX 2D"
+        },
+        {
+          "sessionId": "106515",
+          "corporateId": "114046",
+          "movieName": "EBENEZER: LOS FANTASMAS DE NAVIDAD",
+          "theaterId": "105",
+          "theaterRoom": "3",
+          "sessionDateTime": "2026-11-14T16:30:00.000Z",
+          "sessionDisplayDate": "2026-11-14",
+          "sessionFormat": "2D"
+        }
+      ]
+    }
+  ],
+  "limitaciones": [
+    "Directorio limitado a Cinemark; no contiene La Plata ni Mar del Plata.",
+    "city=Interior no identifica municipio; se revisaron sucursales por direcci?n y sitio oficial.",
+    "El BFF no es una API p?blica contractual con SLA.",
+    "Los conteos son registros brutos antes de excluir sesiones pasadas y duplicados."
+  ],
+  "pruebaEndpoint": [
+    {
+      "ruta": "/api/cartelera/peliculas/1381071/funciones?ciudadId=ar:a2c2aae3-5cc8-4f9e-8e9d-389cf7def8ff",
+      "estadoHttp": 200,
+      "consultadoEn": "2026-11-14T18:52:39.316Z",
+      "pelicula": {
+        "tmdbId": 1381071,
+        "nombre": "Godzilla Minus Zero",
+        "anio": 2026,
+        "duracion": 135,
+        "fuente": "https://www.themoviedb.org/movie/1381071"
+      },
+      "ciudad": "CABA",
+      "cines": 6,
+      "funciones": 149,
+      "estado": "incompleta",
+      "advertencias": [
+        {
+          "code": "INCOMPLETE_DATA",
+          "message": "La fuente no informó una estructura de horarios verificable.",
+          "fuenteId": "serpapi"
+        }
+      ],
+      "muestra": {
+        "id": "funcion:06c76f1214531e48c729859431c3ddb409a684a2f2b50599494bcba017037004",
+        "tmdbId": 1381071,
+        "tipo": "pelicula",
+        "ciudadId": "ar:a2c2aae3-5cc8-4f9e-8e9d-389cf7def8ff",
+        "cineId": "cine:76d2b472507222f8c75831e66dc4c6950437a491440f0263aca6181bc408dc33",
+        "cineNombre": "Cinemark Parque Brown",
+        "inicio": "2026-11-14T16:00:00-03:00",
+        "fechaLocal": "2026-11-14",
+        "horaLocal": "16:00",
+        "zonaHoraria": "America/Argentina/Buenos_Aires",
+        "sala": "1",
+        "formato": "2D",
+        "idioma": "CAST",
+        "subtitulos": null,
+        "urlCompra": null,
+        "fuentes": [
+          {
+            "fuenteId": "butaca",
+            "registroId": "4084",
+            "url": "https://bff.cinemark.com.ar/api/cinema/showtimes",
+            "consultadoEn": "2026-11-14T18:52:39.316Z",
+            "actualizadoEn": null
+          }
+        ]
+      }
+    },
+    {
+      "ruta": "/api/cartelera/peliculas/1381071/funciones?ciudadId=ar:d036bc1a-707f-49c5-b6b3-8f0430fd25af",
+      "estadoHttp": 200,
+      "consultadoEn": "2026-11-14T18:52:40.491Z",
+      "pelicula": {
+        "tmdbId": 1381071,
+        "nombre": "Godzilla Minus Zero",
+        "anio": 2026,
+        "duracion": 135,
+        "fuente": "https://www.themoviedb.org/movie/1381071"
+      },
+      "ciudad": "Córdoba",
+      "cines": 2,
+      "funciones": 37,
+      "estado": "incompleta",
+      "advertencias": [
+        {
+          "code": "INCOMPLETE_DATA",
+          "message": "La fuente no informó una estructura de horarios verificable.",
+          "fuenteId": "serpapi"
+        }
+      ],
+      "muestra": {
+        "id": "funcion:721bac97098c06ad4e2f443d469ede2fdf01c99c986db686123549e5bf640dac",
+        "tmdbId": 1381071,
+        "tipo": "pelicula",
+        "ciudadId": "ar:d036bc1a-707f-49c5-b6b3-8f0430fd25af",
+        "cineId": "cine:bc2eb5217ae25d5ef83bd4f1867b2431cf7aca68416c00e032ca22173d8152ae",
+        "cineNombre": "Cinemark Nuevo Centro",
+        "inicio": "2026-11-14T16:00:00-03:00",
+        "fechaLocal": "2026-11-14",
+        "horaLocal": "16:00",
+        "zonaHoraria": "America/Argentina/Cordoba",
+        "sala": "2",
+        "formato": "2D",
+        "idioma": "CAST",
+        "subtitulos": null,
+        "urlCompra": null,
+        "fuentes": [
+          {
+            "fuenteId": "butaca",
+            "registroId": "106511",
+            "url": "https://bff.cinemark.com.ar/api/cinema/showtimes",
+            "consultadoEn": "2026-11-14T18:52:40.491Z",
+            "actualizadoEn": null
+          }
+        ]
+      }
+    }
+  ]
+}

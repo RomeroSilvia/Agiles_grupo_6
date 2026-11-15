@@ -1,4 +1,5 @@
 export * from './cartelera.constants.js';
+export * from './eventos.constants.js';
 
 // Valores del negocio: deben coincidir con los enums de la base (supabase/migrations).
 export const TIPO_TITULO = Object.freeze({

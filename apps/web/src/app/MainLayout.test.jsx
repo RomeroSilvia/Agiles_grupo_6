@@ -56,4 +56,8 @@ describe('MainLayout', () => {
 
     expect(screen.getByRole('link', { name: 'Cartelera' })).toHaveAttribute('href', '/cartelera');
   });
+  it('muestra el acceso público a los eventos de Cooltura', () => {
+    renderLayout();
+    expect(screen.getByRole('link', { name: 'Cooltura' })).toHaveAttribute('href', '/cooltura');
+  });
 });

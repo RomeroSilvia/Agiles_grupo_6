@@ -3,6 +3,7 @@ import { RUTAS_ENLACE_MAIL } from '@buscador/shared/constants';
 export const RUTAS = Object.freeze({
   BUSQUEDA: '/',
   CARTELERA: '/cartelera',
+  EVENTOS: '/cooltura',
   DETALLE_TITULO: RUTAS_ENLACE_MAIL.DETALLE_TITULO,
   WATCHLIST: '/watchlist',
   MIS_PLATAFORMAS: '/mis-plataformas',

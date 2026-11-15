@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import plazaMorenoLaPlata from '../../assets/plaza-moreno-la-plata.jpg';
 import { Card } from '../../components/ui/Card.jsx';
 import { ExternalLink } from '../../components/ui/ExternalLink.jsx';
 import {
@@ -15,9 +16,9 @@ export function EventoCard({ evento }) {
   return (
     <Card as="article" padding="none" elevated className="flex h-full flex-col overflow-hidden">
       <div className="relative aspect-2/1 overflow-hidden bg-chip">
-        {evento.imagenUrl && !imagenFallida ? (
+        {!imagenFallida ? (
           <img
-            src={evento.imagenUrl}
+            src={evento.imagenUrl || plazaMorenoLaPlata}
             alt=""
             loading="lazy"
             referrerPolicy="no-referrer"

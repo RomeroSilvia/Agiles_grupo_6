@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import plazaMorenoLaPlata from '../../assets/plaza-moreno-la-plata.jpg';
 import { PaginaEventos } from './PaginaEventos.jsx';
 import { EVENTO_FIXTURE, crearRespuestaEventos } from './eventos.fixture.js';
 
@@ -30,6 +31,10 @@ describe('Cooltura en La Plata', () => {
     ).toBeInTheDocument();
     const tituloEvento = await screen.findByRole('heading', { name: EVENTO_FIXTURE.nombre });
     expect(tituloEvento).toBeInTheDocument();
+    expect(within(tituloEvento.closest('article')).getByRole('presentation')).toHaveAttribute(
+      'src',
+      plazaMorenoLaPlata,
+    );
     expect(
       within(tituloEvento.closest('article')).getByText('25 de noviembre de 2026'),
     ).toBeInTheDocument();
@@ -57,7 +62,12 @@ describe('Cooltura en La Plata', () => {
     expect(screen.getByRole('combobox', { name: 'Qué te gusta' })).toHaveValue('todas');
   });
   it('acumula páginas sin repetir eventos', async () => {
-    const otro = { ...EVENTO_FIXTURE, id: 'evento-2', nombre: 'Festival del barrio' };
+    const otro = {
+      ...EVENTO_FIXTURE,
+      id: 'evento-2',
+      nombre: 'Festival del barrio',
+      imagenUrl: 'https://cdn-az.allevents.in/events/poster.jpg',
+    };
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(http(crearRespuestaEventos([EVENTO_FIXTURE], { siguientePagina: 2 })))
@@ -65,7 +75,12 @@ describe('Cooltura en La Plata', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
     fireEvent.click(await screen.findByRole('button', { name: 'Cargar más eventos' }));
-    expect(await screen.findByRole('heading', { name: otro.nombre })).toBeInTheDocument();
+    const otroTitulo = await screen.findByRole('heading', { name: otro.nombre });
+    expect(otroTitulo).toBeInTheDocument();
+    expect(within(otroTitulo.closest('article')).getByRole('presentation')).toHaveAttribute(
+      'src',
+      otro.imagenUrl,
+    );
     expect(screen.getAllByRole('heading', { name: EVENTO_FIXTURE.nombre })).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Cargar más eventos' })).not.toBeInTheDocument();
   });

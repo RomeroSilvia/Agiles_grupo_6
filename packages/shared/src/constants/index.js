@@ -96,6 +96,7 @@ export const ESTADO_USUARIO = Object.freeze({ ACTIVO: 'activo', SIN_CONFIRMAR: '
 export const ESTADOS_USUARIO = Object.values(ESTADO_USUARIO);
 
 export const USUARIOS_POR_PAGINA = 10;
+export const PAGINA_MAXIMA_USUARIOS = 10000;
 
 // Valores técnicos
 export const DEFAULT_REGION = 'AR';

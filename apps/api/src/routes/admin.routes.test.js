@@ -1,15 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
-import { ROL_USUARIO } from '@buscador/shared/constants';
+import {
+  PAGINA_MAXIMA_USUARIOS,
+  ROL_USUARIO,
+  USUARIOS_POR_PAGINA,
+} from '@buscador/shared/constants';
 import { createApp } from '../app.js';
 import { DatabaseError } from '../errors/index.js';
 import * as authRepository from '../repositories/auth.repository.js';
 import * as perfilRepository from '../repositories/perfil.repository.js';
+import * as usuarioAdminRepository from '../repositories/usuarioAdmin.repository.js';
 import { USUARIO } from '../test/fixtures.js';
 import { adminRoutes } from './admin.routes.js';
 
 vi.mock('../repositories/auth.repository.js');
 vi.mock('../repositories/perfil.repository.js');
+vi.mock('../repositories/usuarioAdmin.repository.js');
 
 adminRoutes.get('/prueba', (_req, res) => res.json({ data: 'ok' }));
 
@@ -74,5 +80,103 @@ describe('/api/admin', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ data: 'ok' });
     expect(res.headers['cache-control']).toBe('no-store');
+  });
+});
+
+function crearUsuario(numero) {
+  return {
+    id: `b7d8e1c2-0000-4000-8000-${String(numero).padStart(12, '0')}`,
+    email: `usuario${numero}@mail.com`,
+    region: 'AR',
+    plataformaIds: [1],
+    titulosWatchlist: numero,
+    creadoEn: '2026-10-12T15:30:00+00:00',
+    estado: 'activo',
+  };
+}
+
+const PRIMERA_PAGINA = Array.from({ length: USUARIOS_POR_PAGINA }, (_, i) => crearUsuario(i + 1));
+
+function listarUsuarios(query = {}) {
+  return request(createApp()).get('/api/admin/usuarios').query(query).set('Cookie', COOKIE_SESION);
+}
+
+describe('GET /api/admin/usuarios', () => {
+  beforeEach(() => {
+    perfilRepository.obtenerRol.mockResolvedValue(ROL_USUARIO.ADMINISTRADOR);
+  });
+
+  it('sin filtros devuelve la primera página con el total', async () => {
+    usuarioAdminRepository.listarUsuarios.mockResolvedValue({
+      total: 1284,
+      usuarios: PRIMERA_PAGINA,
+    });
+
+    const res = await listarUsuarios();
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body.data).toEqual({
+      usuarios: PRIMERA_PAGINA,
+      total: 1284,
+      pagina: 1,
+      totalPaginas: 129,
+    });
+    expect(usuarioAdminRepository.listarUsuarios).toHaveBeenCalledWith({
+      limite: USUARIOS_POR_PAGINA,
+      offset: 0,
+    });
+  });
+
+  it('pasa mail, región, estado y página combinados', async () => {
+    usuarioAdminRepository.listarUsuarios.mockResolvedValue({ total: 0, usuarios: [] });
+
+    const res = await listarUsuarios({
+      mail: 'ana',
+      region: 'MX',
+      estado: 'sin_confirmar',
+      pagina: 2,
+    });
+
+    expect(res.status).toBe(200);
+    expect(usuarioAdminRepository.listarUsuarios).toHaveBeenCalledWith({
+      mail: 'ana',
+      region: 'MX',
+      estado: 'sin_confirmar',
+      limite: USUARIOS_POR_PAGINA,
+      offset: USUARIOS_POR_PAGINA,
+    });
+  });
+
+  it('una página fuera de rango responde 200 con la lista vacía y el total', async () => {
+    usuarioAdminRepository.listarUsuarios.mockResolvedValue({ total: 12, usuarios: [] });
+
+    const res = await listarUsuarios({ pagina: 50 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ usuarios: [], total: 12, pagina: 50, totalPaginas: 2 });
+  });
+
+  it.each([
+    ['un estado inválido', { estado: 'bloqueado' }],
+    ['una región con formato inválido', { region: 'arg' }],
+    ['una página mayor al máximo', { pagina: PAGINA_MAXIMA_USUARIOS + 1 }],
+    ['un parámetro desconocido', { orden: 'mail' }],
+  ])('responde 400 con %s', async (_caso, query) => {
+    const res = await listarUsuarios(query);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
+    expect(usuarioAdminRepository.listarUsuarios).not.toHaveBeenCalled();
+  });
+
+  it('responde 403 a un usuario sin rol de administrador', async () => {
+    perfilRepository.obtenerRol.mockResolvedValue(ROL_USUARIO.USUARIO);
+
+    const res = await listarUsuarios();
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+    expect(usuarioAdminRepository.listarUsuarios).not.toHaveBeenCalled();
   });
 });

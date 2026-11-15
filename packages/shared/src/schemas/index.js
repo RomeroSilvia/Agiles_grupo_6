@@ -3,3 +3,4 @@ export * from './busqueda.schema.js';
 export * from './cartelera.schema.js';
 export * from './region.schema.js';
 export * from './url.schema.js';
+export * from './usuariosAdmin.schema.js';

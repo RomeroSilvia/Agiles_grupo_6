@@ -1,13 +1,21 @@
 import { Outlet } from 'react-router';
 import { useSession } from '../../contexts/session/SessionContext.js';
+import { SoloConSesion } from '../auth/SoloConSesion.jsx';
 import { AccesoDenegado } from './AccesoDenegado.jsx';
 
-// Va adentro de SoloConSesion, que ya resuelve la carga de la sesión y la redirección al ingreso
-export function SoloAdmin() {
+function SoloConRolAdmin() {
   const { user } = useSession();
 
-  if (!user?.esAdmin) {
+  if (!user.esAdmin) {
     return <AccesoDenegado />;
   }
   return <Outlet />;
+}
+
+export function SoloAdmin() {
+  return (
+    <SoloConSesion fallback={null}>
+      <SoloConRolAdmin />
+    </SoloConSesion>
+  );
 }

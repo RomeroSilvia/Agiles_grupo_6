@@ -24,6 +24,9 @@ function mockApi({ user }) {
     if (path === '/plataformas' || path === '/plataformas/propias') {
       return [];
     }
+    if (path === '/admin/usuarios') {
+      return { usuarios: [], total: 0, pagina: 1, totalPaginas: 0 };
+    }
     throw new Error(`Ruta no esperada en el test: ${path}`);
   });
 }
@@ -78,6 +81,30 @@ describe('Acceso al panel de administración', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/iniciar-sesion'));
     expect(screen.queryByRole('link', { name: 'Administración' })).not.toBeInTheDocument();
+  });
+
+  it('mientras carga la sesión, la ruta del panel no muestra nada', async () => {
+    mockApi({ user: USUARIO });
+    const respuestaPorDefecto = request.getMockImplementation();
+    let resolverSesion;
+    request.mockImplementation((path, options) => {
+      if (path === '/auth/session') {
+        return new Promise((resolve) => {
+          resolverSesion = resolve;
+        });
+      }
+      return respuestaPorDefecto(path, options);
+    });
+    renderRoute('/admin/usuarios');
+
+    await waitFor(() => expect(resolverSesion).toBeDefined());
+    expect(screen.queryByText('Cargando tu cuenta…')).not.toBeInTheDocument();
+
+    resolverSesion({ user: USUARIO });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'No tenés acceso a esta sección' }),
+    ).toBeInTheDocument();
   });
 
   it('un usuario común que entra a la ruta del panel ve el error de acceso', async () => {

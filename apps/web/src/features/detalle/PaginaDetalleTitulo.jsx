@@ -28,6 +28,7 @@ import { useDisponibilidad } from './useDisponibilidad.js';
 import { useDistincionPropias } from './useDistincionPropias.js';
 import { RUTAS } from '../../app/rutas.js';
 import { useWatchlistTitle } from '../watchlist/useWatchlistTitle.js';
+import { SeccionExhibicionCine } from '../cartelera/SeccionExhibicionCine.jsx';
 
 export function PaginaDetalleTitulo() {
   const { tipo, tmdbId } = useParams();
@@ -247,6 +248,7 @@ export function PaginaDetalleTitulo() {
           </div>
         </div>
       </Card>
+      <SeccionExhibicionCine key={`${tipo}:${tmdbId}`} tipo={titulo.tipo} tmdbId={tmdbId} />
     </section>
   );
 }

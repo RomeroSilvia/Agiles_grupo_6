@@ -1,4 +1,8 @@
-import { CARTELERA_CACHE_TTL_MS, TIPO_TITULO } from '@buscador/shared/constants';
+import {
+  CARTELERA_CACHE_TTL_MS,
+  HORIZONTE_ESTRENOS_DIAS,
+  TIPO_TITULO,
+} from '@buscador/shared/constants';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -27,6 +31,16 @@ export const TMDB_CONFIG = Object.freeze({
 });
 
 export const CARTELERA_CONFIG = Object.freeze({
+  MAX_PAGINAS_INDICE: 10,
   CACHE_TTL_MS: CARTELERA_CACHE_TTL_MS,
   RATE_LIMIT: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
+});
+
+export const ESTRENOS_CONFIG = Object.freeze({
+  CACHE_TTL_MS: CARTELERA_CACHE_TTL_MS,
+  CACHE_MAX_ENTRIES: 40,
+  MAX_PAGINAS_FUENTE: 10,
+  MAX_CANDIDATOS: 200,
+  HORIZONTE_DIAS: HORIZONTE_ESTRENOS_DIAS,
+  RESULTADOS_POR_PAGINA: TMDB_CONFIG.RESULTADOS_POR_PAGINA,
 });

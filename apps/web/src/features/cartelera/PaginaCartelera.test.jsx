@@ -71,6 +71,9 @@ function configurarFetchCartelera(responder) {
     if (url.pathname === '/api/region') {
       return Promise.resolve(respuestaHttp({ data: { region: 'AR' } }));
     }
+    if (url.pathname === '/api/cartelera/ciudades') {
+      return Promise.resolve(respuestaHttp({ data: { pais: 'AR', ciudades: [] } }));
+    }
     if (url.pathname === '/api/cartelera') {
       return responder(url);
     }

@@ -15,15 +15,19 @@ import { MenuUsuario } from './MenuUsuario.jsx';
 import { RUTAS } from './rutas.js';
 
 const ENLACES = [
+  { to: RUTAS.CARTELERA, label: 'Cartelera', publico: true },
+  { to: RUTAS.EVENTOS, label: 'Cooltura', publico: true },
   { to: RUTAS.WATCHLIST, label: 'Mi watchlist' },
   { to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' },
   { to: RUTAS.PERFIL, label: 'Perfil' },
   { to: RUTAS.ADMIN, label: 'Administración', soloAdmin: true },
 ];
 
-function Enlaces({ onNavigate }) {
+function Enlaces({ onNavigate, publicos = false }) {
   const { user } = useSession();
-  const enlaces = ENLACES.filter(({ soloAdmin }) => !soloAdmin || user?.esAdmin);
+  const enlaces = ENLACES.filter(
+    ({ soloAdmin, publico = false }) => publico === publicos && (!soloAdmin || user?.esAdmin),
+  );
 
   return enlaces.map(({ to, label }) => (
     <NavLink
@@ -91,14 +95,9 @@ export function MainLayout() {
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1 gap-y-1 px-2 py-2 sm:gap-3 sm:px-4">
           <LogoInicio className={FOCUS_RING_CLASS_NAME} />
-          <NavLink
-            to={RUTAS.CARTELERA}
-            className={({ isActive }) =>
-              `inline-flex min-h-11 items-center rounded-sm px-2 text-sm transition-colors duration-150 hover:text-foreground ${isActive ? 'font-bold text-foreground' : 'text-muted'} ${FOCUS_RING_CLASS_NAME}`
-            }
-          >
-            Cartelera
-          </NavLink>
+          <nav aria-label="Explorar" className="flex items-center gap-3 px-2">
+            <Enlaces publicos />
+          </nav>
           {user && (
             <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
               <Enlaces />

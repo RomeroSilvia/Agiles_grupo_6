@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Circle,
   CircleAlert,
+  CalendarDays,
   Eye,
   EyeOff,
   Globe,
@@ -18,6 +19,7 @@ import {
   Mail,
   MailCheck,
   Menu,
+  MapPin,
   Moon,
   Plus,
   Search,
@@ -25,6 +27,7 @@ import {
   Star,
   Sun,
   Trash,
+  Ticket,
   Users,
   X,
 } from 'lucide-react';
@@ -78,5 +81,8 @@ export const FiltersIcon = createIcon(SlidersHorizontal);
 export const GlobeIcon = createIcon(Globe);
 export const PlusIcon = createIcon(Plus);
 export const StarIcon = createIcon(Star);
+export const CalendarIcon = createIcon(CalendarDays);
+export const MapPinIcon = createIcon(MapPin);
+export const TicketIcon = createIcon(Ticket);
 export const ChartIcon = createIcon(ChartNoAxesColumn);
 export const UsersIcon = createIcon(Users);

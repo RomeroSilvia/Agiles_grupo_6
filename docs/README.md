@@ -8,6 +8,7 @@ Guías para trabajar en el repositorio. Las convenciones de código (capas, nomb
 | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | [Flujo de trabajo con Git](./flujo-de-trabajo-git/) | Cómo nombrar ramas, abrir pull requests, pedir revisión e integrar a `main`        |
 | [Guía de commits](./guia-de-commits/)               | Cómo escribir los mensajes de commit para que los acepten el hook de husky y el CI |
+| [Directorio de ciudades de cine](./ciudades-cine/)  | Criterios para verificar y configurar cobertura por ciudad                         |
 
 ## Otros recursos
 

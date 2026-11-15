@@ -1,5 +1,6 @@
 import { Avatar } from '../../components/ui/Avatar.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
+import { Skeleton } from '../../components/ui/Skeleton.jsx';
 import { formatearFechaCorta } from '../../utils/formatearFecha.js';
 import { LogoPlataforma } from '../plataformas/LogoPlataforma.jsx';
 import { ETIQUETAS_ESTADO_USUARIO, VARIANTES_ESTADO_USUARIO } from './administracion.constants.js';
@@ -12,9 +13,23 @@ function textoTitulos(cantidad) {
   return `${cantidad} ${cantidad === 1 ? 'título' : 'títulos'}`;
 }
 
-function PlataformasUsuario({ plataformas, email }) {
-  if (plataformas.length === 0) {
+function textoPlataformas(cantidad) {
+  return `${cantidad} ${cantidad === 1 ? 'plataforma' : 'plataformas'}`;
+}
+
+function PlataformasUsuario({ plataformaIds, plataformasPorId, catalogoCargando, email }) {
+  if (plataformaIds.length === 0) {
     return <span className="text-muted">—</span>;
+  }
+  if (catalogoCargando) {
+    return <Skeleton shape="block" className="h-6 w-16" />;
+  }
+
+  const plataformas = plataformaIds.map((id) => plataformasPorId.get(id)).filter(Boolean);
+
+  // Sin el catálogo no hay logos para mostrar, pero el usuario sí eligió plataformas
+  if (plataformas.length === 0) {
+    return <span className="text-muted">{textoPlataformas(plataformaIds.length)}</span>;
   }
 
   return (
@@ -28,9 +43,8 @@ function PlataformasUsuario({ plataformas, email }) {
   );
 }
 
-function FilaUsuario({ usuario, plataformasPorId }) {
+function FilaUsuario({ usuario, plataformasPorId, catalogoCargando }) {
   const { email, region, plataformaIds, titulosWatchlist, creadoEn, estado } = usuario;
-  const plataformas = plataformaIds.map((id) => plataformasPorId.get(id)).filter(Boolean);
   const fechaRegistro = formatearFechaCorta(creadoEn);
 
   return (
@@ -48,7 +62,12 @@ function FilaUsuario({ usuario, plataformasPorId }) {
         {region ? <Chip>{region}</Chip> : <span className="text-muted">—</span>}
       </td>
       <td className={`${CELDA_CLASS_NAME} order-last col-span-3`}>
-        <PlataformasUsuario plataformas={plataformas} email={email} />
+        <PlataformasUsuario
+          plataformaIds={plataformaIds}
+          plataformasPorId={plataformasPorId}
+          catalogoCargando={catalogoCargando}
+          email={email}
+        />
       </td>
       <td className={`${CELDA_CLASS_NAME} order-1 justify-self-end font-mono text-sm`}>
         {textoTitulos(titulosWatchlist)}
@@ -63,7 +82,7 @@ function FilaUsuario({ usuario, plataformasPorId }) {
   );
 }
 
-export function TablaUsuarios({ usuarios, plataformasPorId }) {
+export function TablaUsuarios({ usuarios, plataformasPorId, catalogoCargando }) {
   return (
     <div className="lg:overflow-hidden lg:rounded-card lg:border lg:border-border lg:bg-surface">
       <table aria-label="Usuarios registrados" className="block w-full text-sm lg:table">
@@ -78,7 +97,12 @@ export function TablaUsuarios({ usuarios, plataformasPorId }) {
         </thead>
         <tbody className="grid gap-3 lg:table-row-group">
           {usuarios.map((usuario) => (
-            <FilaUsuario key={usuario.id} usuario={usuario} plataformasPorId={plataformasPorId} />
+            <FilaUsuario
+              key={usuario.id}
+              usuario={usuario}
+              plataformasPorId={plataformasPorId}
+              catalogoCargando={catalogoCargando}
+            />
           ))}
         </tbody>
       </table>

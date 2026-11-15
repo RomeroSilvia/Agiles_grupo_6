@@ -17,6 +17,7 @@ describe('usuariosAdminSchema', () => {
     for (const query of [
       { estado: 'bloqueado' },
       { region: 'arg' },
+      { region: 'ZZ' },
       { pagina: '0' },
       { pagina: String(PAGINA_MAXIMA_USUARIOS + 1) },
       { pagina: '1.5' },

@@ -160,6 +160,7 @@ describe('GET /api/admin/usuarios', () => {
   it.each([
     ['un estado inválido', { estado: 'bloqueado' }],
     ['una región con formato inválido', { region: 'arg' }],
+    ['una región no soportada', { region: 'ZZ' }],
     ['una página mayor al máximo', { pagina: PAGINA_MAXIMA_USUARIOS + 1 }],
     ['un parámetro desconocido', { orden: 'mail' }],
   ])('responde 400 con %s', async (_caso, query) => {

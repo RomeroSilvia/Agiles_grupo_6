@@ -193,8 +193,8 @@ Todas las respuestas, también las de error, llevan `Cache-Control: no-store` pa
 panel no queden en la caché del navegador ni de un proxy.
 
 `GET /api/admin/usuarios` devuelve `{ usuarios, total, pagina, totalPaginas }`, de a 10 usuarios.
-`mail` busca coincidencias parciales (vacío es sin filtro), `region` es un código de país de dos
-letras, `estado` es `activo` o `sin_confirmar` y `pagina` va de 1 a 10.000; cualquier otro valor o
+`mail` busca coincidencias parciales (vacío es sin filtro), `region` es una de las regiones
+soportadas, `estado` es `activo` o `sin_confirmar` y `pagina` va de 1 a 10.000; cualquier otro valor o
 parámetro responde `400`. Una página sin filas devuelve la lista vacía con el `total` real. Cada
 usuario trae `{ id, email, region, plataformaIds, titulosWatchlist, creadoEn, estado }`; las
 plataformas vienen como ids y la web las cruza con `GET /api/plataformas`. `region` es `null` si

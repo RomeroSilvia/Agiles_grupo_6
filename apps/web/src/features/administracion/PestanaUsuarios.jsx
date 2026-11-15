@@ -83,7 +83,11 @@ export function PestanaUsuarios() {
         <>
           <p className="text-sm text-muted">{textoResumen(datos)}</p>
           {datos.usuarios.length > 0 ? (
-            <TablaUsuarios usuarios={datos.usuarios} plataformasPorId={plataformasPorId} />
+            <TablaUsuarios
+              usuarios={datos.usuarios}
+              plataformasPorId={plataformasPorId}
+              catalogoCargando={catalogo.loading}
+            />
           ) : (
             !paginaFueraDeRango && (
               <Card padding="lg" className="text-muted">

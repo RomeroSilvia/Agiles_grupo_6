@@ -45,7 +45,11 @@ const SIN_REGION = {
 
 const LISTADO = { usuarios: [ANA, NACHO], total: 12, pagina: 1, totalPaginas: 2 };
 
-function mockApi({ usuarios = async () => LISTADO, sesion = async () => ({ user: ADMIN }) } = {}) {
+function mockApi({
+  usuarios = async () => LISTADO,
+  sesion = async () => ({ user: ADMIN }),
+  plataformas = async () => [NETFLIX],
+} = {}) {
   request.mockImplementation(async (path, options) => {
     if (path === '/auth/session') {
       return sesion();
@@ -54,7 +58,7 @@ function mockApi({ usuarios = async () => LISTADO, sesion = async () => ({ user:
       return { region: 'AR', source: 'ip' };
     }
     if (path === '/plataformas') {
-      return [NETFLIX];
+      return plataformas();
     }
     if (path === '/plataformas/propias') {
       return [];
@@ -113,6 +117,35 @@ describe('Pestaña de usuarios del panel de administración', () => {
 
     expect(within(fila).getAllByText('—')).toHaveLength(2);
     expect(within(fila).queryByText('AR')).not.toBeInTheDocument();
+  });
+
+  it('si no carga el catálogo, muestra cuántas plataformas eligió en lugar de «—»', async () => {
+    mockApi({
+      plataformas: async () => {
+        throw new ApiError({
+          status: 500,
+          code: 'DATABASE',
+          message: 'No se pudieron cargar las plataformas',
+        });
+      },
+    });
+    renderRoute('/admin/usuarios');
+
+    const tabla = await screen.findByRole('table', { name: 'Usuarios registrados' });
+    await screen.findByText('No se pudieron cargar las plataformas');
+    const filaAna = within(tabla).getByRole('row', { name: /ana\.lopez@mail\.com/ });
+
+    expect(within(filaAna).getByText('1 plataforma')).toBeInTheDocument();
+    expect(within(filaAna).queryByText('—')).not.toBeInTheDocument();
+  });
+
+  it('una región no soportada en la URL no filtra y el select muestra todas', async () => {
+    mockApi();
+    renderRoute('/admin/usuarios?region=ZZ');
+    await screen.findByRole('table', { name: 'Usuarios registrados' });
+
+    expect(ultimoPedidoDeUsuarios()).toMatchObject({ region: undefined });
+    expect(screen.getByRole('combobox', { name: 'Región' })).toHaveValue('');
   });
 
   it('buscar por mail pide el listado filtrado desde la página 1', async () => {

@@ -36,6 +36,7 @@
   --rating: #e6a100;
   --switch-knob: #ffffff;
   --skeleton: #e4e9e6;
+  --grafico-secundario: #6fd3a8;
   --plataforma-inactiva: #8a9590;
   --plataforma-inactiva-foreground: #ffffff;
 }
@@ -72,6 +73,7 @@
   --rating: #f5b82e;
   --switch-knob: #ffffff;
   --skeleton: #22302a;
+  --grafico-secundario: #4fbf8f;
   --plataforma-inactiva: #4d5c55;
   --plataforma-inactiva-foreground: #d5ddd9;
 }
@@ -169,6 +171,7 @@
   --color-rating: var(--rating);
   --color-switch-knob: var(--switch-knob);
   --color-skeleton: var(--skeleton);
+  --color-grafico-secundario: var(--grafico-secundario);
 
   --radius-card: 1rem;
   --radius-field: 0.75rem;

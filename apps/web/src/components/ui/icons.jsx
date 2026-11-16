@@ -28,6 +28,7 @@ import {
   Sun,
   Trash,
   Ticket,
+  Tv,
   Users,
   X,
 } from 'lucide-react';
@@ -86,3 +87,4 @@ export const MapPinIcon = createIcon(MapPin);
 export const TicketIcon = createIcon(Ticket);
 export const ChartIcon = createIcon(ChartNoAxesColumn);
 export const UsersIcon = createIcon(Users);
+export const TvIcon = createIcon(Tv);

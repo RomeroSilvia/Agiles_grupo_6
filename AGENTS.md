@@ -125,7 +125,7 @@ Otras reglas:
 ## Frontend
 
 - Un contexto por dominio en `contexts/<dominio>/`: `<Nombre>Context.js` (createContext + hook `use<Nombre>`) y `<Nombre>Provider.jsx` (componente). El valor del provider va en `useMemo`.
-- Context solo para estado global que cambia poco (sesión, tema, región, plataformas propias). Los resultados de búsqueda y los datos de una pantalla van en hooks de la funcionalidad (`useBusqueda`), no en Context.
+- Context solo para estado global que cambia poco (sesión, tema, región, ciudad de cine, plataformas propias). Los resultados de búsqueda y los datos de una pantalla van en hooks de la funcionalidad (`useBusqueda`), no en Context.
 - Todas las llamadas a la API pasan por `services/api.service.js` (`request`).
 - Estilos solo con clases de Tailwind. Colores y tokens propios en `@theme` de `src/styles.css`; no usar valores sueltos (`bg-[#123456]`).
 - Todo componente visual debe verse bien en modo oscuro (`dark:`) y en celular (mobile first: clases base para celular, `md:` / `lg:` para pantallas grandes).

@@ -1,1 +1,0 @@
-export const MIN_CANTIDAD_TEXTO_BUSCADO = 3;

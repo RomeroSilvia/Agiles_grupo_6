@@ -1,5 +1,8 @@
-import { DIAS_POR_PERIODO_METRICAS, GENEROS_BUSQUEDA } from '@buscador/shared/constants';
-import { MIN_CANTIDAD_TEXTO_BUSCADO } from '../config/metricas.config.js';
+import {
+  DIAS_POR_PERIODO_METRICAS,
+  GENEROS_BUSQUEDA,
+  MIN_CANTIDAD_TEXTO_BUSCADO,
+} from '@buscador/shared/constants';
 import * as metricasRepository from '../repositories/metricas.repository.js';
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PERIODO_METRICAS } from '@buscador/shared/constants';
+import { MIN_CANTIDAD_TEXTO_BUSCADO, PERIODO_METRICAS } from '@buscador/shared/constants';
 import { ApiError, request } from '../../services/api.service.js';
 import { renderRoute } from '../../test/renderRoute.jsx';
 import { MENSAJE_SIN_DATOS } from './administracion.constants.js';
@@ -95,6 +95,17 @@ describe('Pestaña de métricas del panel de administración', () => {
       await within(tarjeta('Plataforma')).findByRole('img', { name: 'Logo de Netflix' }),
     ).toBeInTheDocument();
     expect(within(tarjeta('Textos más buscados')).getByText('friends')).toBeInTheDocument();
+  });
+
+  it('la nota aclara cuántas búsquedas necesita un texto para aparecer', async () => {
+    mockApi();
+    renderRoute('/admin/metricas');
+
+    expect(
+      await screen.findByText(
+        new RegExp(`menos de ${MIN_CANTIDAD_TEXTO_BUSCADO} veces no se muestran`),
+      ),
+    ).toBeInTheDocument();
   });
 
   it('cambiar el período vuelve a pedir las métricas', async () => {

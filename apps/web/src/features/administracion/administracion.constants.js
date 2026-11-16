@@ -1,4 +1,8 @@
-import { ESTADO_USUARIO, PERIODO_METRICAS } from '@buscador/shared/constants';
+import {
+  ESTADO_USUARIO,
+  MIN_CANTIDAD_TEXTO_BUSCADO,
+  PERIODO_METRICAS,
+} from '@buscador/shared/constants';
 import { RUTAS } from '../../app/rutas.js';
 import {
   BookmarkIcon,
@@ -117,5 +121,4 @@ export const MAX_FILAS_RANKING = 7;
 
 export const ETIQUETA_OTRAS = 'Otras';
 
-export const NOTA_METRICAS =
-  '«Búsquedas» cuenta las búsquedas hechas desde que se empezaron a registrar. Los textos buscados pocas veces no se muestran.';
+export const NOTA_METRICAS = `«Búsquedas» cuenta las búsquedas hechas desde que se empezaron a registrar. Los textos buscados menos de ${MIN_CANTIDAD_TEXTO_BUSCADO} veces no se muestran.`;

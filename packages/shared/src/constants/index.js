@@ -117,6 +117,8 @@ export const DIAS_POR_PERIODO_METRICAS = Object.freeze({
   [PERIODO_METRICAS.TODO]: null,
 });
 
+export const MIN_CANTIDAD_TEXTO_BUSCADO = 3;
+
 // Valores técnicos
 export const DEFAULT_REGION = 'AR';
 

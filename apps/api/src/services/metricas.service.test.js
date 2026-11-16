@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GENEROS_BUSQUEDA, PERIODO_METRICAS } from '@buscador/shared/constants';
-import { MIN_CANTIDAD_TEXTO_BUSCADO } from '../config/metricas.config.js';
+import {
+  GENEROS_BUSQUEDA,
+  MIN_CANTIDAD_TEXTO_BUSCADO,
+  PERIODO_METRICAS,
+} from '@buscador/shared/constants';
 import * as metricasRepository from '../repositories/metricas.repository.js';
 import { calcularDesde, obtenerMetricas } from './metricas.service.js';
 

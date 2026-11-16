@@ -1,7 +1,9 @@
 import {
+  ESTADO_FUNCIONES_CINE,
   HORIZONTE_FUNCIONES_CINE_DIAS,
   MAX_FUNCIONES_CINE,
 } from '../constants/cartelera.constants.js';
+import { TIPO_TITULO } from '../constants/index.js';
 import { z } from 'zod';
 import { tmdbIdSchema } from './busqueda.schema.js';
 import {
@@ -9,9 +11,11 @@ import {
   ciudadCineSchema,
   zonaHorariaCineSchema,
 } from './ciudadCine.schema.js';
-import { fechaCivilCarteleraSchema, fuenteSchema, sumarDiasCivil } from './cartelera.schema.js';
+import { fechaCivilCarteleraSchema, fuenteSchema } from './cartelera.schema.js';
+import { sumarDiasCivil } from '../utils/fechaCivil.js';
 import { httpUrlSchema } from './url.schema.js';
 
+export const horaLocalSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
 export const cineIdSchema = z.string().regex(/^cine:[a-f0-9]{64}$/);
 export const funcionCineIdSchema = z.string().regex(/^funcion:[a-f0-9]{64}$/);
 const fuenteFuncionesSchema = fuenteSchema.extend({ nombre: z.string().trim().min(1).optional() });
@@ -34,13 +38,13 @@ export const funcionCineSchema = z
   .object({
     id: funcionCineIdSchema,
     tmdbId: tmdbIdSchema,
-    tipo: z.literal('pelicula'),
+    tipo: z.literal(TIPO_TITULO.PELICULA),
     ciudadId: ciudadCineIdSchema,
     cineId: cineIdSchema,
     cineNombre: z.string().trim().min(1),
     inicio: z.iso.datetime({ offset: true }).regex(/[+-]\d{2}:\d{2}$/),
     fechaLocal: fechaCivilCarteleraSchema,
-    horaLocal: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+    horaLocal: horaLocalSchema,
     zonaHoraria: zonaHorariaCineSchema,
     sala: textoOpcionalSchema,
     formato: textoOpcionalSchema,
@@ -100,13 +104,13 @@ export const advertenciaFuncionesSchema = z.object({
 export const respuestaFuncionesCineSchema = z
   .object({
     tmdbId: tmdbIdSchema,
-    tipo: z.literal('pelicula'),
+    tipo: z.literal(TIPO_TITULO.PELICULA),
     ciudad: ciudadCineSchema,
     desde: fechaCivilCarteleraSchema,
     hasta: fechaCivilCarteleraSchema,
     cines: z.array(cineSchema),
     funciones: z.array(funcionCineSchema).max(MAX_FUNCIONES_CINE),
-    estado: z.enum(['disponible', 'sin_funciones', 'sin_cobertura', 'incompleta']),
+    estado: z.enum(Object.values(ESTADO_FUNCIONES_CINE)),
     advertencias: z.array(advertenciaFuncionesSchema),
     fuentes: z.array(fuenteFuncionesSchema),
     consultadoEn: z.iso.datetime(),
@@ -141,8 +145,11 @@ export const respuestaFuncionesCineSchema = z
           funcion.fechaLocal > data.hasta
         );
       }) ||
-      (['sin_funciones', 'sin_cobertura'].includes(data.estado) && data.funciones.length > 0) ||
-      (data.estado === 'disponible' &&
+      ([ESTADO_FUNCIONES_CINE.SIN_FUNCIONES, ESTADO_FUNCIONES_CINE.SIN_COBERTURA].includes(
+        data.estado,
+      ) &&
+        data.funciones.length > 0) ||
+      (data.estado === ESTADO_FUNCIONES_CINE.DISPONIBLE &&
         (data.funciones.length === 0 || data.advertencias.length > 0));
     if (invalido)
       ctx.addIssue({

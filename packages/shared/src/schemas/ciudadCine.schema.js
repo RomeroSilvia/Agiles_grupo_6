@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { COBERTURA_CIUDAD_CINE } from '../constants/cartelera.constants.js';
 import { fuenteSchema } from './cartelera.schema.js';
 
 const uuidSchema = z.uuid();
@@ -36,7 +37,7 @@ export const ciudadCineSchema = z
     provincia: z.string().trim().min(1, 'La provincia es obligatoria'),
     pais: z.literal('AR'),
     zonaHoraria: zonaHorariaCineSchema,
-    cobertura: z.enum(['disponible', 'sin_verificar', 'sin_cobertura']),
+    cobertura: z.enum(Object.values(COBERTURA_CIUDAD_CINE)),
     fuente: ciudadCineFuenteSchema,
   })
   .strict();

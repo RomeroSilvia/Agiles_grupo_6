@@ -91,7 +91,11 @@ export const TIPOS_OFERTA_INCLUIDOS = Object.freeze([
   TIPO_OFERTA.CON_ANUNCIOS,
 ]);
 
-export const ESTADOS_NOTIFICACION = ['pendiente', 'enviada', 'fallida'];
+export const ESTADO_NOTIFICACION = Object.freeze({
+  PENDIENTE: 'pendiente',
+  ENVIADA: 'enviada',
+  FALLIDA: 'fallida',
+});
 
 export const ESTADO_USUARIO = Object.freeze({ ACTIVO: 'activo', SIN_CONFIRMAR: 'sin_confirmar' });
 export const ESTADOS_USUARIO = Object.values(ESTADO_USUARIO);
@@ -146,8 +150,6 @@ export const TMDB_LOGO_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 export const APP_NAME = 'Streamly';
 
 export const MINUTOS_VENCIMIENTO_ENLACE = 30;
-
-export const CONFIRMACION_ELIMINAR = 'ELIMINAR';
 
 export const RUTAS_ENLACE_MAIL = Object.freeze({
   RESTABLECER_PASSWORD: '/restablecer-contrasena',

@@ -9,6 +9,7 @@ import {
   TMDB_ID_MAXIMO,
   PAGINA_MAXIMA,
 } from '../constants/index.js';
+import { obtenerHoyArgentina, sumarDiasCivil } from '../utils/fechaCivil.js';
 import { tmdbIdSchema } from './busqueda.schema.js';
 
 export const fechaCivilCarteleraSchema = z
@@ -74,21 +75,6 @@ export const respuestaCarteleraSchema = z.object({
   totalPaginas: z.number().int().min(0).max(PAGINA_MAXIMA),
   fuente: fuenteCarteleraSchema,
 });
-
-export function obtenerHoyArgentina(ahora = new Date()) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Argentina/Buenos_Aires',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(ahora);
-}
-
-export function sumarDiasCivil(fecha, dias) {
-  const instante = new Date(`${fecha}T12:00:00Z`);
-  instante.setUTCDate(instante.getUTCDate() + dias);
-  return instante.toISOString().slice(0, 10);
-}
 
 export const consultaEstrenosSchema = z
   .object({

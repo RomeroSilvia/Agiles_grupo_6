@@ -90,9 +90,7 @@ export async function confirmarCambioMail({ token }, usuarioActual) {
 }
 
 export async function eliminarCuenta(usuario, { password }, tokens) {
-  if (password) {
-    await authService.verificarIdentidad({ email: usuario.email, password });
-  }
+  await authService.verificarIdentidad({ email: usuario.email, password });
   await intentoLoginRepository.limpiar(usuario.email);
   await authService.cerrarTodasLasSesiones(tokens);
   await authRepository.eliminarUsuario(usuario.id);

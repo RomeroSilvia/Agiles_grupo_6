@@ -18,13 +18,19 @@ const cache = createTtlCache({
 });
 const cinesCache = createTtlCache({ ttlMs: FUNCIONES_CINE_CONFIG.BUTACA_TTL_MS, maxEntries: 1 });
 
+export function crearErrorButacaDeshabilitado() {
+  return new ExternalServiceError(
+    'Butaca',
+    new Error('Complemento no habilitado o sin verificación'),
+  );
+}
+
 export function estaHabilitadoButaca() {
   return env.BUTACA_ENABLED === 'true' && BUTACA_VERIFICADO;
 }
 
 async function consultarButaca(path, params, schema) {
-  if (!estaHabilitadoButaca())
-    throw new ExternalServiceError('Butaca: complemento no habilitado o sin verificación');
+  if (!estaHabilitadoButaca()) throw crearErrorButacaDeshabilitado();
   const url = new URL(BASE_URL + path);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   const data = validateExternalResponse(

@@ -3,6 +3,7 @@ import {
   HORIZONTE_ESTRENOS_DIAS,
   TIPO_TITULO,
 } from '@buscador/shared/constants';
+import { crearLimite } from './rateLimit.config.js';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -14,6 +15,11 @@ export const RUTA_TMDB_POR_TIPO = Object.freeze({
 });
 
 export const TMDB_CONFIG = Object.freeze({
+  BASE_URL: 'https://api.themoviedb.org/3',
+  TIMEOUT_MS: 8000,
+  POSTER_BASE_URL: 'https://image.tmdb.org/t/p/w500',
+  PROFILE_BASE_URL: 'https://image.tmdb.org/t/p/w185',
+  LANGUAGE: 'es-AR',
   MAX_CONCURRENT_REQUESTS: 8,
   CACHE_TTL_MS: 24 * ONE_HOUR_MS,
   CACHE_MAX_ENTRIES: 5000,
@@ -26,14 +32,14 @@ export const TMDB_CONFIG = Object.freeze({
   MAX_PERSONAS_SECUNDARIAS_A_VALIDAR: 4,
   TAMANIO_LOTE_CREDITOS_PERSONAS: 2,
   RESULTADOS_POR_PAGINA: 20,
-  RATE_LIMIT_BUSQUEDA: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
-  RATE_LIMIT_PERSONAS: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
+  RATE_LIMIT_BUSQUEDA: crearLimite(30),
+  RATE_LIMIT_PERSONAS: crearLimite(30),
 });
 
 export const CARTELERA_CONFIG = Object.freeze({
   MAX_PAGINAS_INDICE: 10,
   CACHE_TTL_MS: CARTELERA_CACHE_TTL_MS,
-  RATE_LIMIT: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
+  RATE_LIMIT: crearLimite(30),
 });
 
 export const ESTRENOS_CONFIG = Object.freeze({

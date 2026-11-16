@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../config/supabase.config.js';
-import { ConflictError, DatabaseError } from '../errors/index.js';
+import { DatabaseError } from '../errors/index.js';
+import { throwSupabaseError } from '../utils/supabaseError.js';
 import { WATCHLIST_PAGE_SIZE } from '../config/watchlist.config.js';
 import {
   TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS,
@@ -10,10 +11,7 @@ import {
 } from '../models/watchlist.model.js';
 
 function lanzarError(error) {
-  if (error.code === '23505') {
-    throw new ConflictError('El título ya está en tu watchlist');
-  }
-  throw new DatabaseError(error);
+  throwSupabaseError(error, 'El título ya está en tu watchlist');
 }
 
 export async function listarTitulosConAvisosActivos(regionPredeterminada) {

@@ -59,6 +59,13 @@ describe('perfil.repository', () => {
     expect(builder.or).toHaveBeenCalledWith('region.is.null,region.neq.UY');
   });
 
+  it('rechaza una región con formato inválido sin consultar la base', async () => {
+    await expect(
+      perfilRepository.actualizarRegion(USUARIO.id, 'AR,rol.eq.x'),
+    ).rejects.toBeInstanceOf(TypeError);
+    expect(supabaseAdmin.from).not.toHaveBeenCalled();
+  });
+
   it('devuelve null si el perfil ya tenía esa región', async () => {
     mockearConsulta(supabaseAdmin.from, { data: null, error: null });
     await expect(perfilRepository.actualizarRegion(USUARIO.id, 'UY')).resolves.toBeNull();

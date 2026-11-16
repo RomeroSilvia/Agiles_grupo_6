@@ -1,5 +1,6 @@
 import { env } from '../config/env.config.js';
 import { ZONA_HORARIA_EVENTOS } from '@buscador/shared/constants';
+import { obtenerFechaCivil } from '@buscador/shared/utils';
 import { EVENTOS_CONFIG } from '../config/eventos.config.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { respuestaAllEventsSchema } from '../models/evento.model.js';
@@ -12,7 +13,7 @@ const cache = createTtlCache({
   ttlMs: EVENTOS_CONFIG.CACHE_TTL_MS,
   maxEntries: EVENTOS_CONFIG.CACHE_MAX_ENTRIES,
 });
-const limitar = createConcurrencyLimiter(2);
+const limitar = createConcurrencyLimiter(EVENTOS_CONFIG.MAX_CONCURRENT_REQUESTS);
 const FECHAS_PROVEEDOR = { hoy: 'today', manana: 'tomorrow', fin_de_semana: 'weekend' };
 const CATEGORIAS_PROVEEDOR = Object.freeze({
   todas: 'all',
@@ -26,12 +27,6 @@ const CATEGORIAS_PROVEEDOR = Object.freeze({
   deportes: 'sports',
   gastronomia: 'food-drinks',
 });
-const formateadorFecha = new Intl.DateTimeFormat('en-CA', {
-  timeZone: ZONA_HORARIA_EVENTOS,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
 let diaPresupuesto;
 let solicitudesDelDia = 0;
 
@@ -41,7 +36,7 @@ export function listarEventosAllEvents({ categoria, fecha, pagina }) {
       new ExternalServiceError('los eventos de La Plata: la fuente no está configurada'),
     );
   }
-  const diaLocal = formateadorFecha.format(new Date());
+  const diaLocal = obtenerFechaCivil(new Date(), ZONA_HORARIA_EVENTOS);
   return cache.getOrSet(`${diaLocal}:${categoria}:${fecha}:${pagina}`, () =>
     limitar(async () => {
       const diaActual = new Date().toISOString().slice(0, 10);
@@ -57,8 +52,8 @@ export function listarEventosAllEvents({ categoria, fecha, pagina }) {
           'los eventos de La Plata: se alcanzó el límite diario de consultas',
         );
       }
-      const url = new URL('https://api.api.sh/allevents/v1/events');
-      url.searchParams.set('city', 'la-plata');
+      const url = new URL(EVENTOS_CONFIG.ALLEVENTS_URL);
+      url.searchParams.set('city', EVENTOS_CONFIG.ALLEVENTS_CIUDAD);
       url.searchParams.set('page', String(pagina));
       url.searchParams.set('raw', '0');
       if (categoria !== 'todas') {

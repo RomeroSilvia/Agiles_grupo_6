@@ -1,13 +1,12 @@
 import { respuestaEventosSchema, eventoSchema } from '@buscador/shared/schemas';
-import { PAGINA_MAXIMA_EVENTOS, ZONA_HORARIA_EVENTOS } from '@buscador/shared/constants';
+import {
+  CIUDAD_EVENTOS,
+  PAGINA_MAXIMA_EVENTOS,
+  URL_FUENTE_EVENTOS,
+  ZONA_HORARIA_EVENTOS,
+} from '@buscador/shared/constants';
+import { obtenerFechaCivil } from '@buscador/shared/utils';
 import * as allEventsIntegration from '../integrations/allEvents.integration.js';
-
-const formateadorFecha = new Intl.DateTimeFormat('en-CA', {
-  timeZone: ZONA_HORARIA_EVENTOS,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
 
 function normalizarTexto(value) {
   return (
@@ -20,7 +19,7 @@ function normalizarTexto(value) {
 }
 
 function obtenerFechaLocal(value) {
-  return formateadorFecha.format(new Date(value));
+  return obtenerFechaCivil(value, ZONA_HORARIA_EVENTOS);
 }
 
 export async function listarEventos({ categoria, fecha, pagina }) {
@@ -34,7 +33,7 @@ export async function listarEventos({ categoria, fecha, pagina }) {
     if (
       evento.virtual ||
       evento.cancelado ||
-      (ciudad && ciudad !== 'la plata') ||
+      (ciudad && ciudad !== normalizarTexto(CIUDAD_EVENTOS.CIUDAD)) ||
       (pais && !['ar', 'argentina'].includes(pais))
     ) {
       continue;
@@ -52,8 +51,8 @@ export async function listarEventos({ categoria, fecha, pagina }) {
     resultados.set(evento.id, eventoSchema.strip().parse(evento));
   }
   return respuestaEventosSchema.parse({
-    ciudad: 'La Plata',
-    provincia: 'Buenos Aires',
+    ciudad: CIUDAD_EVENTOS.CIUDAD,
+    provincia: CIUDAD_EVENTOS.PROVINCIA,
     zonaHoraria: ZONA_HORARIA_EVENTOS,
     pagina,
     siguientePagina:
@@ -62,7 +61,7 @@ export async function listarEventos({ categoria, fecha, pagina }) {
     incompleta,
     fuente: {
       nombre: 'AllEvents',
-      url: 'https://allevents.in/la-plata',
+      url: URL_FUENTE_EVENTOS,
       consultadoEn: respuesta.consultadoEn,
     },
   });

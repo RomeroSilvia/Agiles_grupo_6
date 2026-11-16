@@ -1,3 +1,4 @@
+import { FUENTE_ID_BUTACA } from '@buscador/shared/constants';
 import * as butacaIntegration from '../integrations/butaca.integration.js';
 import {
   CORRESPONDENCIAS_PELICULAS_CINE,
@@ -18,9 +19,7 @@ const cache = createTtlCache({
 });
 export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
   if (!butacaIntegration.estaHabilitadoButaca())
-    return Promise.reject(
-      new ExternalServiceError('Butaca: complemento no habilitado o sin verificación'),
-    );
+    return Promise.reject(butacaIntegration.crearErrorButacaDeshabilitado());
   return cache.getOrSet(
     `${pelicula.tmdbId}:${ciudad.id}:${desde}:${FUNCIONES_CINE_CONFIG.VERSION_MAPEOS}`,
     async () => {
@@ -36,7 +35,8 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
           (item) =>
             item.ciudadId === ciudad.id &&
             item.fuentes.some(
-              (fuente) => fuente.fuenteId === 'butaca' && fuente.registroId === String(mapeo.id),
+              (fuente) =>
+                fuente.fuenteId === FUENTE_ID_BUTACA && fuente.registroId === String(mapeo.id),
             ),
         );
         const cine = cines.find(
@@ -56,7 +56,7 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
           fechasConsulta.push(consultaPeliculas.consultadoEn);
           const revisadas = peliculas.filter((item) =>
             corresponderPeliculaCine({
-              fuenteId: 'butaca',
+              fuenteId: FUENTE_ID_BUTACA,
               registroId: item.corporateId,
               nombre: item.title,
               tmdbId: pelicula.tmdbId,
@@ -77,7 +77,7 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
           }
           const candidatas = peliculas.filter((item) =>
             corresponderPeliculaCine({
-              fuenteId: 'butaca',
+              fuenteId: FUENTE_ID_BUTACA,
               registroId: item.corporateId,
               nombre: item.title,
               tmdbId: pelicula.tmdbId,
@@ -86,7 +86,7 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
           );
           if (!candidatas.length) {
             const correspondenciasPelicula = correspondencias.filter(
-              (item) => item.fuenteId === 'butaca' && item.tmdbId === pelicula.tmdbId,
+              (item) => item.fuenteId === FUENTE_ID_BUTACA && item.tmdbId === pelicula.tmdbId,
             );
             const nombres = [
               ...(pelicula.identidadCine?.nombres ?? []),
@@ -124,7 +124,7 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
               const fechaLocal = partes?.[1] ?? null;
               const horaLocal = partes?.[2] ?? null;
               observaciones.push({
-                fuenteId: 'butaca',
+                fuenteId: FUENTE_ID_BUTACA,
                 registroId: horario.sessionId,
                 peliculaRegistroId: horario.corporateId,
                 peliculaNombre: horario.movieName,
@@ -149,7 +149,7 @@ export function obtenerObservacionesButaca({ pelicula, ciudad, desde, hasta }) {
       }
       if (errorSucursal && !sucursalesRespondidas && !observaciones.length) throw errorSucursal;
       const fuente = {
-        fuenteId: 'butaca',
+        fuenteId: FUENTE_ID_BUTACA,
         registroId: null,
         nombre: 'Butaca / Cinemark',
         url: `${FUNCIONES_CINE_CONFIG.BUTACA_BASE_URL}/cinema/showtimes`,

@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.config.js';
 
+const JSON_BODY_LIMIT = '100kb';
+
 /** Crea la app sin levantar el servidor, para poder testearla con supertest. */
 export function createApp() {
   const app = express();
@@ -14,7 +16,7 @@ export function createApp() {
     app.set('trust proxy', env.TRUST_PROXY);
   }
   app.use(helmet());
-  app.use(express.json({ limit: '100kb' }));
+  app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(cookieParser());
 
   app.use('/api', routes);

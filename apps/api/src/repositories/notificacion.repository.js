@@ -1,3 +1,4 @@
+import { ESTADO_NOTIFICACION } from '@buscador/shared/constants';
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { NOTIFICACIONES_CONFIG } from '../config/notificaciones.config.js';
 import { DatabaseError } from '../errors/index.js';
@@ -14,7 +15,7 @@ export async function listarPorEnviar(maxIntentos) {
     const { data, error } = await supabaseAdmin
       .from('notificacion')
       .select(NOTIFICACION_POR_ENVIAR_COLUMNS)
-      .in('estado', ['pendiente', 'fallida'])
+      .in('estado', [ESTADO_NOTIFICACION.PENDIENTE, ESTADO_NOTIFICACION.FALLIDA])
       .lt('intentos', maxIntentos)
       .order('creada_en')
       .order('id')
@@ -44,11 +45,15 @@ async function actualizar(ids, cambios) {
 }
 
 export function marcarEnviadas(ids, enviadaEn) {
-  return actualizar(ids, { estado: 'enviada', enviada_en: enviadaEn, ultimo_error: null });
+  return actualizar(ids, {
+    estado: ESTADO_NOTIFICACION.ENVIADA,
+    enviada_en: enviadaEn,
+    ultimo_error: null,
+  });
 }
 
 export function marcarFallidas(ids, { intentos, error }) {
-  return actualizar(ids, { estado: 'fallida', intentos, ultimo_error: error });
+  return actualizar(ids, { estado: ESTADO_NOTIFICACION.FALLIDA, intentos, ultimo_error: error });
 }
 
 export async function eliminar(ids) {

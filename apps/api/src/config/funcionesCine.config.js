@@ -1,13 +1,15 @@
 import {
+  FUENTE_ID_BUTACA,
   URL_SITIO_CINEMARK,
   HORIZONTE_FUNCIONES_CINE_DIAS,
   MAX_FUNCIONES_CINE,
 } from '@buscador/shared/constants';
 import { CINES_CINEMARK, EVIDENCIA_CINEMARK } from './cinesCinemark.config.js';
+import { crearLimite } from './rateLimit.config.js';
 
 export const FUNCIONES_CINE_CONFIG = Object.freeze({
   VERSION_MAPEOS: '3',
-  RATE_LIMIT: Object.freeze({ maxRequests: 5, windowMs: 60_000 }),
+  RATE_LIMIT: crearLimite(5),
   MAX_CONCURRENT_REQUESTS: 2,
   MAX_FUNCIONES: MAX_FUNCIONES_CINE,
   HORIZONTE_DIAS: HORIZONTE_FUNCIONES_CINE_DIAS,
@@ -26,7 +28,7 @@ export const LUGARES_CINE = Object.freeze(
     direccion: cine.direccion,
     evidencia: EVIDENCIA_CINEMARK.evidencia,
     urlSitio: URL_SITIO_CINEMARK,
-    fuentes: [{ fuenteId: 'butaca', registroId: String(cine.id) }],
+    fuentes: [{ fuenteId: FUENTE_ID_BUTACA, registroId: String(cine.id) }],
   })),
 );
 export const CORRESPONDENCIAS_PELICULAS_CINE = Object.freeze([]);

@@ -1,51 +1,49 @@
 import {
-  ciudadCineSchema,
-  respuestaFuncionesCineSchema,
-  sumarDiasCivil,
-} from '@buscador/shared/schemas';
+  COBERTURA_CIUDAD_CINE,
+  ESTADO_FUNCIONES_CINE,
+  FUENTE_ID_BUTACA,
+  TIPO_TITULO,
+} from '@buscador/shared/constants';
+import { ciudadCineSchema, respuestaFuncionesCineSchema } from '@buscador/shared/schemas';
+import { obtenerFechaCivil, sumarDiasCivil } from '@buscador/shared/utils';
 import * as ciudadCineService from './ciudadCine.service.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as butacaService from './butaca.service.js';
 import * as butacaIntegration from '../integrations/butaca.integration.js';
 import { FUNCIONES_CINE_CONFIG, LUGARES_CINE } from '../config/funcionesCine.config.js';
 import { ExternalServiceError } from '../errors/index.js';
-import {
-  combinarFuncionesCine,
-  obtenerFechaLocalCine,
-  normalizarObservacionesCine,
-} from './funcionCine.normalizer.js';
+import { combinarFuncionesCine, normalizarObservacionesCine } from './funcionCine.normalizer.js';
 import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.js';
 
+const CAMPOS_CIUDAD_CINE = Object.keys(ciudadCineSchema.shape);
 const limitar = createConcurrencyLimiter(FUNCIONES_CINE_CONFIG.MAX_CONCURRENT_REQUESTS);
 
 export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
   const configuracion = ciudadCineService.obtenerCiudadCine(ciudadId);
-  const pelicula = await tmdbIntegration.obtenerDetalle('pelicula', tmdbId, {
+  const pelicula = await tmdbIntegration.obtenerDetalle(TIPO_TITULO.PELICULA, tmdbId, {
     incluirIdentidadCine: true,
   });
   const ciudad = ciudadCineSchema.parse(
     Object.fromEntries(
-      Object.entries(configuracion).filter(([campo]) =>
-        ['id', 'nombre', 'provincia', 'pais', 'zonaHoraria', 'cobertura', 'fuente'].includes(campo),
-      ),
+      Object.entries(configuracion).filter(([campo]) => CAMPOS_CIUDAD_CINE.includes(campo)),
     ),
   );
-  const desde = obtenerFechaLocalCine(new Date(), ciudad.zonaHoraria);
+  const desde = obtenerFechaCivil(new Date(), ciudad.zonaHoraria);
   const hasta = sumarDiasCivil(desde, FUNCIONES_CINE_CONFIG.HORIZONTE_DIAS);
   const base = {
     tmdbId,
-    tipo: 'pelicula',
+    tipo: TIPO_TITULO.PELICULA,
     ciudad,
     desde,
     hasta,
     consultadoEn: new Date().toISOString(),
   };
-  if (ciudad.cobertura === 'sin_cobertura') {
+  if (ciudad.cobertura === COBERTURA_CIUDAD_CINE.SIN_COBERTURA) {
     return respuestaFuncionesCineSchema.parse({
       ...base,
       cines: [],
       funciones: [],
-      estado: 'sin_cobertura',
+      estado: ESTADO_FUNCIONES_CINE.SIN_COBERTURA,
       advertencias: [],
       fuentes: [],
     });
@@ -54,7 +52,7 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
   const proveedores = [];
   if (configuracion.butacaCines.length && butacaIntegration.estaHabilitadoButaca())
     proveedores.push({
-      fuenteId: 'butaca',
+      fuenteId: FUENTE_ID_BUTACA,
       consultar: () => butacaService.obtenerObservacionesButaca(parametros),
     });
   if (!proveedores.length)
@@ -73,7 +71,7 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
     throw new ExternalServiceError('las funciones: ninguna fuente habilitada respondió');
   }
   const resultado = combinarFuncionesCine(exitosas);
-  if (ciudad.cobertura === 'sin_verificar') {
+  if (ciudad.cobertura === COBERTURA_CIUDAD_CINE.SIN_VERIFICAR) {
     resultado.advertencias.push({
       code: 'INCOMPLETE_DATA',
       message:
@@ -97,10 +95,10 @@ export async function obtenerFuncionesPelicula({ tmdbId, ciudadId }) {
     resultado.fuentes.map((fuente) => fuente.consultadoEn).sort()[0] ?? base.consultadoEn;
   const estado =
     resultado.advertencias.length ||
-    exitosas.some((respuesta) => respuesta.estadoFuente === 'incompleta')
-      ? 'incompleta'
+    exitosas.some((respuesta) => respuesta.estadoFuente === ESTADO_FUNCIONES_CINE.INCOMPLETA)
+      ? ESTADO_FUNCIONES_CINE.INCOMPLETA
       : resultado.funciones.length
-        ? 'disponible'
-        : 'sin_funciones';
+        ? ESTADO_FUNCIONES_CINE.DISPONIBLE
+        : ESTADO_FUNCIONES_CINE.SIN_FUNCIONES;
   return respuestaFuncionesCineSchema.parse({ ...base, ...resultado, estado });
 }

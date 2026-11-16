@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
+import { INTENTO_LOGIN_COLUMNS, fromRow } from '../models/intentoLogin.model.js';
 
 /**
  * @returns {Promise<Date | null>} hasta cuándo está bloqueado el mail, o null si no lo está
@@ -7,17 +8,14 @@ import { DatabaseError } from '../errors/index.js';
 export async function obtenerBloqueo(email) {
   const { data, error } = await supabaseAdmin
     .from('intento_login')
-    .select('bloqueado_hasta')
+    .select(INTENTO_LOGIN_COLUMNS)
     .eq('email', email.toLowerCase())
     .maybeSingle();
 
   if (error) {
     throw new DatabaseError(error);
   }
-  if (!data?.bloqueado_hasta) {
-    return null;
-  }
-  const bloqueadoHasta = new Date(data.bloqueado_hasta);
+  const bloqueadoHasta = data ? fromRow(data).bloqueadoHasta : null;
   return bloqueadoHasta > new Date() ? bloqueadoHasta : null;
 }
 

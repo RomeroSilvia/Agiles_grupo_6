@@ -1,6 +1,6 @@
 import { isIP } from 'node:net';
 import { z } from 'zod';
-import { REGION_PATTERN } from '@buscador/shared/constants';
+import { DEFAULT_REGION, REGION_PATTERN } from '@buscador/shared/constants';
 
 function isTrustedProxyAddress(value) {
   const [address, prefix, extra] = value.trim().split('/');
@@ -30,7 +30,7 @@ export const envSchema = z.object({
       message: 'TRUST_PROXY debe contener IPs o subredes CIDR separadas por comas (no true ni 1)',
     })
     .optional(),
-  DEFAULT_REGION: z.string().regex(REGION_PATTERN).default('AR'),
+  DEFAULT_REGION: z.string().regex(REGION_PATTERN).default(DEFAULT_REGION),
   NODE_CRON_RUN: z.enum(['true', 'false']).default('false'),
   TMDB_API_KEY: z.string().optional(),
   ALLEVENTS_API_KEY: z.string().trim().optional(),

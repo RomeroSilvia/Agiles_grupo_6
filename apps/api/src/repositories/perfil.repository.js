@@ -1,3 +1,4 @@
+import { REGION_PATTERN } from '@buscador/shared/constants';
 import { supabaseAdmin } from '../config/supabase.config.js';
 import { DatabaseError } from '../errors/index.js';
 import { PERFIL_REGION_COLUMNS, PERFIL_ROL_COLUMNS, fromRow } from '../models/perfil.model.js';
@@ -25,6 +26,9 @@ export async function obtenerRol(usuarioId) {
 }
 
 export async function actualizarRegion(usuarioId, region) {
+  if (!REGION_PATTERN.test(region)) {
+    throw new TypeError(`Región inválida: ${region}`);
+  }
   const { data, error } = await supabaseAdmin
     .from('perfil')
     .update({ region })

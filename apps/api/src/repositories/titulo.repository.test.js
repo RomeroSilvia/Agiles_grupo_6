@@ -73,6 +73,24 @@ describe('guardarDesdeTmdb', () => {
     );
   });
 
+  it('guarda los ids de género de TMDB, o null si no los trae', async () => {
+    const builder = mockearConsulta(supabaseAdmin.from, { data: FILA_DUNE, error: null });
+
+    await tituloRepository.guardarDesdeTmdb({ ...DUNE, generosTmdb: [878, 12] });
+    await tituloRepository.guardarDesdeTmdb(DUNE);
+
+    expect(builder.upsert).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ generos_tmdb: [878, 12] }),
+      expect.anything(),
+    );
+    expect(builder.upsert).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ generos_tmdb: null }),
+      expect.anything(),
+    );
+  });
+
   it('usa un nombre de respaldo si TMDB no lo trae', async () => {
     const builder = mockearConsulta(supabaseAdmin.from, { data: FILA_DUNE, error: null });
 

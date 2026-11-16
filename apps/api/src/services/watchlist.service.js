@@ -1,4 +1,4 @@
-import { NotFoundError } from '../errors/index.js';
+import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 import * as tituloRepository from '../repositories/titulo.repository.js';
 import * as watchlistRepository from '../repositories/watchlist.repository.js';
 import * as tituloService from './titulo.service.js';
@@ -16,13 +16,27 @@ export async function obtenerEstadoWatchlist(usuarioId, { tipo, tmdbId }) {
   return { agregado: await watchlistRepository.existe(usuarioId, titulo.id) };
 }
 
-export async function agregarAWatchlist(usuarioId, { tipo, tmdbId }) {
-  let titulo = await tituloRepository.obtenerPorTmdbIdYTipo(tmdbId, tipo);
-  if (!titulo) {
-    const detalle = await tituloService.obtenerDetalleTitulo({ tipo, tmdbId });
-    titulo = await tituloRepository.guardarDesdeTmdb(detalle);
+async function obtenerTituloConGeneros({ tipo, tmdbId }) {
+  const titulo = await tituloRepository.obtenerPorTmdbIdYTipo(tmdbId, tipo);
+  if (titulo?.generosTmdb) {
+    return titulo;
   }
 
+  let detalle;
+  try {
+    detalle = await tituloService.obtenerDetalleTitulo({ tipo, tmdbId });
+  } catch (error) {
+    if (!titulo || !(error instanceof ExternalServiceError || error instanceof NotFoundError)) {
+      throw error;
+    }
+    console.warn('No se pudieron completar los géneros del título', error);
+    return titulo;
+  }
+  return tituloRepository.guardarDesdeTmdb(detalle);
+}
+
+export async function agregarAWatchlist(usuarioId, { tipo, tmdbId }) {
+  const titulo = await obtenerTituloConGeneros({ tipo, tmdbId });
   await watchlistRepository.agregar(usuarioId, titulo.id);
 }
 

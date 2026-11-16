@@ -261,6 +261,10 @@ describe('detalle y disponibilidad de TMDB', () => {
         release_date: '2021-10-22',
         poster_path: '/dune.jpg',
         vote_average: 8.1,
+        genres: [
+          { id: 878, name: 'Ciencia ficción' },
+          { id: 12, name: 'Aventura' },
+        ],
       }),
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -273,6 +277,7 @@ describe('detalle y disponibilidad de TMDB', () => {
       posterUrl: 'https://image.tmdb.org/t/p/w500/dune.jpg',
       anio: 2021,
       puntuacion: 8.1,
+      generosTmdb: [878, 12],
     });
     expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe('/3/movie/1');
   });

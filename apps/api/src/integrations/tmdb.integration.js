@@ -420,6 +420,9 @@ export async function obtenerDetalle(tipo, tmdbId, { incluirIdentidadCine = fals
   return {
     ...normalizarBase(response, tipo),
     sinopsis: obtenerTexto(response?.overview),
+    generosTmdb: Array.isArray(response?.genres)
+      ? response.genres.map((genero) => genero?.id)
+      : null,
     ...(identidadCine ? { identidadCine } : {}),
   };
 }

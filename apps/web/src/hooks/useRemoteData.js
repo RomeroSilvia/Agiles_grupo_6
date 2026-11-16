@@ -19,7 +19,7 @@ export function useRemoteData({ clave, habilitado, solicitar, esperaMs = 0, mens
     }
 
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => {
+    const consultar = () => {
       setRespuesta({
         clave,
         intento,
@@ -56,7 +56,11 @@ export function useRemoteData({ clave, habilitado, solicitar, esperaMs = 0, mens
             });
           }
         });
-    }, esperaMs);
+    };
+    const timeout = esperaMs > 0 ? window.setTimeout(consultar, esperaMs) : null;
+    if (!timeout) {
+      consultar();
+    }
 
     return () => {
       window.clearTimeout(timeout);

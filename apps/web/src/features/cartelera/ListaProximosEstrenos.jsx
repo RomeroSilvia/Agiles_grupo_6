@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
+import { Pagination } from '../../components/ui/Pagination.jsx';
 import { TextField } from '../../components/ui/TextField.jsx';
 import { ResultadoCard } from '../busqueda/ResultadoCard.jsx';
-import { CardsCargando, GrillaResultados } from '../busqueda/ResultadosBusqueda.jsx';
+import { CardsCargando } from '../busqueda/CardsCargando.jsx';
+import { GrillaResultados } from '../busqueda/GrillaResultados.jsx';
 import { FechaEstrenoCine } from './FechaEstrenoCine.jsx';
 import { useProximosEstrenos } from './useProximosEstrenos.js';
 
@@ -48,7 +50,9 @@ export function ListaProximosEstrenos() {
       </p>
       {loading && (
         <>
-          <p role="status">Cargando próximos estrenos…</p>
+          <p role="status" className="sr-only">
+            Cargando próximos estrenos…
+          </p>
           <GrillaResultados>
             <CardsCargando />
           </GrillaResultados>
@@ -69,29 +73,12 @@ export function ListaProximosEstrenos() {
               />
             ))}
           </GrillaResultados>
-          {data.totalPaginas > 1 && (
-            <nav aria-label="Páginas de estrenos" className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="outline"
-                fullWidth={false}
-                disabled={data.pagina <= 1}
-                onClick={() => consultar({ ...consulta, pagina: data.pagina - 1 })}
-              >
-                Anterior
-              </Button>
-              <span>
-                Página {data.pagina} de {data.totalPaginas}
-              </span>
-              <Button
-                variant="outline"
-                fullWidth={false}
-                disabled={data.pagina >= data.totalPaginas}
-                onClick={() => consultar({ ...consulta, pagina: data.pagina + 1 })}
-              >
-                Siguiente
-              </Button>
-            </nav>
-          )}
+          <Pagination
+            label="Páginas de estrenos"
+            page={data.pagina}
+            totalPages={data.totalPaginas}
+            onPageChange={(pagina) => consultar({ ...consulta, pagina })}
+          />
         </>
       )}
     </section>

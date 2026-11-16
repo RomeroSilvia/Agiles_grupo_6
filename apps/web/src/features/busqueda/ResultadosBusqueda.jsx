@@ -1,13 +1,13 @@
 import { Alert } from '../../components/ui/Alert.jsx';
+import { AttributionDisponibilidad } from '../../components/ui/Attribution.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Card } from '../../components/ui/Card.jsx';
+import { LoadMoreButton } from '../../components/ui/LoadMoreButton.jsx';
 import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
-import { CARDS_CARGANDO } from './busqueda.constants.js';
+import { CardsCargando } from './CardsCargando.jsx';
 import { EstadoSinResultadosPropios } from './EstadoSinResultadosPropios.jsx';
+import { GrillaResultados } from './GrillaResultados.jsx';
 import { ResultadoCard } from './ResultadoCard.jsx';
-import { ResultadoCardCargando } from './ResultadoCardCargando.jsx';
-
-const CARDS_ESQUELETO = Array.from({ length: CARDS_CARGANDO }, (_, indice) => indice);
 
 const VISTAS_RESULTADOS = Object.freeze({
   CARGANDO: 'CARGANDO',
@@ -44,16 +44,6 @@ function obtenerVista({
   return busquedaFiltrada
     ? VISTAS_RESULTADOS.SIN_RESULTADOS_PROPIOS
     : VISTAS_RESULTADOS.SIN_RESULTADOS;
-}
-
-export function GrillaResultados({ children }) {
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">{children}</div>
-  );
-}
-
-export function CardsCargando() {
-  return CARDS_ESQUELETO.map((indice) => <ResultadoCardCargando key={indice} />);
 }
 
 export function ResultadosBusqueda({
@@ -182,21 +172,17 @@ export function ResultadosBusqueda({
             ))}
             {isLoadingMore && <CardsCargando />}
           </GrillaResultados>
+          {resultados.some((resultado) => resultado.plataformas?.length > 0) && (
+            <AttributionDisponibilidad />
+          )}
           {hayMasPaginas && (
             <>
-              <div className="mt-3 flex justify-center">
-                <Button
-                  variant="outline"
-                  size="compact"
-                  fullWidth={false}
-                  onClick={onCargarMas}
-                  disabled={isLoading}
-                  loading={isLoadingMore}
-                  loadingText="Cargando…"
-                >
-                  Cargar más
-                </Button>
-              </div>
+              <LoadMoreButton
+                className="mt-3"
+                onClick={onCargarMas}
+                disabled={isLoading}
+                loading={isLoadingMore}
+              />
               {error && <Alert className="mx-auto max-w-md">{error}</Alert>}
             </>
           )}

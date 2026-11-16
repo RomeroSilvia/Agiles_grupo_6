@@ -1,6 +1,6 @@
 import { Alert } from '../../components/ui/Alert.jsx';
-import { Button } from '../../components/ui/Button.jsx';
 import { Card } from '../../components/ui/Card.jsx';
+import { LoadMoreButton } from '../../components/ui/LoadMoreButton.jsx';
 import { Skeleton } from '../../components/ui/Skeleton.jsx';
 import { ExternalLink } from '../../components/ui/ExternalLink.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../../components/ui/focusRing.js';
@@ -70,17 +70,9 @@ export function ListaEventos({ categoria, fecha }) {
         </div>
       )}
       {siguientePagina && !error && (
-        <div className="flex justify-center">
-          <Button
-            variant="outline"
-            fullWidth={false}
-            onClick={cargarMas}
-            loading={loadingMore}
-            loadingText="Cargando eventos…"
-          >
-            Cargar más eventos
-          </Button>
-        </div>
+        <LoadMoreButton onClick={cargarMas} loading={loadingMore}>
+          Cargar más eventos
+        </LoadMoreButton>
       )}
       {fuente && (
         <p className="text-sm text-muted">

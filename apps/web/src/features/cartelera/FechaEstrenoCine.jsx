@@ -1,4 +1,4 @@
-import { formatearFechaCine } from './fechasCine.js';
+import { formatearFechaCivil } from '../../utils/formatearFecha.js';
 
 export function FechaEstrenoCine({
   pelicula,
@@ -6,7 +6,7 @@ export function FechaEstrenoCine({
 }) {
   return pelicula.fechaEstrenoAr ? (
     <time dateTime={pelicula.fechaEstrenoAr}>
-      Estreno en Argentina: {formatearFechaCine(pelicula.fechaEstrenoAr)}
+      Estreno en Argentina: {formatearFechaCivil(pelicula.fechaEstrenoAr)}
     </time>
   ) : (
     <span>{pendiente}</span>

@@ -741,6 +741,7 @@ describe('PaginaBusqueda: filtro de plataformas propias', () => {
     ).toBeInTheDocument();
     expect(rutaPedida(0)).toBe('/api/busqueda/propias');
     expect(screen.getByText('Resultados encontrados para tus plataformas')).toBeInTheDocument();
+    expect(screen.getByText(/Datos de disponibilidad provistos por/)).toBeInTheDocument();
   });
 
   it('al activar el filtro después de buscar, repite la búsqueda filtrada', async () => {

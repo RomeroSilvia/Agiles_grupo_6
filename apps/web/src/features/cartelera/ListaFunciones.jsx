@@ -1,5 +1,5 @@
 import { ordenarCines } from './filtrosFunciones.js';
-import { formatearFechaCine } from './fechasCine.js';
+import { formatearFechaCivil } from '../../utils/formatearFecha.js';
 import { Card } from '../../components/ui/Card.jsx';
 
 export function ListaFunciones({ cines, funciones, renderAccion }) {
@@ -19,11 +19,11 @@ export function ListaFunciones({ cines, funciones, renderAccion }) {
             {fechas.map((fecha) => (
               <section
                 key={fecha}
-                aria-label={`Funciones del ${formatearFechaCine(fecha)}`}
+                aria-label={`Funciones del ${formatearFechaCivil(fecha)}`}
                 className="space-y-2"
               >
                 <h4 className="font-semibold">
-                  <time dateTime={fecha}>{formatearFechaCine(fecha)}</time>
+                  <time dateTime={fecha}>{formatearFechaCivil(fecha)}</time>
                 </h4>
                 <ul className="space-y-3">
                   {horarios

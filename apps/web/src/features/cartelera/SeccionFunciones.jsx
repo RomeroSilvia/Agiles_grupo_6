@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { formatearFechaCine, formatearConsultaCine } from './fechasCine.js';
+import { ESTADO_FUNCIONES_CINE } from '@buscador/shared/constants';
+import { formatearConsultaCine } from './fechasCine.js';
+import { formatearFechaCivil } from '../../utils/formatearFecha.js';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
@@ -55,7 +57,7 @@ export function SeccionFunciones({ tmdbId }) {
       {data && (
         <>
           <p className="text-sm text-muted">
-            Funciones del {formatearFechaCine(data.desde)} al {formatearFechaCine(data.hasta)}.
+            Funciones del {formatearFechaCivil(data.desde)} al {formatearFechaCivil(data.hasta)}.
             Horarios locales de {data.ciudad.nombre}. La cobertura puede no incluir todos los cines.
           </p>
           {data.advertencias.map((aviso, indice) => (
@@ -63,15 +65,15 @@ export function SeccionFunciones({ tmdbId }) {
               {aviso.message}
             </Alert>
           ))}
-          {data.estado === 'sin_cobertura' && (
+          {data.estado === ESTADO_FUNCIONES_CINE.SIN_COBERTURA && (
             <Alert tone="info">No hay información disponible para la ciudad seleccionada.</Alert>
           )}
-          {data.estado === 'sin_funciones' && (
+          {data.estado === ESTADO_FUNCIONES_CINE.SIN_FUNCIONES && (
             <p role="status">
               No se encontraron funciones registradas para esta película y ciudad.
             </p>
           )}
-          {data.estado === 'incompleta' && (
+          {data.estado === ESTADO_FUNCIONES_CINE.INCOMPLETA && (
             <Alert tone="info">
               La información de funciones es incompleta. Los datos recibidos no confirman la
               ausencia de exhibición.

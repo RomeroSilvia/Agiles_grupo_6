@@ -9,15 +9,17 @@ import { ThemeToggle } from '../components/ui/ThemeToggle.jsx';
 import { Attribution } from '../components/ui/Attribution.jsx';
 import { ButtonLink } from '../components/ui/ButtonLink.jsx';
 import { IconButton } from '../components/ui/IconButton.jsx';
-import { BookmarkIcon, MenuIcon, XIcon } from '../components/ui/icons.jsx';
+import { MenuIcon, XIcon } from '../components/ui/icons.jsx';
 import { FOCUS_RING_CLASS_NAME } from '../components/ui/focusRing.js';
 import { MenuUsuario } from './MenuUsuario.jsx';
 import { RUTAS } from './rutas.js';
 
+const NAV_GAP_CLASS_NAME = 'gap-3 sm:gap-5';
+
 const ENLACES = [
   { to: RUTAS.CARTELERA, label: 'Cartelera', publico: true },
   { to: RUTAS.EVENTOS, label: 'Cooltura', publico: true },
-  { to: RUTAS.WATCHLIST, label: 'Mi watchlist' },
+  { to: RUTAS.WATCHLIST, label: 'Mi watchlist', sinSesion: true },
   { to: RUTAS.MIS_PLATAFORMAS, label: 'Mis plataformas' },
   { to: RUTAS.PERFIL, label: 'Perfil' },
   { to: RUTAS.ADMIN, label: 'Administración', soloAdmin: true },
@@ -26,7 +28,10 @@ const ENLACES = [
 function Enlaces({ onNavigate, publicos = false }) {
   const { user } = useSession();
   const enlaces = ENLACES.filter(
-    ({ soloAdmin, publico = false }) => publico === publicos && (!soloAdmin || user?.esAdmin),
+    ({ soloAdmin, publico = false, sinSesion = false }) =>
+      publico === publicos &&
+      (publico || sinSesion || Boolean(user)) &&
+      (!soloAdmin || user?.esAdmin),
   );
 
   return enlaces.map(({ to, label }) => (
@@ -93,13 +98,19 @@ export function MainLayout() {
     <div className="flex min-h-dvh flex-col">
       <ScrollRestoration />
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1 gap-y-1 px-2 py-2 sm:gap-3 sm:px-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-1 px-2 py-2 sm:gap-x-5 sm:px-4">
           <LogoInicio className={FOCUS_RING_CLASS_NAME} />
-          <nav aria-label="Explorar" className="flex items-center gap-3 px-2">
+          <nav
+            aria-label="Explorar"
+            className={`hidden items-center md:flex ${NAV_GAP_CLASS_NAME}`}
+          >
             <Enlaces publicos />
           </nav>
           {user && (
-            <nav aria-label="Principal" className="ml-4 hidden items-center gap-6 md:flex">
+            <nav
+              aria-label="Principal"
+              className={`hidden items-center md:flex ${NAV_GAP_CLASS_NAME}`}
+            >
               <Enlaces />
             </nav>
           )}
@@ -108,12 +119,9 @@ export function MainLayout() {
               to={RUTAS.WATCHLIST}
               aria-label="Mi watchlist"
               title="Mi watchlist"
-              className={`ml-1 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-border/60 hover:text-foreground sm:ml-2 sm:w-auto sm:px-3 ${FOCUS_RING_CLASS_NAME}`}
+              className={`hidden min-h-11 shrink-0 items-center rounded-sm text-sm whitespace-nowrap text-muted transition-colors duration-150 hover:text-foreground md:inline-flex ${FOCUS_RING_CLASS_NAME}`}
             >
-              <BookmarkIcon className="size-5 sm:hidden" />
-              <span className="hidden text-sm font-semibold whitespace-nowrap sm:inline">
-                Mi watchlist
-              </span>
+              Mi watchlist
             </Link>
           )}
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
@@ -127,26 +135,25 @@ export function MainLayout() {
             )}
             <ThemeToggle />
             <AccionesDeSesion />
-            {user && (
-              <IconButton
-                onClick={() => setMenuAbierto((abierto) => !abierto)}
-                aria-expanded={menuAbierto}
-                aria-controls="menu-mobile"
-                aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
-                className="md:hidden"
-              >
-                {menuAbierto ? <XIcon /> : <MenuIcon />}
-              </IconButton>
-            )}
+            <IconButton
+              onClick={() => setMenuAbierto((abierto) => !abierto)}
+              aria-expanded={menuAbierto}
+              aria-controls="menu-mobile"
+              aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+              className="md:hidden"
+            >
+              {menuAbierto ? <XIcon /> : <MenuIcon />}
+            </IconButton>
           </div>
         </div>
 
-        {user && menuAbierto && (
+        {menuAbierto && (
           <nav
             id="menu-mobile"
             aria-label="Menú"
             className="flex flex-col border-t border-border px-4 py-2 md:hidden"
           >
+            <Enlaces publicos onNavigate={cerrarMenu} />
             <Enlaces onNavigate={cerrarMenu} />
           </nav>
         )}

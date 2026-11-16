@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { COBERTURA_CIUDAD_CINE } from '@buscador/shared/constants';
 import { permiteConsultarCiudadCine } from '@buscador/shared/schemas';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { Select } from '../../components/ui/Select.jsx';
@@ -61,8 +62,10 @@ export function SelectorCiudadCine({ onSeleccionar }) {
                 disabled={!permiteConsultarCiudadCine(ciudad)}
               >
                 {ciudad.nombre}, {ciudad.provincia}
-                {ciudad.cobertura === 'sin_cobertura' ? ' — Sin cobertura' : ''}
-                {ciudad.cobertura === 'sin_verificar' ? ' — Cobertura por verificar' : ''}
+                {ciudad.cobertura === COBERTURA_CIUDAD_CINE.SIN_COBERTURA ? ' — Sin cobertura' : ''}
+                {ciudad.cobertura === COBERTURA_CIUDAD_CINE.SIN_VERIFICAR
+                  ? ' — Cobertura por verificar'
+                  : ''}
               </option>
             ))}
           </Select>
@@ -70,7 +73,7 @@ export function SelectorCiudadCine({ onSeleccionar }) {
       )}
 
       {aviso && <Alert tone="info">{aviso}</Alert>}
-      {ciudadSeleccionada?.cobertura === 'sin_verificar' && (
+      {ciudadSeleccionada?.cobertura === COBERTURA_CIUDAD_CINE.SIN_VERIFICAR && (
         <Alert tone="info">
           Podés consultar esta ciudad, pero la cobertura de cines y horarios todavía no está
           verificada. La fuente puede devolver información incompleta.

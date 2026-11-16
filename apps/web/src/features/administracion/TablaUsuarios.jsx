@@ -53,7 +53,7 @@ function FilaUsuario({ usuario, plataformasPorId, catalogoCargando }) {
         <span className="flex items-center gap-3">
           <Avatar email={email} />
           <span className="min-w-0">
-            <span className="block truncate font-medium">{email}</span>
+            <span className="block truncate font-medium lg:max-w-64">{email}</span>
             <span className="block text-sm text-muted lg:hidden">Registro: {fechaRegistro}</span>
           </span>
         </span>
@@ -84,7 +84,7 @@ function FilaUsuario({ usuario, plataformasPorId, catalogoCargando }) {
 
 export function TablaUsuarios({ usuarios, plataformasPorId, catalogoCargando }) {
   return (
-    <div className="lg:overflow-hidden lg:rounded-card lg:border lg:border-border lg:bg-surface">
+    <div className="lg:overflow-x-auto lg:rounded-card lg:border lg:border-border lg:bg-surface">
       <table aria-label="Usuarios registrados" className="block w-full text-sm lg:table">
         <thead className="sr-only lg:not-sr-only">
           <tr className="bg-background text-left font-mono text-xs text-muted uppercase">

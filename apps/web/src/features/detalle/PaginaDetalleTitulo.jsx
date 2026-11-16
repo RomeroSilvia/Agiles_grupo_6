@@ -27,6 +27,7 @@ import { VolverBusqueda } from './VolverBusqueda.jsx';
 import { useDisponibilidad } from './useDisponibilidad.js';
 import { useDistincionPropias } from './useDistincionPropias.js';
 import { RUTAS } from '../../app/rutas.js';
+import { API_ERROR_CODES } from '../../services/api.service.js';
 import { useWatchlistTitle } from '../watchlist/useWatchlistTitle.js';
 import { SeccionExhibicionCine } from '../cartelera/SeccionExhibicionCine.jsx';
 
@@ -63,7 +64,7 @@ export function PaginaDetalleTitulo() {
   }
 
   if (error) {
-    if (errorCode === 'NOT_FOUND') {
+    if (errorCode === API_ERROR_CODES.NOT_FOUND) {
       return <NotFoundPage />;
     }
 

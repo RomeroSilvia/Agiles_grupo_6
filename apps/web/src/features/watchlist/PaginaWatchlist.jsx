@@ -1,8 +1,8 @@
 import { RUTAS } from '../../app/rutas.js';
 import { Alert } from '../../components/ui/Alert.jsx';
-import { Button } from '../../components/ui/Button.jsx';
 import { ButtonLink } from '../../components/ui/ButtonLink.jsx';
 import { Card } from '../../components/ui/Card.jsx';
+import { LoadMoreButton } from '../../components/ui/LoadMoreButton.jsx';
 import { IconBadge } from '../../components/ui/IconBadge.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
@@ -112,19 +112,11 @@ export function PaginaWatchlist() {
             })}
           </ul>
           {pagina < totalPaginas && (
-            <div className="flex justify-center">
-              <Button
-                variant="outline"
-                size="compact"
-                fullWidth={false}
-                onClick={cargarMas}
-                disabled={cargando || Boolean(error) || pendientes.size > 0}
-                loading={cargandoMas}
-                loadingText="Cargando…"
-              >
-                Cargar más
-              </Button>
-            </div>
+            <LoadMoreButton
+              onClick={cargarMas}
+              disabled={cargando || Boolean(error) || pendientes.size > 0}
+              loading={cargandoMas}
+            />
           )}
         </>
       )}

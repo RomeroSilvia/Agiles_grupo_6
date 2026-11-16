@@ -21,8 +21,32 @@ describe('geoip.integration', () => {
 
     await expect(getRegionByIp('127.0.0.1')).resolves.toBeNull();
     await expect(getRegionByIp('::1')).resolves.toBeNull();
-    await expect(getRegionByIp('8.8.8.8')).resolves.toBeNull();
+    await expect(getRegionByIp('8.8.4.4')).resolves.toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('guarda la región de cada IP y no vuelve a consultarla', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ country: 'AR' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getRegionByIp('1.1.1.1')).resolves.toBe('AR');
+    await expect(getRegionByIp('::ffff:1.1.1.1')).resolves.toBe('AR');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('vuelve a consultar una IP si la consulta anterior falló', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('sin conexión'))
+      .mockResolvedValue({ ok: true, json: async () => ({ country: 'UY' }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getRegionByIp('1.0.0.1')).rejects.toMatchObject({ code: 'EXTERNAL_SERVICE' });
+    await expect(getRegionByIp('1.0.0.1')).resolves.toBe('UY');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('no envía IPs privadas o reservadas al servicio externo', async () => {
@@ -55,11 +79,13 @@ describe('geoip.integration', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ country: 'desconocido' }) }),
     );
-    await expect(getRegionByIp('8.8.8.8')).resolves.toBeNull();
+    await expect(getRegionByIp('9.9.9.9')).resolves.toBeNull();
   });
 
   it('convierte un fallo de red en un error de servicio externo', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('sin conexión')));
-    await expect(getRegionByIp('8.8.8.8')).rejects.toMatchObject({ code: 'EXTERNAL_SERVICE' });
+    await expect(getRegionByIp('149.112.112.112')).rejects.toMatchObject({
+      code: 'EXTERNAL_SERVICE',
+    });
   });
 });

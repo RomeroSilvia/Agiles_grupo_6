@@ -2,8 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { GENEROS_BUSQUEDA, TIPO_TITULO } from '@buscador/shared/constants';
 import { createApp } from '../app.js';
+import * as geoipIntegration from '../integrations/geoip.integration.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
+import * as registroBusquedaRepository from '../repositories/registroBusqueda.repository.js';
 
+vi.mock('../integrations/geoip.integration.js');
+vi.mock('../repositories/registroBusqueda.repository.js');
 vi.mock('../integrations/tmdb.integration.js', () => ({
   buscarTitulosPorTexto: vi.fn(),
   descubrirTitulos: vi.fn(),
@@ -44,6 +48,8 @@ function respuestaBusqueda(resultados = [pelicula], tipo = TIPO_TITULO.PELICULA)
 
 beforeEach(() => {
   vi.clearAllMocks();
+  geoipIntegration.getRegionByIp.mockResolvedValue('UY');
+  registroBusquedaRepository.insertar.mockResolvedValue(undefined);
   tmdbIntegration.buscarTitulosPorTexto.mockResolvedValue(respuestaBusqueda());
   tmdbIntegration.descubrirTitulos.mockImplementation(async ({ tipo }) =>
     respuestaBusqueda([{ ...pelicula, tipo }], tipo),
@@ -137,6 +143,58 @@ describe('GET /api/busqueda', () => {
 
     expect(response.status).toBe(502);
     expect(response.body.error.code).toBe('EXTERNAL_SERVICE');
+    consoleError.mockRestore();
+  });
+});
+
+describe('registro de búsquedas', () => {
+  it('registra la búsqueda de la página 1 con el texto normalizado y la región', async () => {
+    const response = await request(createApp())
+      .get('/api/busqueda')
+      .query({ q: '  Dune  ', tipo: 'pelicula', genero: 'drama' });
+
+    expect(response.status).toBe(200);
+    expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith({
+      texto: 'dune',
+      tipo: 'pelicula',
+      genero: 'drama',
+      region: 'UY',
+    });
+  });
+
+  it('no registra las páginas siguientes', async () => {
+    const response = await request(createApp())
+      .get('/api/busqueda')
+      .query({ q: 'dune', pagina: '2' });
+
+    expect(response.status).toBe(200);
+    expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
+  });
+
+  it('no registra la región por defecto cuando no se pudo detectar', async () => {
+    geoipIntegration.getRegionByIp.mockResolvedValue(null);
+
+    await request(createApp()).get('/api/busqueda').query({ q: 'dune' });
+
+    expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith(
+      expect.objectContaining({ region: null }),
+    );
+  });
+
+  it('responde la búsqueda aunque falle el registro', async () => {
+    registroBusquedaRepository.insertar.mockRejectedValue(new Error('caída'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await request(createApp()).get('/api/busqueda').query({ q: 'dune' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.resultados.length).toBeGreaterThan(0);
+    await vi.waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        'No se pudo registrar la búsqueda',
+        expect.any(Error),
+      ),
+    );
     consoleError.mockRestore();
   });
 });

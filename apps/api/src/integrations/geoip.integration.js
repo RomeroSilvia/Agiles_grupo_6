@@ -1,6 +1,13 @@
 import { BlockList, isIP } from 'node:net';
 import { regionSchema } from '@buscador/shared/schemas';
+import { GEOIP_CONFIG } from '../config/geoip.config.js';
 import { ExternalServiceError } from '../errors/index.js';
+import { createTtlCache } from '../utils/ttlCache.js';
+
+const regionCache = createTtlCache({
+  ttlMs: GEOIP_CONFIG.CACHE_TTL_MS,
+  maxEntries: GEOIP_CONFIG.CACHE_MAX_ENTRIES,
+});
 
 const BASE_URL = 'https://api.country.is/';
 const TIMEOUT_MS = 3000;
@@ -45,6 +52,10 @@ export async function getRegionByIp(ip) {
     return null;
   }
 
+  return regionCache.getOrSet(normalizedIp, () => fetchRegion(normalizedIp));
+}
+
+async function fetchRegion(normalizedIp) {
   let response;
   try {
     response = await fetch(new URL(encodeURIComponent(normalizedIp), BASE_URL), {

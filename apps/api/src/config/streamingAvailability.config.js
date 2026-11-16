@@ -1,4 +1,5 @@
 import { TIPO_OFERTA } from '@buscador/shared/constants';
+import { crearLimite } from './rateLimit.config.js';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
@@ -25,6 +26,7 @@ export const STREAMING_AVAILABILITY_CONFIG = Object.freeze({
     rent: TIPO_OFERTA.ALQUILER,
     buy: TIPO_OFERTA.COMPRA,
   }),
+  MAX_LARGO_DEEP_LINK: 500,
   // Un deep link guardado se reutiliza durante este plazo.
   VIGENCIA_DEEP_LINK_MS: 7 * ONE_DAY_MS,
   // Evita consultas repetidas en memoria, incluso cuando el proveedor falla.
@@ -32,8 +34,8 @@ export const STREAMING_AVAILABILITY_CONFIG = Object.freeze({
   CACHE_MAX_ENTRIES: 5000,
   // La disponibilidad se obtiene de JustWatch; Streaming Availability completa el enlace.
   FUENTE_DISPONIBILIDAD: 'JustWatch',
-  RATE_LIMIT_DISPONIBILIDAD: Object.freeze({ maxRequests: 30, windowMs: 60_000 }),
-  RATE_LIMIT_COMPARACION: Object.freeze({ maxRequests: 15, windowMs: 60_000 }),
+  RATE_LIMIT_DISPONIBILIDAD: crearLimite(30),
+  RATE_LIMIT_COMPARACION: crearLimite(15),
 });
 
 // Servicios y dominios válidos según el tmdb_provider_id de supabase/seed.sql.

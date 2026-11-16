@@ -225,17 +225,17 @@ describe('Cuenta: eliminar cuenta', { timeout: 10_000 }, () => {
     expect(request).not.toHaveBeenCalledWith('/auth/account', expect.anything());
   });
 
-  it('con ELIMINAR borra la cuenta, cierra la sesión y lleva a la pantalla pública', async () => {
+  it('con la contraseña borra la cuenta, cierra la sesión y lleva a la pantalla pública', async () => {
     const user = userEvent.setup();
     renderRoute('/perfil/cuenta');
 
     const dialogo = await abrirDialogo(user);
-    await user.type(within(dialogo).getByLabelText('Para confirmar, escribí ELIMINAR'), 'ELIMINAR');
+    await user.type(within(dialogo).getByLabelText('Contraseña actual'), PASSWORD);
     await user.click(within(dialogo).getByRole('button', { name: 'Eliminar mi cuenta' }));
 
     expect(request).toHaveBeenCalledWith('/auth/account', {
       method: 'DELETE',
-      body: { confirmation: 'ELIMINAR' },
+      body: { password: PASSWORD },
     });
     await waitFor(() =>
       expect(screen.getByRole('link', { name: /Iniciar sesión/ })).toBeInTheDocument(),
@@ -244,30 +244,33 @@ describe('Cuenta: eliminar cuenta', { timeout: 10_000 }, () => {
     expect(screen.queryByRole('heading', { name: 'Cuenta' })).not.toBeInTheDocument();
   });
 
-  it('no deja confirmar con otro texto', async () => {
+  it('no deja confirmar sin contraseña', async () => {
     const user = userEvent.setup();
     renderRoute('/perfil/cuenta');
 
     const dialogo = await abrirDialogo(user);
-    await user.type(within(dialogo).getByLabelText('Para confirmar, escribí ELIMINAR'), 'borrar');
     await user.click(within(dialogo).getByRole('button', { name: 'Eliminar mi cuenta' }));
 
-    expect(await within(dialogo).findByText('Escribí ELIMINAR para confirmar')).toBeInTheDocument();
+    expect(await within(dialogo).findByText('Ingresá tu contraseña')).toBeInTheDocument();
     expect(request).not.toHaveBeenCalledWith('/auth/account', expect.anything());
   });
 
-  it('también se puede confirmar con la contraseña', async () => {
+  it('muestra el error en el campo si la contraseña es incorrecta y no cierra la sesión', async () => {
+    mockApi({
+      eliminar: async () => {
+        throw CONTRASENA_INCORRECTA;
+      },
+    });
     const user = userEvent.setup();
     renderRoute('/perfil/cuenta');
 
     const dialogo = await abrirDialogo(user);
-    await user.click(within(dialogo).getByRole('button', { name: 'Confirmar con mi contraseña' }));
-    await user.type(within(dialogo).getByLabelText('Contraseña actual'), PASSWORD);
+    await user.type(within(dialogo).getByLabelText('Contraseña actual'), 'Incorrecta#1');
     await user.click(within(dialogo).getByRole('button', { name: 'Eliminar mi cuenta' }));
 
-    expect(request).toHaveBeenCalledWith('/auth/account', {
-      method: 'DELETE',
-      body: { password: PASSWORD },
-    });
+    expect(
+      await within(dialogo).findByText('La contraseña actual no es correcta'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: '¿Eliminar tu cuenta?' })).toBeInTheDocument();
   });
 });

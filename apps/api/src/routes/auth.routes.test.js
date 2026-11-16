@@ -12,7 +12,11 @@ import {
   ExternalServiceError,
   RateLimitError,
 } from '../errors/index.js';
-import { RATE_LIMIT_RECUPERACION } from '../config/cuenta.config.js';
+import {
+  RATE_LIMIT_INICIO_SESION,
+  RATE_LIMIT_RECUPERACION,
+  RATE_LIMIT_REGISTRO,
+} from '../config/cuenta.config.js';
 import { USUARIO } from '../test/fixtures.js';
 
 // La base es compartida: los tests nunca llegan a Supabase
@@ -684,24 +688,7 @@ describe('POST /api/auth/email-change/confirm', () => {
 });
 
 describe('DELETE /api/auth/account', () => {
-  it('con ELIMINAR cierra todas las sesiones, borra la cuenta y las cookies', async () => {
-    conSesion();
-    authRepository.cerrarSesion.mockResolvedValue(true);
-
-    const res = await request(createApp())
-      .delete('/api/auth/account')
-      .set('Cookie', COOKIES_SESION)
-      .send({ confirmation: 'ELIMINAR' });
-
-    expect(res.status).toBe(204);
-    expect(authRepository.cerrarSesion).toHaveBeenCalledWith('access-de-prueba', 'global');
-    expect(authRepository.eliminarUsuario).toHaveBeenCalledWith(USUARIO.id);
-    expect(intentoLoginRepository.limpiar).toHaveBeenCalledWith(USUARIO.email);
-    expect(cookiesDe(res)).toMatch(/access_token=;/);
-    expect(cookiesDe(res)).toMatch(/refresh_token=;/);
-  });
-
-  it('con la contraseña correcta también borra la cuenta', async () => {
+  it('con la contraseña correcta cierra todas las sesiones, borra la cuenta y las cookies', async () => {
     conSesion();
     authRepository.iniciarSesionConPassword.mockResolvedValue(SESION);
     authRepository.cerrarSesion.mockResolvedValue(true);
@@ -712,7 +699,11 @@ describe('DELETE /api/auth/account', () => {
       .send({ password: PASSWORD_VALIDA });
 
     expect(res.status).toBe(204);
+    expect(authRepository.cerrarSesion).toHaveBeenCalledWith('access-de-prueba', 'global');
     expect(authRepository.eliminarUsuario).toHaveBeenCalledWith(USUARIO.id);
+    expect(intentoLoginRepository.limpiar).toHaveBeenCalledWith(USUARIO.email);
+    expect(cookiesDe(res)).toMatch(/access_token=;/);
+    expect(cookiesDe(res)).toMatch(/refresh_token=;/);
   });
 
   it('no borra nada si la contraseña es incorrecta', async () => {
@@ -729,13 +720,13 @@ describe('DELETE /api/auth/account', () => {
     expect(cookiesDe(res)).toBe('');
   });
 
-  it('rechaza otro texto de confirmación', async () => {
+  it('no acepta la confirmación por texto sin contraseña', async () => {
     conSesion();
 
     const res = await request(createApp())
       .delete('/api/auth/account')
       .set('Cookie', COOKIES_SESION)
-      .send({ confirmation: 'eliminar' });
+      .send({ confirmation: 'ELIMINAR' });
 
     expect(res.status).toBe(400);
     expect(authRepository.eliminarUsuario).not.toHaveBeenCalled();
@@ -744,9 +735,28 @@ describe('DELETE /api/auth/account', () => {
   it('responde 401 sin sesión', async () => {
     const res = await request(createApp())
       .delete('/api/auth/account')
-      .send({ confirmation: 'ELIMINAR' });
+      .send({ password: PASSWORD_VALIDA });
 
     expect(res.status).toBe(401);
     expect(authRepository.eliminarUsuario).not.toHaveBeenCalled();
+  });
+});
+
+describe('límites por IP de registro e inicio de sesión', () => {
+  it.each([
+    ['/api/auth/sign-up', RATE_LIMIT_REGISTRO],
+    ['/api/auth/sign-in', RATE_LIMIT_INICIO_SESION],
+  ])('%s responde 429 si desde la misma IP se superan los intentos', async (ruta, limite) => {
+    const app = createApp();
+
+    let res;
+    for (let i = 0; i <= limite.maxRequests; i++) {
+      res = await request(app).post(ruta).send({ email: 'no-es-un-mail', password: 'x' });
+    }
+
+    expect(res.status).toBe(429);
+    expect(res.body.error.code).toBe('RATE_LIMITED');
+    expect(authRepository.crearUsuario).not.toHaveBeenCalled();
+    expect(authRepository.iniciarSesionConPassword).not.toHaveBeenCalled();
   });
 });

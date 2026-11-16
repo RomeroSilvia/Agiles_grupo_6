@@ -1,4 +1,4 @@
-import { DEFAULT_REGION } from '@buscador/shared/constants';
+import { env } from '../config/env.config.js';
 import { ExternalServiceError } from '../errors/index.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as plataformaRepository from '../repositories/plataforma.repository.js';
@@ -49,7 +49,7 @@ async function armarDisponibilidad({
   });
 }
 
-export async function obtenerDisponibilidad({ tipo, tmdbId, region = DEFAULT_REGION }) {
+export async function obtenerDisponibilidad({ tipo, tmdbId, region = env.DEFAULT_REGION }) {
   const codigoRegion = String(region).toUpperCase();
   const [ofertasPorRegion, plataformasActivas] = await obtenerDatosDisponibilidad({
     tipo,

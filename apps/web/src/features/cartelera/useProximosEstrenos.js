@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { HORIZONTE_ESTRENOS_DIAS } from '@buscador/shared/constants';
 import { consultaEstrenosSchema, respuestaEstrenosSchema } from '@buscador/shared/schemas';
 import { listarProximosEstrenos } from './cartelera.api.js';
 
@@ -29,7 +30,8 @@ export function useProximosEstrenos() {
   }, [consulta, intento]);
   const consultar = useCallback((valores) => {
     const resultado = consultaEstrenosSchema.safeParse(valores);
-    if (!resultado.success) return 'Elegí un período futuro de entre 1 y 90 días.';
+    if (!resultado.success)
+      return `Elegí un período futuro de entre 1 y ${HORIZONTE_ESTRENOS_DIAS} días.`;
     setEstado({ data: null, loading: true, error: '' });
     setConsulta(resultado.data);
     return '';

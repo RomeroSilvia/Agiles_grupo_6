@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { ESTADO_FUNCIONES_CINE, FUENTE_ID_BUTACA, TIPO_TITULO } from '@buscador/shared/constants';
 import {
   lugaresCineConfiguracionSchema,
   correspondenciasPeliculasCineSchema,
@@ -6,6 +7,7 @@ import {
 import {
   fechaCivilCarteleraSchema,
   funcionCineSchema,
+  horaLocalSchema,
   validarEnlaceCine,
 } from '@buscador/shared/schemas';
 
@@ -22,19 +24,10 @@ export function crearIdCine(prefijo, campos) {
   return `${prefijo}:${createHash('sha256').update(JSON.stringify(campos)).digest('hex')}`;
 }
 
-export function obtenerFechaLocalCine(ahora, zonaHoraria) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: zonaHoraria,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(ahora);
-}
-
 export function crearInicioLocalCine(fecha, hora, zonaHoraria) {
   if (
     !fechaCivilCarteleraSchema.safeParse(fecha).success ||
-    !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(hora)
+    !horaLocalSchema.safeParse(hora).success
   )
     return null;
   const offset =
@@ -81,7 +74,7 @@ export function corresponderCarteleraButaca(peliculas, pelicula) {
   const candidata = candidatas[0];
   return [
     {
-      fuenteId: 'butaca',
+      fuenteId: FUENTE_ID_BUTACA,
       registroId: candidata.corporateId,
       nombre: candidata.title,
       tmdbId: pelicula.tmdbId,
@@ -229,7 +222,7 @@ export function normalizarObservacionesCine({
     const texto = (valor) => (typeof valor === 'string' && valor.trim() ? valor.trim() : null);
     const funcion = {
       tmdbId,
-      tipo: 'pelicula',
+      tipo: TIPO_TITULO.PELICULA,
       ciudadId: ciudad.id,
       cineId,
       cineNombre: lugar.nombre,
@@ -297,7 +290,9 @@ export function normalizarObservacionesCine({
   return {
     cines: [...cines.values()],
     funciones,
-    estadoFuente: advertencias.length ? 'incompleta' : 'disponible',
+    estadoFuente: advertencias.length
+      ? ESTADO_FUNCIONES_CINE.INCOMPLETA
+      : ESTADO_FUNCIONES_CINE.DISPONIBLE,
     fuentes: [fuente],
     advertencias,
     diagnostico,
@@ -322,8 +317,8 @@ export function combinarFuncionesCine(respuestas) {
     .flatMap((respuesta) => respuesta.funciones)
     .sort(
       (a, b) =>
-        Number(b.fuentes.some((fuente) => fuente.fuenteId === 'butaca')) -
-        Number(a.fuentes.some((fuente) => fuente.fuenteId === 'butaca')),
+        Number(b.fuentes.some((fuente) => fuente.fuenteId === FUENTE_ID_BUTACA)) -
+        Number(a.fuentes.some((fuente) => fuente.fuenteId === FUENTE_ID_BUTACA)),
     );
   for (const candidata of ordenadas) {
     const exacta = funciones.find((funcion) => funcion.id === candidata.id);

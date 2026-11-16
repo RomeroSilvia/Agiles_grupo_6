@@ -1,3 +1,4 @@
+import { MAX_IPS_REGISTRADAS } from '../config/rateLimit.config.js';
 import { RateLimitError } from '../errors/index.js';
 
 export function rateLimit({ maxRequests, windowMs }) {
@@ -23,7 +24,7 @@ export function rateLimit({ maxRequests, windowMs }) {
       return next(new RateLimitError(new Error('Se superó el límite de solicitudes por IP')));
     }
 
-    if (solicitudesPorIp.size > 1000) {
+    if (solicitudesPorIp.size > MAX_IPS_REGISTRADAS) {
       for (const [ipRegistrada, ventanaRegistrada] of solicitudesPorIp) {
         if (ventanaRegistrada.venceEn <= ahora) {
           solicitudesPorIp.delete(ipRegistrada);

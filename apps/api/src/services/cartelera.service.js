@@ -4,12 +4,8 @@ import {
   FUENTE_ID_TMDB,
   REGION_CARTELERA,
 } from '@buscador/shared/constants';
-import {
-  respuestaCarteleraSchema,
-  respuestaEstrenosSchema,
-  obtenerHoyArgentina,
-  sumarDiasCivil,
-} from '@buscador/shared/schemas';
+import { respuestaCarteleraSchema, respuestaEstrenosSchema } from '@buscador/shared/schemas';
+import { obtenerHoyArgentina, sumarDiasCivil } from '@buscador/shared/utils';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { ESTRENOS_CONFIG } from '../config/tmdb.config.js';

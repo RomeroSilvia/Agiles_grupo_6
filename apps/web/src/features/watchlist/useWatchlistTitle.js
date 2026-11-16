@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { request } from '../../services/api.service.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
-import { rutaWatchlistTitulo } from '../../app/rutas.js';
+import { agregarAWatchlist, obtenerEstadoWatchlist, quitarDeWatchlist } from './watchlist.api.js';
 
 const ESTADO_VACIO = { key: null, cargando: false, cargado: false, agregado: false, error: '' };
 
@@ -9,20 +8,19 @@ export function useWatchlistTitle({ tipo, tmdbId } = {}) {
   const { user, loading: cargandoSesion } = useSession();
   const usuarioId = user?.id ?? null;
   const tieneParametros = Boolean(tipo && tmdbId);
-  const ruta = tieneParametros ? rutaWatchlistTitulo(tipo, tmdbId) : null;
-  const key = usuarioId && ruta ? `${usuarioId}:${ruta}` : null;
+  const key = usuarioId && tieneParametros ? `${usuarioId}:${tipo}:${tmdbId}` : null;
   const [estado, setEstado] = useState(ESTADO_VACIO);
   const [intento, setIntento] = useState(0);
   const [actualizando, setActualizando] = useState(false);
 
   useEffect(() => {
-    if (cargandoSesion || !usuarioId || !ruta || !key) {
+    if (cargandoSesion || !key) {
       return undefined;
     }
 
     const controller = new AbortController();
 
-    request(ruta, { signal: controller.signal })
+    obtenerEstadoWatchlist({ tipo, tmdbId, signal: controller.signal })
       .then((data) => {
         if (!controller.signal.aborted) {
           setEstado({ key, cargando: false, cargado: true, agregado: data.agregado, error: '' });
@@ -41,7 +39,7 @@ export function useWatchlistTitle({ tipo, tmdbId } = {}) {
       });
 
     return () => controller.abort();
-  }, [cargandoSesion, intento, key, ruta, usuarioId]);
+  }, [cargandoSesion, intento, key, tipo, tmdbId]);
 
   const reintentar = useCallback(() => {
     setEstado(ESTADO_VACIO);
@@ -50,14 +48,14 @@ export function useWatchlistTitle({ tipo, tmdbId } = {}) {
 
   const alternar = useCallback(async () => {
     const estadoActual = estado.key === key ? estado : ESTADO_VACIO;
-    if (!usuarioId || !ruta || !estadoActual.cargado || actualizando) {
+    if (!key || !estadoActual.cargado || actualizando) {
       return;
     }
 
     const agregado = !estadoActual.agregado;
     setActualizando(true);
     try {
-      await request(ruta, { method: agregado ? 'PUT' : 'DELETE' });
+      await (agregado ? agregarAWatchlist : quitarDeWatchlist)({ tipo, tmdbId });
       setEstado((actual) =>
         actual.key === key ? { key, cargando: false, cargado: true, agregado, error: '' } : actual,
       );
@@ -66,7 +64,7 @@ export function useWatchlistTitle({ tipo, tmdbId } = {}) {
       let estadoConfirmado = false;
       let mensajeError = `${error.message}. No pudimos confirmar el estado guardado.`;
       try {
-        const data = await request(ruta);
+        const data = await obtenerEstadoWatchlist({ tipo, tmdbId });
         estadoPersistido = data.agregado;
         estadoConfirmado = true;
         mensajeError = error.message;
@@ -87,7 +85,7 @@ export function useWatchlistTitle({ tipo, tmdbId } = {}) {
     } finally {
       setActualizando(false);
     }
-  }, [actualizando, estado, key, ruta, usuarioId]);
+  }, [actualizando, estado, key, tipo, tmdbId]);
 
   const estadoActual = estado.key === key ? estado : ESTADO_VACIO;
   return {

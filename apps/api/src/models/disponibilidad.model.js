@@ -6,6 +6,10 @@ export const DISPONIBILIDAD_COLUMNS =
   'titulo_id, plataforma_id, region, tipo_oferta, deep_link, fuente_id, detectada_en, verificada_en, vigente';
 export const DISPONIBILIDAD_PRIMARY_KEY = 'titulo_id,plataforma_id,region,tipo_oferta';
 
+export function claveOferta({ plataformaId, tipoOferta }) {
+  return `${plataformaId}:${tipoOferta}`;
+}
+
 export function fromRow(row) {
   return {
     tituloId: row.titulo_id,

@@ -2,7 +2,10 @@ export const API_ERROR_CODES = Object.freeze({
   CONFLICT: 'CONFLICT',
   FORBIDDEN: 'FORBIDDEN',
   INVALID_LINK: 'INVALID_LINK',
+  NETWORK: 'NETWORK',
+  NOT_FOUND: 'NOT_FOUND',
   UNAUTHENTICATED: 'UNAUTHENTICATED',
+  UNKNOWN: 'UNKNOWN',
 });
 
 export class ApiError extends Error {
@@ -47,7 +50,7 @@ export async function request(path, { method = 'GET', body, params, signal } = {
 
     throw new ApiError({
       status: 0,
-      code: 'NETWORK',
+      code: API_ERROR_CODES.NETWORK,
       message: 'No pudimos conectarnos. Revisá tu conexión y probá de nuevo.',
     });
   }
@@ -57,7 +60,7 @@ export async function request(path, { method = 'GET', body, params, signal } = {
   if (!response.ok) {
     throw new ApiError({
       status: response.status,
-      code: content?.error?.code ?? 'UNKNOWN',
+      code: content?.error?.code ?? API_ERROR_CODES.UNKNOWN,
       message: content?.error?.message ?? 'No se pudo completar la operación',
       details: content?.error?.details,
     });

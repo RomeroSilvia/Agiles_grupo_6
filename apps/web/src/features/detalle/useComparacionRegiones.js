@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { regionesComparacionSchema } from '@buscador/shared/schemas';
-import { rutaDisponibilidad } from '../../app/rutas.js';
-import { ApiError, request } from '../../services/api.service.js';
+import { ApiError } from '../../services/api.service.js';
+import { compararDisponibilidad } from './detalle.api.js';
 
 const ESTADO_INICIAL = {
   clave: null,
@@ -44,7 +44,7 @@ function reducer(estado, accion) {
 
 export function useComparacionRegiones({ tipo, tmdbId } = {}) {
   const tieneParametros = Boolean(tipo && tmdbId);
-  const rutaBase = tieneParametros ? rutaDisponibilidad(tipo, tmdbId) : null;
+  const rutaBase = tieneParametros ? `${tipo}/${tmdbId}` : null;
   const [estado, dispatch] = useReducer(reducer, ESTADO_INICIAL);
   const abortControllerRef = useRef(null);
   const ultimaSeleccionRef = useRef([]);
@@ -82,8 +82,10 @@ export function useComparacionRegiones({ tipo, tmdbId } = {}) {
       dispatch({ tipo: 'iniciar', clave: rutaBase });
 
       try {
-        const query = encodeURIComponent(validacion.data.join(','));
-        const data = await request(`${rutaBase}/comparacion?regiones=${query}`, {
+        const data = await compararDisponibilidad({
+          tipo,
+          tmdbId,
+          regiones: validacion.data,
           signal: controller.signal,
         });
 
@@ -113,7 +115,7 @@ export function useComparacionRegiones({ tipo, tmdbId } = {}) {
         });
       }
     },
-    [rutaBase],
+    [rutaBase, tipo, tmdbId],
   );
 
   const reintentar = useCallback(() => {

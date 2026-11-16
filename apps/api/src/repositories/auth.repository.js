@@ -18,6 +18,8 @@ import { ConflictError, ExternalServiceError, RateLimitError } from '../errors/i
  * @property {UsuarioSesion} user
  */
 
+const SERVICIO_AUTENTICACION = 'el servicio de autenticación';
+
 export const ALCANCE_SESION = Object.freeze({ LOCAL: 'local', GLOBAL: 'global' });
 
 export const TIPO_ENLACE = Object.freeze({
@@ -66,7 +68,7 @@ function errorDelServicio(error) {
   if (error.status === 429 || error.code === 'over_request_rate_limit') {
     return new RateLimitError(error);
   }
-  return new ExternalServiceError('de autenticación', error);
+  return new ExternalServiceError(SERVICIO_AUTENTICACION, error);
 }
 
 /**
@@ -137,7 +139,7 @@ export async function obtenerUsuarioPorToken(accessToken) {
     if (CODIGOS_TOKEN_INVALIDO.has(error.code)) {
       return null;
     }
-    throw new ExternalServiceError('de autenticación', error);
+    throw new ExternalServiceError(SERVICIO_AUTENTICACION, error);
   }
 }
 

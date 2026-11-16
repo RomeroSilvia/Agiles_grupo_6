@@ -5,7 +5,28 @@ import {
   personaBusquedaSchema,
   personaIdBusquedaSchema,
   tieneFiltrosAvanzados,
+  tituloParamsSchema,
 } from './busqueda.schema.js';
+
+describe('tituloParamsSchema', () => {
+  it('convierte el identificador de la ruta a número', () => {
+    expect(tituloParamsSchema.parse({ tipo: 'serie', tmdbId: '1399' })).toEqual({
+      tipo: 'serie',
+      tmdbId: 1399,
+    });
+  });
+
+  it.each(['0', '-1', '1e3', '1.5', '2147483648', 'abc'])(
+    'rechaza el identificador %s',
+    (tmdbId) => {
+      expect(tituloParamsSchema.safeParse({ tipo: 'pelicula', tmdbId }).success).toBe(false);
+    },
+  );
+
+  it('rechaza un tipo desconocido', () => {
+    expect(tituloParamsSchema.safeParse({ tipo: 'juego', tmdbId: '1' }).success).toBe(false);
+  });
+});
 
 describe('busquedaSchema', () => {
   it('acepta géneros unificados e identificadores positivos para las personas', () => {

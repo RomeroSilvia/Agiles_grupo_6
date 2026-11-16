@@ -348,7 +348,11 @@ describe('Link "Mis plataformas" del header', () => {
 
     expect(await screen.findByRole('link', { name: 'Crear cuenta' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Mis plataformas' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Abrir menú' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
+    const menu = screen.getByRole('navigation', { name: 'Menú' });
+    expect(within(menu).getByRole('link', { name: 'Cartelera' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('link', { name: 'Mis plataformas' })).not.toBeInTheDocument();
   });
 });
 

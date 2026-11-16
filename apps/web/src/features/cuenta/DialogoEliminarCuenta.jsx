@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { CONFIRMACION_ELIMINAR } from '@buscador/shared/constants';
-import { accountDeletionByTextSchema, passwordConfirmationSchema } from '@buscador/shared/schemas';
+import { accountDeletionSchema } from '@buscador/shared/schemas';
 import { useSession } from '../../contexts/session/SessionContext.js';
 import { useZodForm } from '../../hooks/useZodForm.js';
 import { useFormSubmit } from '../../hooks/useFormSubmit.js';
@@ -10,9 +8,7 @@ import { Dialog } from '../../components/ui/Dialog.jsx';
 import { DialogActions } from '../../components/ui/DialogActions.jsx';
 import { FormError } from '../../components/ui/FormError.jsx';
 import { PasswordField } from '../../components/ui/PasswordField.jsx';
-import { TextField } from '../../components/ui/TextField.jsx';
 import { AlertIcon, TrashIcon } from '../../components/ui/icons.jsx';
-import { LINK_CLASS_NAME } from '../../components/ui/focusRing.js';
 import { RUTAS } from '../../app/rutas.js';
 import { eliminarCuenta } from './cuenta.api.js';
 import { CONSECUENCIAS_ELIMINAR } from './cuenta.constants.js';
@@ -21,19 +17,10 @@ import { separarErrorPassword } from './separarErrorPassword.js';
 export function DialogoEliminarCuenta({ onCancelar }) {
   const navigate = useNavigate();
   const { reloadSession } = useSession();
-  const [conPassword, setConPassword] = useState(false);
-  const { field, validate } = useZodForm(
-    conPassword ? passwordConfirmationSchema : accountDeletionByTextSchema,
-    { confirmation: '', password: '' },
-  );
-  const { submitting, error, submit, clearError } = useFormSubmit();
+  const { field, validate } = useZodForm(accountDeletionSchema, { password: '' });
+  const { submitting, error, submit } = useFormSubmit();
   const { errorPassword, errorGeneral } = separarErrorPassword(error);
   const campoPassword = field('password');
-
-  function alternarModo() {
-    clearError();
-    setConPassword((actual) => !actual);
-  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -66,35 +53,12 @@ export function DialogoEliminarCuenta({ onCancelar }) {
       </ul>
 
       <form noValidate onSubmit={handleSubmit} className="mt-5 space-y-3">
-        {conPassword ? (
-          <PasswordField
-            label="Contraseña actual"
-            autoComplete="current-password"
-            {...campoPassword}
-            error={campoPassword.error ?? errorPassword}
-          />
-        ) : (
-          <TextField
-            label={`Para confirmar, escribí ${CONFIRMACION_ELIMINAR}`}
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            {...field('confirmation')}
-          />
-        )}
-
-        <p className="text-sm text-muted">
-          {conPassword
-            ? `¿Preferís escribir ${CONFIRMACION_ELIMINAR}? `
-            : '¿Preferís usar tu contraseña? '}
-          <button
-            type="button"
-            onClick={alternarModo}
-            className={`${LINK_CLASS_NAME} cursor-pointer rounded-sm underline`}
-          >
-            {conPassword ? `Escribir ${CONFIRMACION_ELIMINAR}` : 'Confirmar con mi contraseña'}
-          </button>
-        </p>
+        <PasswordField
+          label="Contraseña actual"
+          autoComplete="current-password"
+          {...campoPassword}
+          error={campoPassword.error ?? errorPassword}
+        />
 
         <FormError>{errorGeneral}</FormError>
 

@@ -6,7 +6,6 @@ import {
   ChartNoAxesColumn,
   Check,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   Circle,
   CircleAlert,
@@ -70,7 +69,6 @@ export const SpinnerIcon = createIcon(LoaderCircle, 'animate-spin');
 export const SearchIcon = createIcon(Search);
 export const ChevronDownIcon = createIcon(ChevronDown);
 export const ChevronRightIcon = createIcon(ChevronRight);
-export const ChevronLeftIcon = createIcon(ChevronLeft);
 export const LockIcon = createIcon(Lock);
 export const MailCheckIcon = createIcon(MailCheck);
 export const MailIcon = createIcon(Mail);

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { request } from '../../services/api.service.js';
 import { useSession } from '../../contexts/session/SessionContext.js';
-import { rutaWatchlistTitulo } from '../../app/rutas.js';
+import { listarWatchlist, quitarDeWatchlist } from './watchlist.api.js';
 
 const ESTADO_VACIO = {
   usuarioId: null,
@@ -13,10 +12,6 @@ const ESTADO_VACIO = {
   cargandoMas: false,
   error: '',
 };
-
-function rutaPagina(pagina) {
-  return `/watchlist?pagina=${pagina}`;
-}
 
 function crearEstado(usuarioId, data) {
   return {
@@ -32,7 +27,7 @@ function crearEstado(usuarioId, data) {
 }
 
 async function listarPrimeraPagina() {
-  return request(rutaPagina(1));
+  return listarWatchlist({ pagina: 1 });
 }
 
 export function useWatchlist() {
@@ -64,7 +59,7 @@ export function useWatchlist() {
       cargando: true,
     }));
 
-    request(rutaPagina(1), { signal: controller.signal })
+    listarWatchlist({ pagina: 1, signal: controller.signal })
       .then((data) => {
         if (!controller.signal.aborted) {
           setEstado(crearEstado(usuarioId, data));
@@ -112,7 +107,7 @@ export function useWatchlist() {
     );
 
     try {
-      const data = await request(rutaPagina(pagina));
+      const data = await listarWatchlist({ pagina });
       setEstado((actual) =>
         actual.usuarioId === usuarioId
           ? {
@@ -155,7 +150,7 @@ export function useWatchlist() {
       setEstado((actual) => ({ ...actual, error: '' }));
 
       try {
-        await request(rutaWatchlistTitulo(tipo, tmdbId), { method: 'DELETE' });
+        await quitarDeWatchlist({ tipo, tmdbId });
         try {
           const data = await listarPrimeraPagina();
           setEstado((actual) =>

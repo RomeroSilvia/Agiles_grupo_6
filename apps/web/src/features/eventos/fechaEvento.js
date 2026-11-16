@@ -1,7 +1,8 @@
 import { ZONA_HORARIA_EVENTOS } from '@buscador/shared/constants';
+import { LOCALE } from '../../config/app.config.js';
+import { formatearFechaCivil } from '../../utils/formatearFecha.js';
 
-const fechaFormatter = new Intl.DateTimeFormat('es-AR', { dateStyle: 'long', timeZone: 'UTC' });
-const inicioFormatter = new Intl.DateTimeFormat('es-AR', {
+const inicioFormatter = new Intl.DateTimeFormat(LOCALE, {
   dateStyle: 'long',
   timeStyle: 'short',
   hourCycle: 'h23',
@@ -34,7 +35,7 @@ export function formatearFechaEvento(evento) {
     return inicioFormatter.format(new Date(evento.inicio));
   }
   if (evento.fecha) {
-    return fechaFormatter.format(new Date(`${evento.fecha}T12:00:00Z`));
+    return formatearFechaCivil(evento.fecha);
   }
   if (evento.fechaTexto) {
     // Traducir solo las etiquetas; no inferir año, fecha ISO ni zona desde texto libre.

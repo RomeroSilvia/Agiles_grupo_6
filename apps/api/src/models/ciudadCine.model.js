@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { COBERTURA_CIUDAD_CINE, FUENTE_ID_BUTACA } from '@buscador/shared/constants';
 import { ciudadCineSchema } from '@buscador/shared/schemas';
 
 export const ciudadCineConfiguracionSchema = ciudadCineSchema
@@ -15,6 +16,7 @@ export const ciudadCineConfiguracionSchema = ciudadCineSchema
   .strict()
   .refine(
     ({ cobertura, butacaCines, fuente }) =>
-      cobertura === 'sin_cobertura' || (butacaCines.length > 0 && fuente.fuenteId === 'butaca'),
+      cobertura === COBERTURA_CIUDAD_CINE.SIN_COBERTURA ||
+      (butacaCines.length > 0 && fuente.fuenteId === FUENTE_ID_BUTACA),
     'La ciudad consultable requiere sucursales y procedencia del proveedor',
   );

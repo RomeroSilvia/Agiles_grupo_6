@@ -1,13 +1,19 @@
 import { Button } from './Button.jsx';
 import { ArrowLeftIcon, ArrowRightIcon } from './icons.jsx';
 
-export function Pagination({ page, totalPages, onPageChange, disabled = false }) {
+export function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+  disabled = false,
+  label = 'Paginación',
+}) {
   if (totalPages <= 1) {
     return null;
   }
 
   return (
-    <nav aria-label="Paginación" className="flex items-center justify-between gap-3">
+    <nav aria-label={label} className="flex items-center justify-between gap-3">
       <Button
         variant="secondary"
         size="sm"

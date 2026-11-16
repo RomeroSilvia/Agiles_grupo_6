@@ -18,6 +18,8 @@ export const tmdbIdSchema = z.union([
     .pipe(z.number().int().max(TMDB_ID_MAXIMO)),
 ]);
 
+export const tituloParamsSchema = z.object({ tipo: z.enum(TIPOS_TITULO), tmdbId: tmdbIdSchema });
+
 export const personaBusquedaSchema = z
   .object({
     q: z.string().trim().min(2, 'Ingresá al menos dos letras para buscar personas').max(100),

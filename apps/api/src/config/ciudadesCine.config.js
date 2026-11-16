@@ -1,3 +1,9 @@
+import {
+  COBERTURA_CIUDAD_CINE,
+  FUENTE_ID_BUTACA,
+  REGION_CARTELERA,
+  ZONA_HORARIA_AR,
+} from '@buscador/shared/constants';
 import { CIUDADES_CINEMARK, CINES_CINEMARK, EVIDENCIA_CINEMARK } from './cinesCinemark.config.js';
 
 const { registroId, url, consultadoEn, actualizadoEn } = EVIDENCIA_CINEMARK;
@@ -7,9 +13,9 @@ export const DIRECTORIO_CIUDADES_CINE = Object.freeze({
   ciudades: [
     ...CIUDADES_CINEMARK.map((ciudad) => ({
       ...ciudad,
-      pais: 'AR',
-      cobertura: 'disponible',
-      fuente: { registroId, url, consultadoEn, actualizadoEn, fuenteId: 'butaca' },
+      pais: REGION_CARTELERA,
+      cobertura: COBERTURA_CIUDAD_CINE.DISPONIBLE,
+      fuente: { registroId, url, consultadoEn, actualizadoEn, fuenteId: FUENTE_ID_BUTACA },
       butacaCines: CINES_CINEMARK.filter((cine) => cine.ciudadId === ciudad.id).map(
         ({ id, slug }) => ({ id, slug }),
       ),
@@ -21,9 +27,9 @@ export const DIRECTORIO_CIUDADES_CINE = Object.freeze({
       id,
       nombre,
       provincia: 'Buenos Aires',
-      pais: 'AR',
-      zonaHoraria: 'America/Argentina/Buenos_Aires',
-      cobertura: 'sin_cobertura',
+      pais: REGION_CARTELERA,
+      zonaHoraria: ZONA_HORARIA_AR,
+      cobertura: COBERTURA_CIUDAD_CINE.SIN_COBERTURA,
       fuente: {
         fuenteId: 'directorio',
         registroId: null,

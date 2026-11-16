@@ -1,10 +1,11 @@
 import { Alert } from '../../components/ui/Alert.jsx';
-import { Button } from '../../components/ui/Button.jsx';
 import { Card } from '../../components/ui/Card.jsx';
+import { LoadMoreButton } from '../../components/ui/LoadMoreButton.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { ResultadoCard } from '../busqueda/ResultadoCard.jsx';
-import { CardsCargando, GrillaResultados } from '../busqueda/ResultadosBusqueda.jsx';
+import { CardsCargando } from '../busqueda/CardsCargando.jsx';
+import { GrillaResultados } from '../busqueda/GrillaResultados.jsx';
 import { useCartelera } from './useCartelera.js';
 
 import { FechaEstrenoCine } from './FechaEstrenoCine.jsx';
@@ -74,19 +75,7 @@ export function ListaCarteleraActual() {
         )}
 
         {pagina < totalPaginas && (
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              size="compact"
-              fullWidth={false}
-              onClick={cargarMas}
-              disabled={isLoading}
-              loading={isLoadingMore}
-              loadingText="Cargando…"
-            >
-              Cargar más
-            </Button>
-          </div>
+          <LoadMoreButton onClick={cargarMas} disabled={isLoading} loading={isLoadingMore} />
         )}
       </section>
     </div>

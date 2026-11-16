@@ -11,7 +11,7 @@ export function TablaComparacion({ filas, nombreTitulo }) {
   const columnas = columnasComparacion(filas);
 
   return (
-    <Card padding="none">
+    <Card padding="none" className="lg:overflow-x-auto">
       <table aria-label="Resultados de comparación por región" className="w-full text-sm">
         <thead className="sr-only lg:not-sr-only">
           <tr className="border-b border-border text-left font-mono text-xs text-muted uppercase">

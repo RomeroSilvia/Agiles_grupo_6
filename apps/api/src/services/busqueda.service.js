@@ -16,6 +16,7 @@ import {
 import { generoSchema } from '../models/genero.model.js';
 import { personaSchema, respuestaCreditosCombinadosSchema } from '../models/persona.model.js';
 import { NotFoundError } from '../errors/index.js';
+import { parseYear } from '../utils/date.js';
 import { validateExternalResponse } from '../utils/validateExternalResponse.js';
 
 const TIPOS_BUSQUEDA = Object.freeze([TIPO_TITULO.PELICULA, TIPO_TITULO.SERIE]);
@@ -56,11 +57,6 @@ function obtenerGeneroIds(filtros, tipo) {
   }
 
   return generosPorId.get(filtros.genero).tmdbIds[tipo];
-}
-
-function obtenerAnio(fecha) {
-  const anio = typeof fecha === 'string' ? fecha.slice(0, 4) : null;
-  return /^\d{4}$/.test(anio ?? '') ? Number(anio) : null;
 }
 
 async function obtenerCreditosDePersona({ personaId, rol, tipo }) {
@@ -114,7 +110,7 @@ async function buscarSinTextoConPersonas(filtros, tipo, generoIds) {
       continue;
     }
     if (
-      (filtros.anio !== undefined && obtenerAnio(credito.fecha) !== filtros.anio) ||
+      (filtros.anio !== undefined && parseYear(credito.fecha) !== filtros.anio) ||
       !tieneGenero(credito, generoIds)
     ) {
       continue;

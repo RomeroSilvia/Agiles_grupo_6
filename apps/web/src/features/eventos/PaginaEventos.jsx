@@ -4,6 +4,7 @@ import { consultaEventosSchema } from '@buscador/shared/schemas';
 import { Select } from '../../components/ui/Select.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
+import { cardClassName } from '../../components/ui/surface.js';
 import { MapPinIcon } from '../../components/ui/icons.jsx';
 import catedralLaPlata from '../../assets/catedral-la-plata.jpg';
 import { ListaEventos } from './ListaEventos.jsx';
@@ -46,7 +47,7 @@ export function PaginaEventos() {
             alt="Catedral de La Plata al atardecer"
             width="1079"
             height="1223"
-            className="w-full rounded-card object-contain lg:w-64 lg:shrink-0"
+            className="max-h-64 w-full rounded-card object-cover lg:max-h-none lg:w-64 lg:shrink-0 lg:object-contain"
           />
         </div>
       </header>
@@ -56,7 +57,10 @@ export function PaginaEventos() {
       <form
         onSubmit={(event) => event.preventDefault()}
         aria-label="Filtrar eventos"
-        className="flex flex-col gap-4 rounded-card border border-border bg-surface p-5 sm:flex-row sm:items-end"
+        className={cardClassName({
+          padding: 'lg',
+          className: 'flex flex-col gap-4 sm:flex-row sm:items-end',
+        })}
       >
         <div className="flex-1 space-y-2">
           <label htmlFor="categoria-eventos" className="text-sm font-semibold">

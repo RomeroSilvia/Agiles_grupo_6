@@ -1,8 +1,11 @@
 import { z } from 'zod';
 import {
   CATEGORIAS_EVENTOS,
+  CIUDAD_EVENTOS,
   PAGINA_MAXIMA_EVENTOS,
   PERIODOS_EVENTOS,
+  URL_FUENTE_EVENTOS,
+  ZONA_HORARIA_EVENTOS,
 } from '../constants/eventos.constants.js';
 
 export const consultaEventosSchema = z
@@ -57,9 +60,9 @@ export const eventoSchema = z
 
 export const respuestaEventosSchema = z
   .object({
-    ciudad: z.literal('La Plata'),
-    provincia: z.literal('Buenos Aires'),
-    zonaHoraria: z.literal('America/Argentina/Buenos_Aires'),
+    ciudad: z.literal(CIUDAD_EVENTOS.CIUDAD),
+    provincia: z.literal(CIUDAD_EVENTOS.PROVINCIA),
+    zonaHoraria: z.literal(ZONA_HORARIA_EVENTOS),
     pagina: z.number().int().positive(),
     siguientePagina: z.number().int().positive().max(PAGINA_MAXIMA_EVENTOS).nullable(),
     resultados: z.array(eventoSchema),
@@ -67,7 +70,7 @@ export const respuestaEventosSchema = z
     fuente: z
       .object({
         nombre: z.literal('AllEvents'),
-        url: z.literal('https://allevents.in/la-plata'),
+        url: z.literal(URL_FUENTE_EVENTOS),
         consultadoEn: z.iso.datetime({ offset: true }),
       })
       .strict(),

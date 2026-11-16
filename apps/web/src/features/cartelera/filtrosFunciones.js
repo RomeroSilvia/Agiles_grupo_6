@@ -1,5 +1,7 @@
+import { LOCALE } from '../../config/app.config.js';
+
 export function ordenarCines(a, b) {
-  return a.nombre.localeCompare(b.nombre, 'es-AR') || a.id.localeCompare(b.id);
+  return a.nombre.localeCompare(b.nombre, LOCALE) || a.id.localeCompare(b.id);
 }
 
 export function obtenerOpcionesFunciones(data) {

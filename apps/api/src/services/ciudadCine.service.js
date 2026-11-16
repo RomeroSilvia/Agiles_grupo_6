@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { COBERTURA_CIUDAD_CINE } from '@buscador/shared/constants';
 import { ciudadCineIdSchema, respuestaCiudadesCineSchema } from '@buscador/shared/schemas';
 import { DIRECTORIO_CIUDADES_CINE } from '../config/ciudadesCine.config.js';
 import { NotFoundError, ValidationError } from '../errors/index.js';
@@ -38,7 +39,7 @@ function cargarCiudadesCine() {
 
 export function listarCiudadesCine() {
   const ciudades = cargarCiudadesCine()
-    .filter((ciudad) => ciudad.cobertura === 'disponible')
+    .filter((ciudad) => ciudad.cobertura === COBERTURA_CIUDAD_CINE.DISPONIBLE)
     .map(({ id, nombre, provincia, pais, zonaHoraria, cobertura, fuente }) => ({
       id,
       nombre,

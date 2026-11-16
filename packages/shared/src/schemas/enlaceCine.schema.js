@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { URL_SITIO_CINEMARK } from '../constants/cartelera.constants.js';
+import { FUENTE_ID_BUTACA, URL_SITIO_CINEMARK } from '../constants/cartelera.constants.js';
 import { httpUrlSchema } from './url.schema.js';
 import { cineIdSchema, funcionCineIdSchema } from './funcionCine.schema.js';
 import { tmdbIdSchema } from './busqueda.schema.js';
@@ -96,7 +96,7 @@ export function crearPoliticaEnlacesCine(reglasRevisadas) {
 const politica = crearPoliticaEnlacesCine([
   {
     tipo: 'sitio',
-    fuenteId: 'butaca',
+    fuenteId: FUENTE_ID_BUTACA,
     url: URL_SITIO_CINEMARK,
     cineId: null,
     funcionId: null,

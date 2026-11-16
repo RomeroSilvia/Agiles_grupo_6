@@ -12,7 +12,23 @@ export const ESTADO_FECHA = Object.freeze({
 
 export const ESTADOS_FECHA = Object.values(ESTADO_FECHA);
 
+export const ZONA_HORARIA_AR = 'America/Argentina/Buenos_Aires';
+
 export const FUENTE_ID_TMDB = 'tmdb';
+export const FUENTE_ID_BUTACA = 'butaca';
+
+export const COBERTURA_CIUDAD_CINE = Object.freeze({
+  DISPONIBLE: 'disponible',
+  SIN_VERIFICAR: 'sin_verificar',
+  SIN_COBERTURA: 'sin_cobertura',
+});
+
+export const ESTADO_FUNCIONES_CINE = Object.freeze({
+  DISPONIBLE: 'disponible',
+  SIN_FUNCIONES: 'sin_funciones',
+  SIN_COBERTURA: 'sin_cobertura',
+  INCOMPLETA: 'incompleta',
+});
 export const REGION_CARTELERA = 'AR';
 export const CARTELERA_CACHE_TTL_MS = 60 * 60 * 1000;
 

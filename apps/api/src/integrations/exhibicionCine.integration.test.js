@@ -70,6 +70,21 @@ describe('adquisición de fechas e índice de exhibición', () => {
     expect(await listarIdsPeliculasEnCartelera()).toEqual(ids);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+  it('acepta el índice aunque TMDB informe un total distinto entre páginas', async () => {
+    const ids = Array.from({ length: 21 }, (_, i) => i + 1);
+    const fetchMock = vi.fn().mockImplementation(async (url) => {
+      const pagina = Number(url.searchParams.get('page'));
+      return response({
+        page: pagina,
+        total_pages: 2,
+        total_results: pagina === 1 ? 21 : 22,
+        results: ids.slice((pagina - 1) * 20, pagina * 20).map((id) => ({ id })),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { listarIdsPeliculasEnCartelera } = await import('./tmdb.integration.js');
+    expect(await listarIdsPeliculasEnCartelera()).toEqual(ids);
+  });
   it('no cachea un índice incompleto ni publica un subconjunto', async () => {
     const fetchMock = vi
       .fn()

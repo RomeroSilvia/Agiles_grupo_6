@@ -1,67 +1,38 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { httpUrlSchema } from '@buscador/shared/schemas';
-import { rutaDisponibilidad } from '../../app/rutas.js';
-import { ApiError, request } from '../../services/api.service.js';
+import { useRemoteData } from '../../hooks/useRemoteData.js';
+import { obtenerDisponibilidad } from './detalle.api.js';
+
+const MENSAJE_ERROR = 'No se pudo consultar la disponibilidad.';
+const MENSAJE_SIN_PARAMETROS = 'No se pudo identificar el título.';
+
+function normalizarDisponibilidad(data) {
+  return {
+    ofertas: Array.isArray(data?.ofertas) ? data.ofertas : [],
+    enlaceTmdb: httpUrlSchema.safeParse(data?.enlaceTmdb).success ? data.enlaceTmdb : null,
+  };
+}
 
 export function useDisponibilidad({ tipo, tmdbId, region, regionLoading = false } = {}) {
   const tieneParametros = Boolean(tipo && tmdbId);
   const regionResuelta = Boolean(region) && !regionLoading;
-  const claveParametros = tieneParametros ? `${tipo}/${tmdbId}/${region ?? ''}` : null;
-  const [ofertas, setOfertas] = useState([]);
-  const [enlaceTmdb, setEnlaceTmdb] = useState(null);
-  const [error, setError] = useState(null);
-  const [claveCargada, setClaveCargada] = useState(null);
-  const [recarga, setRecarga] = useState(0);
-
-  const reintentar = useCallback(() => {
-    setClaveCargada(null);
-    setRecarga((n) => n + 1);
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    if (!tieneParametros || !regionResuelta) {
-      return () => controller.abort();
-    }
-
-    const queryRegion = region ? `?region=${encodeURIComponent(region)}` : '';
-    request(`${rutaDisponibilidad(tipo, tmdbId)}${queryRegion}`, {
-      signal: controller.signal,
-    })
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setOfertas(Array.isArray(data?.ofertas) ? data.ofertas : []);
-          setEnlaceTmdb(httpUrlSchema.safeParse(data?.enlaceTmdb).success ? data.enlaceTmdb : null);
-          setError(null);
-          setClaveCargada(claveParametros);
-        }
-      })
-      .catch((requestError) => {
-        if (requestError.name === 'AbortError' || controller.signal.aborted) {
-          return;
-        }
-
-        setOfertas([]);
-        setEnlaceTmdb(null);
-        setError(
-          requestError instanceof ApiError
-            ? requestError.message
-            : 'No se pudo consultar la disponibilidad.',
-        );
-        setClaveCargada(claveParametros);
-      });
-
-    return () => controller.abort();
-  }, [claveParametros, tieneParametros, regionResuelta, tipo, tmdbId, region, recarga]);
-
-  const esDetalleActual = tieneParametros && regionResuelta && claveCargada === claveParametros;
+  const solicitar = useCallback(
+    ({ signal }) =>
+      obtenerDisponibilidad({ tipo, tmdbId, region, signal }).then(normalizarDisponibilidad),
+    [tipo, tmdbId, region],
+  );
+  const { datos, isLoading, error, reintentar } = useRemoteData({
+    clave: tieneParametros ? `${tipo}/${tmdbId}/${region ?? ''}` : null,
+    habilitado: tieneParametros && regionResuelta,
+    solicitar,
+    mensajeError: MENSAJE_ERROR,
+  });
 
   return {
-    ofertas: esDetalleActual ? ofertas : [],
-    enlaceTmdb: esDetalleActual ? enlaceTmdb : null,
-    isLoading: tieneParametros && (!regionResuelta || !esDetalleActual),
-    error: !tieneParametros ? 'No se pudo identificar el título.' : esDetalleActual ? error : null,
+    ofertas: datos?.ofertas ?? [],
+    enlaceTmdb: datos?.enlaceTmdb ?? null,
+    isLoading: tieneParametros && (!regionResuelta || isLoading),
+    error: tieneParametros ? error || null : MENSAJE_SIN_PARAMETROS,
     reintentar,
   };
 }

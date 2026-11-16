@@ -1,3 +1,4 @@
+import { TIPO_TITULO } from '@buscador/shared/constants';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { SectionTitle } from '../../components/ui/SectionTitle.jsx';
 import { SeccionFunciones } from './SeccionFunciones.jsx';
@@ -5,7 +6,7 @@ import { useExhibicionCine } from './useExhibicionCine.js';
 
 export function SeccionExhibicionCine({ tipo, tmdbId }) {
   const { consultable, loading, error, reintentar } = useExhibicionCine({ tipo, tmdbId });
-  if (tipo !== 'pelicula' || consultable === false) return null;
+  if (tipo !== TIPO_TITULO.PELICULA || consultable === false) return null;
   if (consultable) return <SeccionFunciones key={tmdbId} tmdbId={tmdbId} />;
 
   return (

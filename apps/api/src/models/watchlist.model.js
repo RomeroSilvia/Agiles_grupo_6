@@ -1,12 +1,11 @@
 import { z } from 'zod';
 import { TIPOS_TITULO } from '@buscador/shared/constants';
 import { regionSchema } from '@buscador/shared/schemas';
+import { TMDB_CONFIG } from '../config/tmdb.config.js';
 import { WATCHLIST_PAGE_SIZE } from '../config/watchlist.config.js';
 
-const POSTGRES_INTEGER_MAX = 2_147_483_647;
 const WATCHLIST_MAX_PAGE = Math.floor(Number.MAX_SAFE_INTEGER / WATCHLIST_PAGE_SIZE);
-const TITULO_INVALIDO = 'El título no es válido';
-const TMDB_POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const TMDB_POSTER_BASE_URL = TMDB_CONFIG.POSTER_BASE_URL;
 
 export const WATCHLIST_TITULO_COLUMNS =
   'id, agregado_en, titulo!inner(id, tmdb_id, tipo, nombre, anio, poster_path, puntuacion)';
@@ -16,15 +15,6 @@ export const TITULOS_WATCHLIST_PARA_SINCRONIZAR_COLUMNS =
 
 export const watchlistQuerySchema = z.object({
   pagina: z.coerce.number().int().min(1).max(WATCHLIST_MAX_PAGE).default(1),
-});
-
-export const watchlistParamsSchema = z.object({
-  tipo: z.enum(TIPOS_TITULO),
-  tmdbId: z
-    .string()
-    .regex(/^[1-9]\d{0,9}$/, TITULO_INVALIDO)
-    .transform(Number)
-    .pipe(z.number().max(POSTGRES_INTEGER_MAX, TITULO_INVALIDO)),
 });
 
 const watchlistRowSchema = z.object({

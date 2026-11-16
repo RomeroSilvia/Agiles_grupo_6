@@ -1,4 +1,3 @@
-import { httpUrlSchema } from '@buscador/shared/schemas';
 import {
   SERVICIO_POR_TMDB_PROVIDER_ID,
   STREAMING_AVAILABILITY_CONFIG,
@@ -11,20 +10,15 @@ import * as disponibilidadRepository from '../repositories/disponibilidad.reposi
 import * as fuenteDatosRepository from '../repositories/fuenteDatos.repository.js';
 import * as sincronizacionRepository from '../repositories/sincronizacion.repository.js';
 import * as tituloRepository from '../repositories/titulo.repository.js';
+import { claveOferta } from '../models/disponibilidad.model.js';
+import { getUtcDayWindow } from '../utils/date.js';
 import { createTtlCache } from '../utils/ttlCache.js';
+import { esDeepLinkDePlataforma } from './deepLink.validator.js';
 
 const deepLinksCache = createTtlCache({
   ttlMs: STREAMING_AVAILABILITY_CONFIG.CACHE_TTL_MS,
   maxEntries: STREAMING_AVAILABILITY_CONFIG.CACHE_MAX_ENTRIES,
 });
-
-function obtenerVentanaUtc(ahora) {
-  const inicio = new Date(ahora);
-  inicio.setUTCHours(0, 0, 0, 0);
-  const fin = new Date(inicio);
-  fin.setUTCDate(fin.getUTCDate() + 1);
-  return { inicio: inicio.toISOString(), fin: fin.toISOString() };
-}
 
 function mensajeError(error) {
   return error instanceof Error ? error.message : 'Error desconocido';
@@ -51,7 +45,7 @@ async function consultarConReserva({ tipo, tmdbId, region }) {
   }
 
   const sincronizacion = await sincronizacionRepository.iniciar();
-  const { inicio, fin } = obtenerVentanaUtc(sincronizacion.iniciadaEn ?? new Date());
+  const { start: inicio, end: fin } = getUtcDayWindow(sincronizacion.iniciadaEn ?? new Date());
   let errorConsulta = null;
 
   try {
@@ -81,10 +75,6 @@ async function consultarConReserva({ tipo, tmdbId, region }) {
   }
 }
 
-function claveOferta(plataformaId, tipoOferta) {
-  return `${plataformaId}:${tipoOferta}`;
-}
-
 // Solo las plataformas que Streaming Availability conoce pueden tener deep link.
 function listarOfertasEnlazables(ofertas) {
   return ofertas.flatMap(({ tipoOferta, plataformas }) =>
@@ -92,17 +82,6 @@ function listarOfertasEnlazables(ofertas) {
       .filter(({ tmdbProviderId }) => SERVICIO_POR_TMDB_PROVIDER_ID[tmdbProviderId])
       .map((plataforma) => ({ plataforma, tipoOferta })),
   );
-}
-
-function esDeepLinkDePlataforma(enlace, plataforma) {
-  const resultado = httpUrlSchema.safeParse(enlace);
-  if (!resultado.success) {
-    return false;
-  }
-
-  const { dominios } = SERVICIO_POR_TMDB_PROVIDER_ID[plataforma.tmdbProviderId];
-  const { hostname } = new URL(resultado.data);
-  return dominios.some((dominio) => hostname === dominio || hostname.endsWith(`.${dominio}`));
 }
 
 // Solo acepta el enlace del mismo tipo de oferta: el de otro tipo abriría una oferta
@@ -135,7 +114,7 @@ async function leerVigentes({ tipo, tmdbId, region, enlazables }) {
           plataformas.has(plataformaId) && verificadaEn.getTime() > limite,
       )
       .map(({ plataformaId, tipoOferta, deepLink }) => [
-        claveOferta(plataformaId, tipoOferta),
+        claveOferta({ plataformaId, tipoOferta }),
         esDeepLinkDePlataforma(deepLink, plataformas.get(plataformaId)) ? deepLink : null,
       ]),
   );
@@ -144,7 +123,7 @@ async function leerVigentes({ tipo, tmdbId, region, enlazables }) {
 // Hay un guardado vigente para cada oferta (null incluido).
 function estanCompletos(guardados, enlazables) {
   return enlazables.every(({ plataforma, tipoOferta }) =>
-    guardados.has(claveOferta(plataforma.id, tipoOferta)),
+    guardados.has(claveOferta({ plataformaId: plataforma.id, tipoOferta })),
   );
 }
 
@@ -165,7 +144,7 @@ async function guardar({ tipo, tmdbId, region, enlazables, deepLinks }) {
       plataformaId: plataforma.id,
       region,
       tipoOferta,
-      deepLink: deepLinks.get(claveOferta(plataforma.id, tipoOferta)),
+      deepLink: deepLinks.get(claveOferta({ plataformaId: plataforma.id, tipoOferta })),
       fuenteId,
       verificadaEn,
     })),
@@ -195,7 +174,7 @@ async function resolverDeepLinks({ tipo, tmdbId, region, enlazables }) {
 
   const deepLinks = new Map(
     enlazables.map((oferta) => [
-      claveOferta(oferta.plataforma.id, oferta.tipoOferta),
+      claveOferta({ plataformaId: oferta.plataforma.id, tipoOferta: oferta.tipoOferta }),
       elegirDeepLink(oferta, opciones),
     ]),
   );
@@ -214,7 +193,7 @@ function asignarDeepLinks(ofertas, deepLinks) {
     tipoOferta,
     plataformas: plataformas.map((plataforma) => ({
       ...plataforma,
-      deepLink: deepLinks.get(claveOferta(plataforma.id, tipoOferta)) ?? null,
+      deepLink: deepLinks.get(claveOferta({ plataformaId: plataforma.id, tipoOferta })) ?? null,
     })),
   }));
 }

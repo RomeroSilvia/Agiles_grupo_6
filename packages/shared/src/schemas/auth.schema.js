@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { CONFIRMACION_ELIMINAR } from '../constants/index.js';
 
 const email = z.email('Ingresá un mail válido');
 
@@ -103,13 +102,4 @@ export const emailChangeSchema = emailChangeFormSchema.extend(passwordConfirmati
 
 export const linkTokenSchema = z.object({ token: linkToken });
 
-export const accountDeletionByTextSchema = z.object({
-  confirmation: z.literal(CONFIRMACION_ELIMINAR, {
-    error: `Escribí ${CONFIRMACION_ELIMINAR} para confirmar`,
-  }),
-});
-
-export const accountDeletionSchema = z.union([
-  accountDeletionByTextSchema,
-  passwordConfirmationSchema,
-]);
+export const accountDeletionSchema = passwordConfirmationSchema;

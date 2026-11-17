@@ -167,7 +167,7 @@ Con «Todo el período» las tarjetas no muestran los nuevos.
 
 **De dónde salen los datos**
 
-- **Búsquedas:** cada búsqueda en `/api/busqueda` se registra con el texto (sin espacios de más y en minúsculas), el tipo, el género y la región, haya sesión o no. Solo cuenta la página 1, porque pasar de página no es una búsqueda nueva. No se guarda el usuario ni la IP, y si la región no se pudo detectar queda vacía. El registro se hace después de responder, así que nunca demora ni hace fallar la búsqueda.
+- **Búsquedas:** cada búsqueda en `/api/busqueda` se registra con el texto (sin espacios de más y en minúsculas), el tipo, el género y la región, haya sesión o no. Solo cuenta la página 1, porque pasar de página no es una búsqueda nueva. La misma búsqueda desde la misma IP se registra una sola vez cada 30 minutos, así volver del detalle, recargar o cambiar un filtro sin cambiar el texto no suma de nuevo. No se guarda el usuario ni la IP (la IP solo queda en memoria esos 30 minutos para reconocer las repetidas), y si la región no se pudo detectar queda vacía. El registro se hace después de responder, así que nunca demora ni hace fallar la búsqueda.
 - **Privacidad:** los textos buscados menos de 3 veces no se muestran, para no exponer datos personales que alguien haya escrito en el buscador.
 - **Géneros de la watchlist:** cada título guarda sus géneros de TMDB al agregarse a una watchlist, y la API los agrupa en los géneros de la app. Un título cuenta una sola vez por género aunque tenga varios géneros de TMDB del mismo grupo. Los títulos guardados antes de esta función no tienen género hasta que alguien los vuelve a agregar.
 

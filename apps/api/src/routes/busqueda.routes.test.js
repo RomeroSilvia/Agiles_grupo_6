@@ -147,16 +147,18 @@ describe('GET /api/busqueda', () => {
   });
 });
 
+// Cada caso busca un texto distinto: la misma búsqueda desde la misma IP se registra una sola vez
+// por ventana, y todos los pedidos de supertest salen de la misma IP
 describe('registro de búsquedas', () => {
   it('registra la búsqueda de la página 1 con el texto normalizado y la región', async () => {
     const response = await request(createApp())
       .get('/api/busqueda')
-      .query({ q: '  Dune  ', tipo: 'pelicula', genero: 'drama' });
+      .query({ q: '  El   Padrino  ', tipo: 'pelicula', genero: 'drama' });
 
     expect(response.status).toBe(200);
     await vi.waitFor(() =>
       expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith({
-        texto: 'dune',
+        texto: 'el padrino',
         tipo: 'pelicula',
         genero: 'drama',
         region: 'UY',
@@ -178,7 +180,7 @@ describe('registro de búsquedas', () => {
   it('no registra la región por defecto cuando no se pudo detectar', async () => {
     geoipIntegration.getRegionByIp.mockResolvedValue(null);
 
-    await request(createApp()).get('/api/busqueda').query({ q: 'dune' });
+    await request(createApp()).get('/api/busqueda').query({ q: 'alien' });
 
     await vi.waitFor(() =>
       expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith(
@@ -190,17 +192,30 @@ describe('registro de búsquedas', () => {
   it('responde la búsqueda sin esperar la región', async () => {
     geoipIntegration.getRegionByIp.mockReturnValue(new Promise(() => {}));
 
-    const response = await request(createApp()).get('/api/busqueda').query({ q: 'dune' });
+    const response = await request(createApp()).get('/api/busqueda').query({ q: 'matrix' });
 
     expect(response.status).toBe(200);
     expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
+  });
+
+  it('no registra otra vez la misma búsqueda desde la misma IP', async () => {
+    await request(createApp()).get('/api/busqueda').query({ q: 'Interestelar' });
+    await vi.waitFor(() => expect(registroBusquedaRepository.insertar).toHaveBeenCalledTimes(1));
+
+    const response = await request(createApp())
+      .get('/api/busqueda')
+      .query({ q: 'interestelar', tipo: 'pelicula' });
+
+    expect(response.status).toBe(200);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(registroBusquedaRepository.insertar).toHaveBeenCalledTimes(1);
   });
 
   it('responde la búsqueda aunque falle el registro', async () => {
     registroBusquedaRepository.insertar.mockRejectedValue(new Error('caída'));
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const response = await request(createApp()).get('/api/busqueda').query({ q: 'dune' });
+    const response = await request(createApp()).get('/api/busqueda').query({ q: 'tron' });
 
     expect(response.status).toBe(200);
     expect(response.body.data.resultados.length).toBeGreaterThan(0);

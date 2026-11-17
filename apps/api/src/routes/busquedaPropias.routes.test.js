@@ -272,14 +272,16 @@ describe('GET /api/busqueda/propias', () => {
   });
 });
 
+// Cada caso busca un texto distinto: la misma búsqueda desde la misma IP se registra una sola vez
+// por ventana, y todos los pedidos de supertest salen de la misma IP
 describe('registro de búsquedas en plataformas propias', () => {
   it('registra la búsqueda de la página 1 con la región del usuario', async () => {
-    const res = await buscarConSesion({ q: '  Dune ', genero: 'drama' });
+    const res = await buscarConSesion({ q: '  El   Padrino ', genero: 'drama' });
 
     expect(res.status).toBe(200);
     await vi.waitFor(() =>
       expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith({
-        texto: 'dune',
+        texto: 'el padrino',
         tipo: 'pelicula',
         genero: 'drama',
         region: 'AR',
@@ -305,7 +307,7 @@ describe('registro de búsquedas en plataformas propias', () => {
     registroBusquedaRepository.insertar.mockRejectedValue(new Error('caída'));
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const res = await buscarConSesion({ q: 'Dune' });
+    const res = await buscarConSesion({ q: 'Tron' });
 
     expect(res.status).toBe(200);
     await vi.waitFor(() =>

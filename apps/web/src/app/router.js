@@ -2,6 +2,7 @@ import { createBrowserRouter, redirect } from 'react-router';
 import { MainLayout } from './MainLayout.jsx';
 import { NotFoundPage } from './NotFoundPage.jsx';
 import { PaginaBusqueda } from '../features/busqueda/PaginaBusqueda.jsx';
+import { PaginaAnimo } from '../features/animo/PaginaAnimo.jsx';
 import { PaginaCartelera } from '../features/cartelera/PaginaCartelera.jsx';
 import { PaginaEventos } from '../features/eventos/PaginaEventos.jsx';
 import { PaginaDetalleTitulo } from '../features/detalle/PaginaDetalleTitulo.jsx';
@@ -32,6 +33,7 @@ export const routes = [
     Component: MainLayout,
     children: [
       { index: true, Component: PaginaBusqueda },
+      { path: RUTAS.ANIMO, Component: PaginaAnimo },
       { path: RUTAS.CARTELERA, Component: PaginaCartelera },
       { path: RUTAS.EVENTOS, Component: PaginaEventos },
       { path: RUTAS.DETALLE_TITULO, Component: PaginaDetalleTitulo },

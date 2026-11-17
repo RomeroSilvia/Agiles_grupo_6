@@ -43,6 +43,14 @@ describe('Cooltura en La Plata', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveAttribute('target', '_blank');
     expect(screen.getByText('Gratis')).toBeInTheDocument();
+    const planBLink = screen.getByRole('link', { name: /mejor con amigos: ir a Plan B/ });
+    expect(planBLink).toHaveTextContent(
+      'Los planes que te ofrecemos en Streamly disfrutálos mejor con amigos:',
+    );
+    expect(planBLink).toHaveAttribute('href', 'https://plan-b-dusky.vercel.app/');
+    expect(planBLink).toHaveAttribute('target', '_blank');
+    expect(planBLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(within(planBLink).getByRole('img', { name: 'Plan B' })).toBeVisible();
   });
   it('cambia filtros y reinicia la categoría al consultar por período', async () => {
     const fetchMock = vi.fn().mockResolvedValue(http(crearRespuestaEventos()));

@@ -4,6 +4,7 @@ import { consultaEventosSchema } from '@buscador/shared/schemas';
 import { Select } from '../../components/ui/Select.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Chip } from '../../components/ui/Chip.jsx';
+import { InvitacionPlanB } from '../../components/ui/InvitacionPlanB.jsx';
 import { cardClassName } from '../../components/ui/surface.js';
 import { MapPinIcon } from '../../components/ui/icons.jsx';
 import catedralLaPlata from '../../assets/catedral-la-plata.jpg';
@@ -101,6 +102,7 @@ export function PaginaEventos() {
         )}
       </form>
       <ListaEventos key={`${categoria}:${fecha}`} categoria={categoria} fecha={fecha} />
+      <InvitacionPlanB />
     </div>
   );
 }

@@ -225,6 +225,13 @@ describe('PaginaCartelera', () => {
     renderRoute('/cartelera');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo consultar TMDB');
+    expect(screen.getByRole('link', { name: /mejor con amigos: ir a Plan B/ })).toHaveTextContent(
+      'Los planes que te ofrecemos en Streamly disfrutálos mejor con amigos:',
+    );
+    expect(screen.getByRole('link', { name: /mejor con amigos: ir a Plan B/ })).toHaveAttribute(
+      'href',
+      'https://plan-b-dusky.vercel.app/',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByText('No hay información de cartelera disponible.')).toBeVisible();
     expect(

@@ -6,9 +6,11 @@ export async function buscar(req, res) {
   const data = await busquedaService.buscarTitulos(filtros);
   res.json({ data });
 
-  registroBusquedaService
-    .registrarBusqueda({ filtros, usuarioId: req.user?.id ?? null, ip: req.ip })
-    .catch((error) => console.error('No se pudo registrar la búsqueda', error));
+  registroBusquedaService.registrarBusquedaSinEsperar({
+    filtros,
+    usuarioId: req.user?.id ?? null,
+    ip: req.ip,
+  });
 }
 
 export async function listarGeneros(_req, res) {

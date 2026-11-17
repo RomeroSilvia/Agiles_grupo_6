@@ -71,6 +71,13 @@ describe('registroBusqueda.service', () => {
     expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
   });
 
+  it('no registra un pedido sin texto ni filtros', async () => {
+    await registrarBusqueda({ filtros: { q: '', pagina: 1 }, usuarioId: USUARIO_ID, ip: IP });
+
+    expect(regionService.obtenerRegion).not.toHaveBeenCalled();
+    expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
+  });
+
   it('propaga el error del repository', async () => {
     registroBusquedaRepository.insertar.mockRejectedValue(new Error('caída'));
 

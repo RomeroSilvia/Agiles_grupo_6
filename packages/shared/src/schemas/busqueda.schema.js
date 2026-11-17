@@ -60,14 +60,18 @@ const filtrosBusquedaSchema = z
 
 export const busquedaPropiasSchema = filtrosBusquedaSchema;
 
-export const busquedaSchema = filtrosBusquedaSchema.refine(
-  ({ q, tipo, anio, genero, actor, director }) =>
-    Boolean(q) || [tipo, anio, genero, actor, director].some((filtro) => filtro !== undefined),
-  {
-    message: 'Ingresá un título o seleccioná al menos un filtro',
-    path: ['q'],
-  },
-);
+// Una búsqueda necesita un texto o al menos un filtro; sin nada es solo recorrer el catálogo
+export function tieneCriterioBusqueda({ q, tipo, anio, genero, actor, director } = {}) {
+  return (
+    Boolean(q?.trim()) ||
+    [tipo, anio, genero, actor, director].some((filtro) => filtro !== undefined)
+  );
+}
+
+export const busquedaSchema = filtrosBusquedaSchema.refine(tieneCriterioBusqueda, {
+  message: 'Ingresá un título o seleccioná al menos un filtro',
+  path: ['q'],
+});
 
 export function tieneFiltrosAvanzados(filtros = {}) {
   return Boolean(filtros.genero || filtros.actor || filtros.director);

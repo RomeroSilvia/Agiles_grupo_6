@@ -1,4 +1,5 @@
 import { REGION_SOURCE } from '@buscador/shared/constants';
+import { tieneCriterioBusqueda } from '@buscador/shared/schemas';
 import * as registroBusquedaRepository from '../repositories/registroBusqueda.repository.js';
 import * as regionService from './region.service.js';
 
@@ -10,7 +11,8 @@ function normalizarTexto(texto) {
 }
 
 export async function registrarBusqueda({ filtros, usuarioId, ip }) {
-  if (filtros.pagina !== PRIMERA_PAGINA) {
+  // Pasar de página no es una búsqueda nueva, y sin texto ni filtros solo se recorre el catálogo
+  if (filtros.pagina !== PRIMERA_PAGINA || !tieneCriterioBusqueda(filtros)) {
     return;
   }
 
@@ -22,4 +24,11 @@ export async function registrarBusqueda({ filtros, usuarioId, ip }) {
     genero: filtros.genero ?? null,
     region: source === REGION_SOURCE.DEFAULT ? null : region,
   });
+}
+
+// Para llamar después de responder: la búsqueda nunca se demora ni falla por el registro
+export function registrarBusquedaSinEsperar(datos) {
+  registrarBusqueda(datos).catch((error) =>
+    console.error('No se pudo registrar la búsqueda', error),
+  );
 }

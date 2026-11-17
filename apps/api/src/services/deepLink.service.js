@@ -84,17 +84,22 @@ function listarOfertasEnlazables(ofertas) {
   );
 }
 
-// Solo acepta el enlace del mismo tipo de oferta: el de otro tipo abriría una oferta
-// distinta a la que se muestra (por ejemplo, el alquiler en lugar de la suscripción).
-function elegirDeepLink({ plataforma, tipoOferta }, opciones) {
+// Solo acepta el enlace y los idiomas del mismo tipo de oferta: el de otro tipo abriría
+// una oferta distinta a la que se muestra (por ejemplo, el alquiler en lugar de la suscripción).
+function elegirDatosOferta({ plataforma, tipoOferta }, opciones) {
   const { servicio } = SERVICIO_POR_TMDB_PROVIDER_ID[plataforma.tmdbProviderId];
-  const elegida = opciones.find(
+  const coincidentes = opciones.filter(
     (opcion) =>
       opcion.servicio === servicio &&
       opcion.tipoOferta === tipoOferta &&
       esDeepLinkDePlataforma(opcion.deepLink, plataforma),
   );
-  return elegida?.deepLink ?? null;
+
+  return {
+    deepLink: coincidentes[0]?.deepLink ?? null,
+    audios: [...new Set(coincidentes.flatMap((opcion) => opcion.audios ?? []))],
+    subtitulos: [...new Set(coincidentes.flatMap((opcion) => opcion.subtitulos ?? []))],
+  };
 }
 
 // Devuelve los deep links guardados y vigentes de las ofertas (null si el guardado no es válido).
@@ -115,7 +120,13 @@ async function leerVigentes({ tipo, tmdbId, region, enlazables }) {
       )
       .map(({ plataformaId, tipoOferta, deepLink }) => [
         claveOferta({ plataformaId, tipoOferta }),
-        esDeepLinkDePlataforma(deepLink, plataformas.get(plataformaId)) ? deepLink : null,
+        {
+          deepLink: esDeepLinkDePlataforma(deepLink, plataformas.get(plataformaId))
+            ? deepLink
+            : null,
+          audios: [],
+          subtitulos: [],
+        },
       ]),
   );
 }
@@ -127,7 +138,7 @@ function estanCompletos(guardados, enlazables) {
   );
 }
 
-async function guardar({ tipo, tmdbId, region, enlazables, deepLinks }) {
+async function guardar({ tipo, tmdbId, region, enlazables, datosPorOferta }) {
   const [titulo, fuenteId] = await Promise.all([
     tmdbIntegration.obtenerDetalle(tipo, tmdbId),
     fuenteDatosRepository.obtenerIdPorNombre(STREAMING_AVAILABILITY_CONFIG.FUENTE_DISPONIBILIDAD),
@@ -144,7 +155,9 @@ async function guardar({ tipo, tmdbId, region, enlazables, deepLinks }) {
       plataformaId: plataforma.id,
       region,
       tipoOferta,
-      deepLink: deepLinks.get(claveOferta({ plataformaId: plataforma.id, tipoOferta })),
+      deepLink:
+        datosPorOferta.get(claveOferta({ plataformaId: plataforma.id, tipoOferta }))?.deepLink ??
+        null,
       fuenteId,
       verificadaEn,
     })),
@@ -154,7 +167,7 @@ async function guardar({ tipo, tmdbId, region, enlazables, deepLinks }) {
 async function resolverDeepLinks({ tipo, tmdbId, region, enlazables }) {
   const guardados = await leerVigentes({ tipo, tmdbId, region, enlazables });
   if (estanCompletos(guardados, enlazables)) {
-    return guardados;
+    return { datosPorOferta: guardados, idiomasDisponibles: true };
   }
 
   let opciones;
@@ -163,52 +176,66 @@ async function resolverDeepLinks({ tipo, tmdbId, region, enlazables }) {
   } catch (error) {
     if (error instanceof ExternalServiceError) {
       console.error(error);
-      return new Map();
+      return { datosPorOferta: new Map(), idiomasDisponibles: false };
     }
     throw error;
   }
 
   if (opciones === null) {
-    return new Map();
+    return { datosPorOferta: new Map(), idiomasDisponibles: false };
   }
 
-  const deepLinks = new Map(
+  const datosPorOferta = new Map(
     enlazables.map((oferta) => [
       claveOferta({ plataformaId: oferta.plataforma.id, tipoOferta: oferta.tipoOferta }),
-      elegirDeepLink(oferta, opciones),
+      elegirDatosOferta(oferta, opciones),
     ]),
   );
 
   try {
-    await guardar({ tipo, tmdbId, region, enlazables, deepLinks });
+    await guardar({ tipo, tmdbId, region, enlazables, datosPorOferta });
   } catch (error) {
     console.error('No se pudieron guardar los deep links', error);
   }
 
-  return deepLinks;
+  return { datosPorOferta, idiomasDisponibles: true };
 }
 
-function asignarDeepLinks(ofertas, deepLinks) {
+function asignarDeepLinks(ofertas, { datosPorOferta, idiomasDisponibles }) {
   return ofertas.map(({ tipoOferta, plataformas }) => ({
     tipoOferta,
-    plataformas: plataformas.map((plataforma) => ({
-      ...plataforma,
-      deepLink: deepLinks.get(claveOferta({ plataformaId: plataforma.id, tipoOferta })) ?? null,
-    })),
+    plataformas: plataformas.map((plataforma) => {
+      if (!idiomasDisponibles) {
+        return {
+          ...plataforma,
+          deepLink: null,
+          audios: null,
+          subtitulos: null,
+        };
+      }
+
+      const datos = datosPorOferta.get(claveOferta({ plataformaId: plataforma.id, tipoOferta }));
+      return {
+        ...plataforma,
+        deepLink: datos?.deepLink ?? null,
+        audios: datos?.audios ?? [],
+        subtitulos: datos?.subtitulos ?? [],
+      };
+    }),
   }));
 }
 
-/** Suma a cada plataforma de las ofertas su deep link (null si no tiene uno válido). */
+/** Suma a cada plataforma de las ofertas su deep link e idiomas disponibles. */
 export async function agregarDeepLinks({ tipo, tmdbId, region, ofertas }) {
   const enlazables = listarOfertasEnlazables(ofertas);
-  const deepLinks =
+  const resultado =
     enlazables.length === 0
-      ? new Map()
+      ? { datosPorOferta: new Map(), idiomasDisponibles: true }
       : await deepLinksCache.getOrSet(`${tipo}:${tmdbId}:${region}`, () =>
           resolverDeepLinks({ tipo, tmdbId, region, enlazables }),
         );
 
-  return asignarDeepLinks(ofertas, deepLinks);
+  return asignarDeepLinks(ofertas, resultado);
 }
 
 /**
@@ -217,8 +244,8 @@ export async function agregarDeepLinks({ tipo, tmdbId, region, ofertas }) {
  */
 export async function agregarDeepLinksGuardados({ tipo, tmdbId, region, ofertas }) {
   const enlazables = listarOfertasEnlazables(ofertas);
-  const deepLinks =
+  const datosPorOferta =
     enlazables.length === 0 ? new Map() : await leerVigentes({ tipo, tmdbId, region, enlazables });
 
-  return asignarDeepLinks(ofertas, deepLinks);
+  return asignarDeepLinks(ofertas, { datosPorOferta, idiomasDisponibles: true });
 }

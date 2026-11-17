@@ -13,16 +13,16 @@ const TAMANIOS_LOGO = {
 
 const tileClassName = `${TOOLTIP_TRIGGER_CLASS_NAME} inline-flex rounded-field border border-border bg-surface p-1 ${FOCUS_RING_CLASS_NAME}`;
 
-function ContenidoTile({ plataforma, size, inactiva = false }) {
+function ContenidoTile({ plataforma, size, inactiva = false, mostrarNombreOculto = true }) {
   return (
     <>
       <LogoPlataforma plataforma={plataforma} size={TAMANIOS_LOGO[size]} inactiva={inactiva} />
-      <span className="sr-only">{plataforma.nombre}</span>
+      {mostrarNombreOculto && <span className="sr-only">{plataforma.nombre}</span>}
     </>
   );
 }
 
-function TarjetaNoPropia({ plataforma, size }) {
+function TarjetaNoPropia({ plataforma, size, mostrarNombreOculto }) {
   const tooltipId = useId();
 
   return (
@@ -33,15 +33,32 @@ function TarjetaNoPropia({ plataforma, size }) {
       aria-describedby={tooltipId}
       className={`${tileClassName} cursor-not-allowed`}
     >
-      <ContenidoTile plataforma={plataforma} size={size} inactiva />
+      <ContenidoTile
+        plataforma={plataforma}
+        size={size}
+        inactiva
+        mostrarNombreOculto={mostrarNombreOculto}
+      />
       <Tooltip id={tooltipId}>No tenés {plataforma.nombre} en tus plataformas</Tooltip>
     </div>
   );
 }
 
-export function TarjetaDisponibilidad({ plataforma, esPropia, nombreTitulo, size = 'md' }) {
+export function TarjetaDisponibilidad({
+  plataforma,
+  esPropia,
+  nombreTitulo,
+  size = 'md',
+  mostrarNombreOculto = true,
+}) {
   if (!esPropia) {
-    return <TarjetaNoPropia plataforma={plataforma} size={size} />;
+    return (
+      <TarjetaNoPropia
+        plataforma={plataforma}
+        size={size}
+        mostrarNombreOculto={mostrarNombreOculto}
+      />
+    );
   }
 
   const destino = obtenerDestinoPlataforma(plataforma);
@@ -49,7 +66,11 @@ export function TarjetaDisponibilidad({ plataforma, esPropia, nombreTitulo, size
   if (!destino) {
     return (
       <div role="group" tabIndex={0} aria-label={plataforma.nombre} className={tileClassName}>
-        <ContenidoTile plataforma={plataforma} size={size} />
+        <ContenidoTile
+          plataforma={plataforma}
+          size={size}
+          mostrarNombreOculto={mostrarNombreOculto}
+        />
         <Tooltip decorative>Disponible en {plataforma.nombre}</Tooltip>
       </div>
     );
@@ -66,7 +87,11 @@ export function TarjetaDisponibilidad({ plataforma, esPropia, nombreTitulo, size
       aria-label={etiqueta}
       className={`${tileClassName} transition-colors duration-150 hover:border-primary`}
     >
-      <ContenidoTile plataforma={plataforma} size={size} />
+      <ContenidoTile
+        plataforma={plataforma}
+        size={size}
+        mostrarNombreOculto={mostrarNombreOculto}
+      />
       <span
         aria-hidden="true"
         className="absolute -top-1.5 -right-1.5 inline-flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-surface"

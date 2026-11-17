@@ -110,15 +110,37 @@ beforeEach(() => {
 });
 
 describe('agregarDeepLinks', () => {
-  it('asigna a cada plataforma solo su propio deep link (escenarios 1 y 2)', async () => {
+  it('asigna a cada plataforma solo su propio deep link e idiomas (escenarios 1 y 2)', async () => {
+    streamingAvailabilityIntegration.obtenerDeepLinks.mockResolvedValue([
+      {
+        servicio: 'netflix',
+        tipoOferta: 'suscripcion',
+        deepLink: ENLACE_NETFLIX,
+        audios: ['Español', 'Inglés'],
+        subtitulos: ['Español'],
+      },
+      {
+        servicio: 'prime',
+        tipoOferta: 'suscripcion',
+        deepLink: ENLACE_PRIME,
+        audios: [],
+        subtitulos: [],
+      },
+    ]);
+
     const resultado = await agregarDeepLinks(consulta());
 
     expect(resultado).toEqual([
       {
         tipoOferta: 'suscripcion',
         plataformas: [
-          { ...NETFLIX, deepLink: ENLACE_NETFLIX },
-          { ...PRIME, deepLink: ENLACE_PRIME },
+          {
+            ...NETFLIX,
+            deepLink: ENLACE_NETFLIX,
+            audios: ['Español', 'Inglés'],
+            subtitulos: ['Español'],
+          },
+          { ...PRIME, deepLink: ENLACE_PRIME, audios: [], subtitulos: [] },
         ],
       },
     ]);
@@ -171,6 +193,10 @@ describe('agregarDeepLinks', () => {
       'Netflix:suscripcion': null,
       'Amazon Prime Video:suscripcion': null,
     });
+    expect(resultado[0].plataformas).toEqual([
+      expect.objectContaining({ nombre: 'Netflix', audios: null, subtitulos: null }),
+      expect.objectContaining({ nombre: 'Amazon Prime Video', audios: null, subtitulos: null }),
+    ]);
     expect(sincronizacionRepository.finalizar).toHaveBeenCalledWith(5, {
       finalizadaEn: expect.any(String),
       error: expect.stringContaining(String(STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY)),
@@ -229,11 +255,30 @@ describe('agregarDeepLinks', () => {
     expect(streamingAvailabilityIntegration.obtenerDeepLinks).toHaveBeenCalledTimes(1);
   });
 
-  it('usa solo el enlace del mismo tipo de oferta y no el de otro tipo del mismo servicio', async () => {
+  it('usa solo el enlace y los idiomas del mismo tipo de oferta y unifica variantes del servicio', async () => {
     const enlaceAlquiler = 'https://www.netflix.com/title/alquiler';
     streamingAvailabilityIntegration.obtenerDeepLinks.mockResolvedValue([
-      { servicio: 'netflix', tipoOferta: 'alquiler', deepLink: enlaceAlquiler },
-      { servicio: 'netflix', tipoOferta: 'suscripcion', deepLink: ENLACE_NETFLIX },
+      {
+        servicio: 'netflix',
+        tipoOferta: 'alquiler',
+        deepLink: enlaceAlquiler,
+        audios: ['Francés'],
+        subtitulos: ['Francés'],
+      },
+      {
+        servicio: 'netflix',
+        tipoOferta: 'suscripcion',
+        deepLink: ENLACE_NETFLIX,
+        audios: ['Español'],
+        subtitulos: ['Español'],
+      },
+      {
+        servicio: 'netflix',
+        tipoOferta: 'suscripcion',
+        deepLink: ENLACE_NETFLIX,
+        audios: ['Español', 'Inglés'],
+        subtitulos: ['Inglés'],
+      },
       { servicio: 'prime', tipoOferta: 'alquiler', deepLink: ENLACE_PRIME },
     ]);
 
@@ -243,6 +288,18 @@ describe('agregarDeepLinks', () => {
       'Netflix:suscripcion': ENLACE_NETFLIX,
       'Amazon Prime Video:suscripcion': null,
     });
+    expect(resultado[0].plataformas).toEqual([
+      expect.objectContaining({
+        nombre: 'Netflix',
+        audios: ['Español', 'Inglés'],
+        subtitulos: ['Español', 'Inglés'],
+      }),
+      expect.objectContaining({
+        nombre: 'Amazon Prime Video',
+        audios: [],
+        subtitulos: [],
+      }),
+    ]);
   });
 
   it('asigna a una oferta de alquiler el enlace de alquiler del servicio', async () => {
@@ -284,6 +341,10 @@ describe('agregarDeepLinks', () => {
       'Netflix:suscripcion': null,
       'Amazon Prime Video:suscripcion': null,
     });
+    expect(resultado[0].plataformas).toEqual([
+      expect.objectContaining({ nombre: 'Netflix', audios: null, subtitulos: null }),
+      expect.objectContaining({ nombre: 'Amazon Prime Video', audios: null, subtitulos: null }),
+    ]);
     expect(disponibilidadRepository.guardarDeepLinks).not.toHaveBeenCalled();
   });
 

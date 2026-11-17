@@ -55,6 +55,8 @@ export function toDeepLinkRow(disponibilidad) {
   };
 }
 
+const idiomasPlataformaSchema = z.array(z.string().min(1)).nullable();
+
 export const disponibilidadSchema = z.object({
   region: regionSchema,
   ofertas: z.array(
@@ -68,6 +70,8 @@ export const disponibilidadSchema = z.object({
           logoPath: z.string().min(1).nullable(),
           urlHome: httpUrlSchema.nullable(),
           deepLink: httpUrlSchema.nullable(),
+          audios: idiomasPlataformaSchema,
+          subtitulos: idiomasPlataformaSchema,
         }),
       ),
     }),

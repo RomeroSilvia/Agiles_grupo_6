@@ -7,7 +7,6 @@ import {
 } from '@buscador/shared/schemas';
 import * as busquedaController from '../controllers/busqueda.controller.js';
 import { TMDB_CONFIG } from '../config/tmdb.config.js';
-import { detectRegion } from '../middlewares/detectRegion.middleware.js';
 import { loadSession } from '../middlewares/loadSession.middleware.js';
 import { rateLimit } from '../middlewares/rateLimit.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
@@ -35,6 +34,5 @@ busquedaRoutes.get(
   limitarBusqueda,
   validate({ query: busquedaSchema }),
   loadSession,
-  detectRegion,
   busquedaController.buscar,
 );

@@ -1,22 +1,14 @@
-import { REGION_SOURCE } from '@buscador/shared/constants';
 import * as busquedaService from '../services/busqueda.service.js';
 import * as registroBusquedaService from '../services/registroBusqueda.service.js';
-
-const PRIMERA_PAGINA = 1;
 
 export async function buscar(req, res) {
   const filtros = req.validated.query;
   const data = await busquedaService.buscarTitulos(filtros);
   res.json({ data });
 
-  if (filtros.pagina === PRIMERA_PAGINA) {
-    registroBusquedaService
-      .registrarBusqueda({
-        ...filtros,
-        region: req.regionSource === REGION_SOURCE.DEFAULT ? null : req.region,
-      })
-      .catch((error) => console.error('No se pudo registrar la búsqueda', error));
-  }
+  registroBusquedaService
+    .registrarBusqueda({ filtros, usuarioId: req.user?.id ?? null, ip: req.ip })
+    .catch((error) => console.error('No se pudo registrar la búsqueda', error));
 }
 
 export async function listarGeneros(_req, res) {

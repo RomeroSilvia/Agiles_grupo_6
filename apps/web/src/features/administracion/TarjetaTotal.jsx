@@ -1,5 +1,6 @@
 import { Card } from '../../components/ui/Card.jsx';
 import { formatearNumero } from '../../utils/formatearNumero.js';
+import { textoNuevosPeriodo } from './administracion.constants.js';
 
 export function TarjetaTotal({ label, Icono, valor, nuevos, diasPeriodo }) {
   const mostrarNuevos = nuevos !== undefined && diasPeriodo !== null;
@@ -13,7 +14,7 @@ export function TarjetaTotal({ label, Icono, valor, nuevos, diasPeriodo }) {
       <dd className="font-display text-3xl font-bold sm:text-4xl">{formatearNumero(valor)}</dd>
       {mostrarNuevos && (
         <dd className="text-sm font-medium text-success">
-          +{formatearNumero(nuevos)} en {diasPeriodo} días
+          {textoNuevosPeriodo(nuevos, diasPeriodo)}
         </dd>
       )}
     </Card>

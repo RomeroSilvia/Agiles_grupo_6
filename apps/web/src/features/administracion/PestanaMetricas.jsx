@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { DIAS_POR_PERIODO_METRICAS } from '@buscador/shared/constants';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { SegmentedControl } from '../../components/ui/SegmentedControl.jsx';
@@ -13,6 +12,7 @@ import {
   RANKING_REGION,
   RANKING_TEXTOS,
   RANKING_TIPO,
+  RANKINGS,
   TARJETAS_TOTALES,
 } from './administracion.constants.js';
 import { aItemsGenero, aItemsPlataforma, aItemsRegion, aItemsTexto } from './metricas.utils.js';
@@ -24,8 +24,6 @@ import { TarjetaTotal } from './TarjetaTotal.jsx';
 import { useMetricasAdmin } from './useMetricasAdmin.js';
 import { usePeriodoMetricas } from './usePeriodoMetricas.js';
 import { useRecargarSesionSinAcceso } from './useRecargarSesionSinAcceso.js';
-
-const CANTIDAD_RANKINGS = 5;
 
 const COLUMNA_RANKINGS_CLASS_NAME = 'contents lg:flex lg:flex-col lg:gap-4';
 
@@ -45,8 +43,8 @@ function MetricasCargando() {
         ))}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        {Array.from({ length: CANTIDAD_RANKINGS }, (_, indice) => (
-          <Skeleton key={indice} shape="block" className="h-72" />
+        {RANKINGS.map(({ titulo }) => (
+          <Skeleton key={titulo} shape="block" className="h-72" />
         ))}
       </div>
     </div>
@@ -55,10 +53,6 @@ function MetricasCargando() {
 
 function Metricas({ totales, rankings, diasPeriodo }) {
   const catalogo = useCatalogoPlataformas();
-  const plataformasPorId = useMemo(
-    () => new Map(catalogo.plataformas.map((plataforma) => [plataforma.id, plataforma])),
-    [catalogo.plataformas],
-  );
 
   return (
     <div className="space-y-4">
@@ -126,7 +120,7 @@ function Metricas({ totales, rankings, diasPeriodo }) {
             ) : (
               <RankingBarras
                 label={RANKING_PLATAFORMA.titulo}
-                items={aItemsPlataforma(rankings.plataforma, plataformasPorId)}
+                items={aItemsPlataforma(rankings.plataforma, catalogo.plataformasPorId)}
                 renderIcono={renderLogoPlataforma}
               />
             )}

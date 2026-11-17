@@ -282,6 +282,20 @@ describe('detalle y disponibilidad de TMDB', () => {
     expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe('/3/movie/1');
   });
 
+  it.each([
+    ['sin géneros', {}],
+    ['con géneros sin id válido', { genres: [{ name: 'Drama' }, { id: '18' }, null] }],
+  ])('devuelve una lista vacía de géneros %s', async (_caso, generos) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(respuestaFetch({ id: 1, title: 'Dune', ...generos })),
+    );
+
+    await expect(obtenerDetalle(TIPO_TITULO.PELICULA, 1)).resolves.toMatchObject({
+      generosTmdb: [],
+    });
+  });
+
   it('convierte un 404 del endpoint de detalle en un recurso no encontrado', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
 

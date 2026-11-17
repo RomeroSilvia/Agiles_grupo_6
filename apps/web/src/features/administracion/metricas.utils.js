@@ -2,7 +2,7 @@ import { NOMBRES_REGION, TIPOS_TITULO } from '@buscador/shared/constants';
 import { ETIQUETA_OTRAS, MAX_FILAS_RANKING } from './administracion.constants.js';
 
 const CLAVE_OTRAS = 'otras';
-const PORCENTAJE_TOTAL = 100;
+export const PORCENTAJE_TOTAL = 100;
 
 export function agruparResto(items, maxFilas = MAX_FILAS_RANKING) {
   if (items.length <= maxFilas) {

@@ -3,6 +3,7 @@ import {
   ANIO_MAXIMO,
   ANIO_MINIMO,
   GENEROS_BUSQUEDA_IDS,
+  MAX_LARGO_TEXTO_BUSQUEDA,
   PAGINA_MAXIMA,
   ROLES_PERSONA,
   TIPOS_TITULO,
@@ -22,7 +23,11 @@ export const tituloParamsSchema = z.object({ tipo: z.enum(TIPOS_TITULO), tmdbId:
 
 export const personaBusquedaSchema = z
   .object({
-    q: z.string().trim().min(2, 'Ingresá al menos dos letras para buscar personas').max(100),
+    q: z
+      .string()
+      .trim()
+      .min(2, 'Ingresá al menos dos letras para buscar personas')
+      .max(MAX_LARGO_TEXTO_BUSQUEDA),
     rol: z.enum(ROLES_PERSONA),
   })
   .strict();
@@ -38,7 +43,7 @@ export const personaRolSchema = z.object({ rol: z.enum(ROLES_PERSONA) }).strict(
 
 const filtrosBusquedaSchema = z
   .object({
-    q: z.string().trim().max(100).default(''),
+    q: z.string().trim().max(MAX_LARGO_TEXTO_BUSQUEDA).default(''),
     tipo: z.enum(TIPOS_TITULO).optional(),
     anio: z.coerce
       .number()

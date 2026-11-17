@@ -74,6 +74,7 @@ export const ANIO_MINIMO = 1888;
 export const ANIO_MAXIMO = 2100;
 export const PAGINA_MAXIMA = 500;
 export const TMDB_ID_MAXIMO = 2147483647;
+export const MAX_LARGO_TEXTO_BUSQUEDA = 100;
 
 export const TIPO_OFERTA = Object.freeze({
   SUSCRIPCION: 'suscripcion',

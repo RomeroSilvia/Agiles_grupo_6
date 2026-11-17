@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { USUARIOS_POR_PAGINA } from '@buscador/shared/constants';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { Card } from '../../components/ui/Card.jsx';
@@ -38,11 +38,6 @@ export function PestanaUsuarios() {
   const { datos, isLoading, error, codigoError, reintentar } = useUsuariosAdmin(filtros);
   const catalogo = useCatalogoPlataformas();
 
-  const plataformasPorId = useMemo(
-    () => new Map(catalogo.plataformas.map((plataforma) => [plataforma.id, plataforma])),
-    [catalogo.plataformas],
-  );
-
   const sinAcceso = useRecargarSesionSinAcceso(codigoError);
 
   const paginaFueraDeRango = datos && datos.totalPaginas > 0 && filtros.pagina > datos.totalPaginas;
@@ -75,7 +70,7 @@ export function PestanaUsuarios() {
           {datos.usuarios.length > 0 ? (
             <TablaUsuarios
               usuarios={datos.usuarios}
-              plataformasPorId={plataformasPorId}
+              plataformasPorId={catalogo.plataformasPorId}
               catalogoCargando={catalogo.loading}
             />
           ) : (

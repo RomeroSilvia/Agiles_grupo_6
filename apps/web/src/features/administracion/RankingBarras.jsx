@@ -1,7 +1,6 @@
 import { formatearNumero } from '../../utils/formatearNumero.js';
+import { PORCENTAJE_TOTAL } from './metricas.utils.js';
 import { SinDatosRanking } from './SinDatosRanking.jsx';
-
-const PORCENTAJE_TOTAL = 100;
 
 export function RankingBarras({ label, items, renderIcono }) {
   if (items.length === 0) {

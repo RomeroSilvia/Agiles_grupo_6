@@ -154,12 +154,14 @@ describe('registro de búsquedas', () => {
       .query({ q: '  Dune  ', tipo: 'pelicula', genero: 'drama' });
 
     expect(response.status).toBe(200);
-    expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith({
-      texto: 'dune',
-      tipo: 'pelicula',
-      genero: 'drama',
-      region: 'UY',
-    });
+    await vi.waitFor(() =>
+      expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith({
+        texto: 'dune',
+        tipo: 'pelicula',
+        genero: 'drama',
+        region: 'UY',
+      }),
+    );
   });
 
   it('no registra las páginas siguientes', async () => {
@@ -168,6 +170,8 @@ describe('registro de búsquedas', () => {
       .query({ q: 'dune', pagina: '2' });
 
     expect(response.status).toBe(200);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(geoipIntegration.getRegionByIp).not.toHaveBeenCalled();
     expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
   });
 
@@ -176,9 +180,20 @@ describe('registro de búsquedas', () => {
 
     await request(createApp()).get('/api/busqueda').query({ q: 'dune' });
 
-    expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith(
-      expect.objectContaining({ region: null }),
+    await vi.waitFor(() =>
+      expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith(
+        expect.objectContaining({ region: null }),
+      ),
     );
+  });
+
+  it('responde la búsqueda sin esperar la región', async () => {
+    geoipIntegration.getRegionByIp.mockReturnValue(new Promise(() => {}));
+
+    const response = await request(createApp()).get('/api/busqueda').query({ q: 'dune' });
+
+    expect(response.status).toBe(200);
+    expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
   });
 
   it('responde la búsqueda aunque falle el registro', async () => {

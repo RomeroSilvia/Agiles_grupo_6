@@ -158,7 +158,7 @@ Con «Todo el período» las tarjetas no muestran los nuevos.
 | Género              | Títulos guardados en el período, por género     | Búsquedas filtradas por género      |
 | Tipo de contenido   | Porcentaje de películas y series guardadas      | Búsquedas filtradas por tipo        |
 | Región              | Usuarios que guardaron títulos, según su región | Búsquedas según la región detectada |
-| Plataforma          | Usuarios que la agregaron a «Mis plataformas»   | —                                   |
+| Plataforma          | Usuarios que la agregaron en el período         | —                                   |
 | Textos más buscados | —                                               | Los 10 textos más buscados          |
 
 - Género, tipo y región tienen un selector **Watchlist / Búsquedas**.

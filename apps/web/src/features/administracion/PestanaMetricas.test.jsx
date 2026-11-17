@@ -108,6 +108,18 @@ describe('Pestaña de métricas del panel de administración', () => {
     ).toBeInTheDocument();
   });
 
+  it('el ranking de plataforma aclara que cuenta las agregadas en el período', async () => {
+    mockApi();
+    renderRoute('/admin/metricas');
+    await screen.findByText('1.284');
+
+    expect(
+      within(tarjeta('Plataforma')).getByText(
+        'Usuarios que la agregaron a «Mis plataformas» en el período',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('cambiar el período vuelve a pedir las métricas', async () => {
     mockApi();
     const user = userEvent.setup();

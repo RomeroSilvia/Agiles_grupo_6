@@ -11,6 +11,7 @@ import {
   TvIcon,
   UsersIcon,
 } from '../../components/ui/icons.jsx';
+import { formatearNumero } from '../../utils/formatearNumero.js';
 
 export const TITULO_PANEL_ADMIN = 'Panel de administración';
 
@@ -109,13 +110,25 @@ export const RANKING_REGION = Object.freeze({
 
 export const RANKING_PLATAFORMA = Object.freeze({
   titulo: 'Plataforma',
-  descripcion: 'Usuarios que la tienen en «Mis plataformas»',
+  descripcion: 'Usuarios que la agregaron a «Mis plataformas» en el período',
 });
 
 export const RANKING_TEXTOS = Object.freeze({
   titulo: 'Textos más buscados',
   descripcion: 'Búsquedas por título o nombre',
 });
+
+export const RANKINGS = Object.freeze([
+  RANKING_GENERO,
+  RANKING_TIPO,
+  RANKING_REGION,
+  RANKING_PLATAFORMA,
+  RANKING_TEXTOS,
+]);
+
+export function textoNuevosPeriodo(nuevos, dias) {
+  return `+${formatearNumero(nuevos)} en ${dias} días`;
+}
 
 export const MAX_FILAS_RANKING = 7;
 

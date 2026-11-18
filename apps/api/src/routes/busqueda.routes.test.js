@@ -2,8 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { GENEROS_BUSQUEDA, TIPO_TITULO } from '@buscador/shared/constants';
 import { createApp } from '../app.js';
+import * as geoipIntegration from '../integrations/geoip.integration.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
+import * as registroBusquedaRepository from '../repositories/registroBusqueda.repository.js';
 
+vi.mock('../integrations/geoip.integration.js');
+vi.mock('../repositories/registroBusqueda.repository.js');
 vi.mock('../integrations/tmdb.integration.js', () => ({
   buscarTitulosPorTexto: vi.fn(),
   descubrirTitulos: vi.fn(),
@@ -44,6 +48,8 @@ function respuestaBusqueda(resultados = [pelicula], tipo = TIPO_TITULO.PELICULA)
 
 beforeEach(() => {
   vi.clearAllMocks();
+  geoipIntegration.getRegionByIp.mockResolvedValue('UY');
+  registroBusquedaRepository.insertar.mockResolvedValue(undefined);
   tmdbIntegration.buscarTitulosPorTexto.mockResolvedValue(respuestaBusqueda());
   tmdbIntegration.descubrirTitulos.mockImplementation(async ({ tipo }) =>
     respuestaBusqueda([{ ...pelicula, tipo }], tipo),
@@ -137,6 +143,88 @@ describe('GET /api/busqueda', () => {
 
     expect(response.status).toBe(502);
     expect(response.body.error.code).toBe('EXTERNAL_SERVICE');
+    consoleError.mockRestore();
+  });
+});
+
+// Cada caso busca un texto distinto: la misma búsqueda desde la misma IP se registra una sola vez
+// por ventana, y todos los pedidos de supertest salen de la misma IP
+describe('registro de búsquedas', () => {
+  it('registra la búsqueda de la página 1 con el texto normalizado y la región', async () => {
+    const response = await request(createApp())
+      .get('/api/busqueda')
+      .query({ q: '  El   Padrino  ', tipo: 'pelicula', genero: 'drama' });
+
+    expect(response.status).toBe(200);
+    await vi.waitFor(() =>
+      expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith({
+        texto: 'el padrino',
+        tipo: 'pelicula',
+        genero: 'drama',
+        region: 'UY',
+      }),
+    );
+  });
+
+  it('no registra las páginas siguientes', async () => {
+    const response = await request(createApp())
+      .get('/api/busqueda')
+      .query({ q: 'dune', pagina: '2' });
+
+    expect(response.status).toBe(200);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(geoipIntegration.getRegionByIp).not.toHaveBeenCalled();
+    expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
+  });
+
+  it('no registra la región por defecto cuando no se pudo detectar', async () => {
+    geoipIntegration.getRegionByIp.mockResolvedValue(null);
+
+    await request(createApp()).get('/api/busqueda').query({ q: 'alien' });
+
+    await vi.waitFor(() =>
+      expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith(
+        expect.objectContaining({ region: null }),
+      ),
+    );
+  });
+
+  it('responde la búsqueda sin esperar la región', async () => {
+    geoipIntegration.getRegionByIp.mockReturnValue(new Promise(() => {}));
+
+    const response = await request(createApp()).get('/api/busqueda').query({ q: 'matrix' });
+
+    expect(response.status).toBe(200);
+    expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
+  });
+
+  it('no registra otra vez la misma búsqueda desde la misma IP', async () => {
+    await request(createApp()).get('/api/busqueda').query({ q: 'Interestelar' });
+    await vi.waitFor(() => expect(registroBusquedaRepository.insertar).toHaveBeenCalledTimes(1));
+
+    const response = await request(createApp())
+      .get('/api/busqueda')
+      .query({ q: 'interestelar', tipo: 'pelicula' });
+
+    expect(response.status).toBe(200);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(registroBusquedaRepository.insertar).toHaveBeenCalledTimes(1);
+  });
+
+  it('responde la búsqueda aunque falle el registro', async () => {
+    registroBusquedaRepository.insertar.mockRejectedValue(new Error('caída'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await request(createApp()).get('/api/busqueda').query({ q: 'tron' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.resultados.length).toBeGreaterThan(0);
+    await vi.waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        'No se pudo registrar la búsqueda',
+        expect.any(Error),
+      ),
+    );
     consoleError.mockRestore();
   });
 });

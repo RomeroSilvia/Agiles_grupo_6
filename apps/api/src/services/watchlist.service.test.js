@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotFoundError } from '../errors/index.js';
+import { ExternalServiceError, NotFoundError } from '../errors/index.js';
 import * as tituloRepository from '../repositories/titulo.repository.js';
 import * as watchlistRepository from '../repositories/watchlist.repository.js';
 import * as tituloService from './titulo.service.js';
@@ -70,6 +70,54 @@ describe('watchlistService', () => {
     });
     expect(tituloRepository.guardarDesdeTmdb).toHaveBeenCalledWith(titulo);
     expect(watchlistRepository.agregar).toHaveBeenCalledWith(usuarioId, titulo.id);
+  });
+
+  it('si el título ya está guardado con géneros, no consulta TMDB', async () => {
+    const conGeneros = { ...titulo, generosTmdb: [878] };
+    tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue(conGeneros);
+
+    await watchlistService.agregarAWatchlist(usuarioId, { tipo: 'pelicula', tmdbId: 42 });
+
+    expect(tituloService.obtenerDetalleTitulo).not.toHaveBeenCalled();
+    expect(tituloRepository.guardarDesdeTmdb).not.toHaveBeenCalled();
+    expect(watchlistRepository.agregar).toHaveBeenCalledWith(usuarioId, conGeneros.id);
+  });
+
+  it('completa los géneros de un título guardado sin ellos', async () => {
+    const detalle = { ...titulo, generosTmdb: [878, 12] };
+    tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue({ ...titulo, generosTmdb: null });
+    tituloService.obtenerDetalleTitulo.mockResolvedValue(detalle);
+    tituloRepository.guardarDesdeTmdb.mockResolvedValue(detalle);
+
+    await watchlistService.agregarAWatchlist(usuarioId, { tipo: 'pelicula', tmdbId: 42 });
+
+    expect(tituloRepository.guardarDesdeTmdb).toHaveBeenCalledWith(detalle);
+    expect(watchlistRepository.agregar).toHaveBeenCalledWith(usuarioId, titulo.id);
+  });
+
+  it('si TMDB falla, agrega igual un título ya guardado sin géneros', async () => {
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue({ ...titulo, generosTmdb: null });
+    tituloService.obtenerDetalleTitulo.mockRejectedValue(
+      new ExternalServiceError('TMDB', new Error('caída')),
+    );
+
+    await watchlistService.agregarAWatchlist(usuarioId, { tipo: 'pelicula', tmdbId: 42 });
+
+    expect(tituloRepository.guardarDesdeTmdb).not.toHaveBeenCalled();
+    expect(watchlistRepository.agregar).toHaveBeenCalledWith(usuarioId, titulo.id);
+    consoleWarn.mockRestore();
+  });
+
+  it('si TMDB falla y el título no está guardado, propaga el error', async () => {
+    const error = new ExternalServiceError('TMDB', new Error('caída'));
+    tituloRepository.obtenerPorTmdbIdYTipo.mockResolvedValue(null);
+    tituloService.obtenerDetalleTitulo.mockRejectedValue(error);
+
+    await expect(
+      watchlistService.agregarAWatchlist(usuarioId, { tipo: 'pelicula', tmdbId: 42 }),
+    ).rejects.toBe(error);
+    expect(watchlistRepository.agregar).not.toHaveBeenCalled();
   });
 
   it('responde como no encontrado si el título no pertenece a la lista del usuario', async () => {

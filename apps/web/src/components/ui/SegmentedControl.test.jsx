@@ -33,6 +33,24 @@ describe('SegmentedControl', () => {
     expect(evento.target.value).toBe('serie');
   });
 
+  it('con la leyenda oculta sigue nombrando al grupo para los lectores de pantalla', () => {
+    render(
+      <SegmentedControl
+        legend="Datos del ranking"
+        legendHidden
+        size="sm"
+        name="fuente"
+        value="pelicula"
+        options={OPCIONES}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('group', { name: 'Datos del ranking' })).toBeInTheDocument();
+    expect(screen.getByText('Datos del ranking')).toHaveClass('sr-only');
+    expect(screen.getByRole('radio', { name: 'Películas' })).toBeChecked();
+  });
+
   it('no avisa si se elige la opción que ya está marcada', async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

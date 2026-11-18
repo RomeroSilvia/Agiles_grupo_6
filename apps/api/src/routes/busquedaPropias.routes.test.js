@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import * as authRepository from '../repositories/auth.repository.js';
+import * as registroBusquedaRepository from '../repositories/registroBusqueda.repository.js';
 import * as usuarioPlataformaRepository from '../repositories/usuarioPlataforma.repository.js';
 import * as tmdbIntegration from '../integrations/tmdb.integration.js';
 import * as busquedaService from '../services/busqueda.service.js';
@@ -10,6 +11,7 @@ import { ExternalServiceError } from '../errors/index.js';
 import { NETFLIX, USUARIO } from '../test/fixtures.js';
 
 vi.mock('../repositories/auth.repository.js');
+vi.mock('../repositories/registroBusqueda.repository.js');
 vi.mock('../repositories/usuarioPlataforma.repository.js');
 vi.mock('../services/region.service.js');
 vi.mock('../integrations/tmdb.integration.js', () => ({
@@ -64,6 +66,7 @@ beforeEach(() => {
   usuarioPlataformaRepository.listarPlataformasActivasPorUsuario.mockResolvedValue([NETFLIX]);
   regionService.obtenerRegion.mockResolvedValue({ region: 'AR', source: 'profile' });
   busquedaService.buscarTitulos.mockResolvedValue(paginaDeTmdb([]));
+  registroBusquedaRepository.insertar.mockResolvedValue(undefined);
   ofertasPorId({});
 });
 
@@ -266,5 +269,53 @@ describe('GET /api/busqueda/propias', () => {
     const res = await buscarConSesion({ q: 'Dune' });
 
     expect(res.body.data.resultados).toEqual([]);
+  });
+});
+
+// Cada caso busca un texto distinto: la misma búsqueda desde la misma IP se registra una sola vez
+// por ventana, y todos los pedidos de supertest salen de la misma IP
+describe('registro de búsquedas en plataformas propias', () => {
+  it('registra la búsqueda de la página 1 con la región del usuario', async () => {
+    const res = await buscarConSesion({ q: '  El   Padrino ', genero: 'drama' });
+
+    expect(res.status).toBe(200);
+    await vi.waitFor(() =>
+      expect(registroBusquedaRepository.insertar).toHaveBeenCalledWith({
+        texto: 'el padrino',
+        tipo: 'pelicula',
+        genero: 'drama',
+        region: 'AR',
+      }),
+    );
+    expect(regionService.obtenerRegion).toHaveBeenLastCalledWith({
+      usuarioId: USUARIO.id,
+      ip: expect.any(String),
+    });
+  });
+
+  it('no registra el pedido sin texto ni filtros', async () => {
+    const res = await request(createApp())
+      .get('/api/busqueda/propias')
+      .set('Cookie', COOKIE_SESION);
+
+    expect(res.status).toBe(200);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(registroBusquedaRepository.insertar).not.toHaveBeenCalled();
+  });
+
+  it('responde la búsqueda aunque falle el registro', async () => {
+    registroBusquedaRepository.insertar.mockRejectedValue(new Error('caída'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await buscarConSesion({ q: 'Tron' });
+
+    expect(res.status).toBe(200);
+    await vi.waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        'No se pudo registrar la búsqueda',
+        expect.any(Error),
+      ),
+    );
+    consoleError.mockRestore();
   });
 });

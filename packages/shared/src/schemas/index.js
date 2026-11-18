@@ -4,6 +4,7 @@ export * from './cartelera.schema.js';
 export * from './region.schema.js';
 export * from './url.schema.js';
 export * from './usuariosAdmin.schema.js';
+export * from './metricasAdmin.schema.js';
 export * from './ciudadCine.schema.js';
 export * from './funcionCine.schema.js';
 export * from './enlaceCine.schema.js';

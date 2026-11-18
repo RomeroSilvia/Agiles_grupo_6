@@ -4,6 +4,7 @@ import {
   busquedaSchema,
   personaBusquedaSchema,
   personaIdBusquedaSchema,
+  tieneCriterioBusqueda,
   tieneFiltrosAvanzados,
   tituloParamsSchema,
 } from './busqueda.schema.js';
@@ -78,5 +79,12 @@ describe('busquedaSchema', () => {
   it('identifica filtros avanzados desde la función compartida', () => {
     expect(tieneFiltrosAvanzados({ genero: 'drama' })).toBe(true);
     expect(tieneFiltrosAvanzados({ tipo: 'pelicula' })).toBe(false);
+  });
+
+  it('reconoce si hay un texto o un filtro para buscar', () => {
+    expect(tieneCriterioBusqueda({ q: 'Dune' })).toBe(true);
+    expect(tieneCriterioBusqueda({ q: '', anio: 2021 })).toBe(true);
+    expect(tieneCriterioBusqueda({ q: '   ', pagina: 1 })).toBe(false);
+    expect(tieneCriterioBusqueda()).toBe(false);
   });
 });

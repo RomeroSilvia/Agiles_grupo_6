@@ -1,19 +1,16 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { USUARIOS_POR_PAGINA } from '@buscador/shared/constants';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { Card } from '../../components/ui/Card.jsx';
 import { Pagination } from '../../components/ui/Pagination.jsx';
 import { Skeleton } from '../../components/ui/Skeleton.jsx';
-import { useSession } from '../../contexts/session/SessionContext.js';
-import { API_ERROR_CODES } from '../../services/api.service.js';
 import { formatearNumero } from '../../utils/formatearNumero.js';
 import { useCatalogoPlataformas } from '../plataformas/useCatalogoPlataformas.js';
 import { FiltrosUsuarios } from './FiltrosUsuarios.jsx';
 import { TablaUsuarios } from './TablaUsuarios.jsx';
 import { useFiltrosUsuarios } from './useFiltrosUsuarios.js';
+import { useRecargarSesionSinAcceso } from './useRecargarSesionSinAcceso.js';
 import { useUsuariosAdmin } from './useUsuariosAdmin.js';
-
-const CODIGOS_SIN_ACCESO = new Set([API_ERROR_CODES.FORBIDDEN, API_ERROR_CODES.UNAUTHENTICATED]);
 
 function textoResumen({ total, pagina, usuarios }) {
   const desde = (pagina - 1) * USUARIOS_POR_PAGINA + 1;
@@ -36,24 +33,12 @@ function UsuariosCargando() {
 }
 
 export function PestanaUsuarios() {
-  const { reloadSession } = useSession();
   const { filtros, mailIngresado, cambiarMail, cambiarFiltro, cambiarPagina } =
     useFiltrosUsuarios();
   const { datos, isLoading, error, codigoError, reintentar } = useUsuariosAdmin(filtros);
   const catalogo = useCatalogoPlataformas();
 
-  const plataformasPorId = useMemo(
-    () => new Map(catalogo.plataformas.map((plataforma) => [plataforma.id, plataforma])),
-    [catalogo.plataformas],
-  );
-
-  const sinAcceso = CODIGOS_SIN_ACCESO.has(codigoError);
-
-  useEffect(() => {
-    if (sinAcceso) {
-      reloadSession();
-    }
-  }, [sinAcceso, reloadSession]);
+  const sinAcceso = useRecargarSesionSinAcceso(codigoError);
 
   const paginaFueraDeRango = datos && datos.totalPaginas > 0 && filtros.pagina > datos.totalPaginas;
 
@@ -85,7 +70,7 @@ export function PestanaUsuarios() {
           {datos.usuarios.length > 0 ? (
             <TablaUsuarios
               usuarios={datos.usuarios}
-              plataformasPorId={plataformasPorId}
+              plataformasPorId={catalogo.plataformasPorId}
               catalogoCargando={catalogo.loading}
             />
           ) : (

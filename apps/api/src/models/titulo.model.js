@@ -3,7 +3,7 @@ import { TIPOS_TITULO } from '@buscador/shared/constants';
 import { TMDB_CONFIG } from '../config/tmdb.config.js';
 
 export const TITULO_COLUMNS =
-  'id, tmdb_id, tipo, nombre, anio, sinopsis, poster_path, puntuacion, actualizado_en';
+  'id, tmdb_id, tipo, nombre, anio, sinopsis, poster_path, puntuacion, generos_tmdb, actualizado_en';
 export const TITULO_PRIMARY_KEY = 'tmdb_id,tipo';
 
 const TMDB_POSTER_BASE_URL = TMDB_CONFIG.POSTER_BASE_URL;
@@ -22,6 +22,7 @@ export function toRow(titulo) {
     sinopsis: titulo.sinopsis,
     poster_path: posterPath,
     puntuacion: titulo.puntuacion,
+    generos_tmdb: titulo.generosTmdb ?? null,
     actualizado_en: new Date().toISOString(),
   };
 }
@@ -36,6 +37,7 @@ export function fromRow(row) {
     sinopsis: row.sinopsis,
     posterUrl: row.poster_path ? `${TMDB_POSTER_BASE_URL}${row.poster_path}` : null,
     puntuacion: row.puntuacion,
+    generosTmdb: row.generos_tmdb ?? null,
     actualizadoEn: row.actualizado_en,
   };
 }
@@ -48,4 +50,5 @@ export const tituloSchema = z.object({
   posterUrl: z.url().nullable(),
   anio: z.number().int().nullable(),
   puntuacion: z.number().min(0).max(10).nullable(),
+  generosTmdb: z.array(z.number().int().positive()).nullable().default(null),
 });

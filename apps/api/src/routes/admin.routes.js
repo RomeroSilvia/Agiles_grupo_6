@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { usuariosAdminSchema } from '@buscador/shared/schemas';
+import { metricasAdminSchema, usuariosAdminSchema } from '@buscador/shared/schemas';
+import * as metricasController from '../controllers/metricas.controller.js';
 import * as usuarioAdminController from '../controllers/usuarioAdmin.controller.js';
 import { noStore } from '../middlewares/noStore.middleware.js';
 import { requireAdmin } from '../middlewares/requireAdmin.middleware.js';
@@ -14,4 +15,10 @@ adminRoutes.get(
   '/usuarios',
   validate({ query: usuariosAdminSchema }),
   usuarioAdminController.listarUsuarios,
+);
+
+adminRoutes.get(
+  '/metricas',
+  validate({ query: metricasAdminSchema }),
+  metricasController.obtenerMetricas,
 );

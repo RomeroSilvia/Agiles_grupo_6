@@ -75,6 +75,7 @@ export const ANIO_MINIMO = 1888;
 export const ANIO_MAXIMO = 2100;
 export const PAGINA_MAXIMA = 500;
 export const TMDB_ID_MAXIMO = 2147483647;
+export const MAX_LARGO_TEXTO_BUSQUEDA = 100;
 
 export const TIPO_OFERTA = Object.freeze({
   SUSCRIPCION: 'suscripcion',
@@ -104,6 +105,21 @@ export const ESTADOS_USUARIO = Object.values(ESTADO_USUARIO);
 export const USUARIOS_POR_PAGINA = 10;
 export const PAGINA_MAXIMA_USUARIOS = 10000;
 export const MAX_LARGO_BUSQUEDA_MAIL = 100;
+
+export const PERIODO_METRICAS = Object.freeze({
+  SIETE_DIAS: '7d',
+  TREINTA_DIAS: '30d',
+  TODO: 'todo',
+});
+export const PERIODOS_METRICAS = Object.values(PERIODO_METRICAS);
+
+export const DIAS_POR_PERIODO_METRICAS = Object.freeze({
+  [PERIODO_METRICAS.SIETE_DIAS]: 7,
+  [PERIODO_METRICAS.TREINTA_DIAS]: 30,
+  [PERIODO_METRICAS.TODO]: null,
+});
+
+export const MIN_CANTIDAD_TEXTO_BUSCADO = 3;
 
 // Valores técnicos
 export const DEFAULT_REGION = 'AR';

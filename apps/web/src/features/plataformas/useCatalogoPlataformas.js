@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useRemoteData } from '../../hooks/useRemoteData.js';
 import { listarPlataformas } from './plataformas.api.js';
 import { MENSAJE_ERROR_CATALOGO } from './plataformas.constants.js';
@@ -12,5 +13,11 @@ export function useCatalogoPlataformas() {
     mensajeError: MENSAJE_ERROR_CATALOGO,
   });
 
-  return { plataformas: datos ?? SIN_PLATAFORMAS, loading: isLoading, error, reintentar };
+  const plataformas = datos ?? SIN_PLATAFORMAS;
+  const plataformasPorId = useMemo(
+    () => new Map(plataformas.map((plataforma) => [plataforma.id, plataforma])),
+    [plataformas],
+  );
+
+  return { plataformas, plataformasPorId, loading: isLoading, error, reintentar };
 }

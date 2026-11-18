@@ -2,18 +2,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import {
   PAGINA_MAXIMA_USUARIOS,
+  PERIODO_METRICAS,
   ROL_USUARIO,
   USUARIOS_POR_PAGINA,
 } from '@buscador/shared/constants';
 import { createApp } from '../app.js';
 import { DatabaseError } from '../errors/index.js';
 import * as authRepository from '../repositories/auth.repository.js';
+import * as metricasRepository from '../repositories/metricas.repository.js';
 import * as perfilRepository from '../repositories/perfil.repository.js';
 import * as usuarioAdminRepository from '../repositories/usuarioAdmin.repository.js';
 import { USUARIO } from '../test/fixtures.js';
 import { adminRoutes } from './admin.routes.js';
 
 vi.mock('../repositories/auth.repository.js');
+vi.mock('../repositories/metricas.repository.js');
 vi.mock('../repositories/perfil.repository.js');
 vi.mock('../repositories/usuarioAdmin.repository.js');
 
@@ -179,5 +182,103 @@ describe('GET /api/admin/usuarios', () => {
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('FORBIDDEN');
     expect(usuarioAdminRepository.listarUsuarios).not.toHaveBeenCalled();
+  });
+});
+
+const METRICAS = {
+  totales: {
+    usuarios: 1284,
+    usuariosNuevos: 38,
+    titulosWatchlist: 6912,
+    titulosWatchlistNuevos: 412,
+    regionesActivas: 9,
+    plataformasElegidas: 8,
+  },
+  rankings: {
+    genero: { watchlist: [{ genero: 'comedia', cantidad: 1215 }], busquedas: [] },
+    tipo: { watchlist: [{ tipo: 'pelicula', cantidad: 4030 }], busquedas: [] },
+    region: { watchlist: [{ region: 'AR', cantidad: 612 }], busquedas: [] },
+    plataforma: [{ plataformaId: 1, cantidad: 903 }],
+    textosBuscados: [{ texto: 'friends', cantidad: 87 }],
+  },
+};
+
+function obtenerMetricas(query = {}) {
+  return request(createApp()).get('/api/admin/metricas').query(query).set('Cookie', COOKIE_SESION);
+}
+
+describe('GET /api/admin/metricas', () => {
+  beforeEach(() => {
+    perfilRepository.obtenerRol.mockResolvedValue(ROL_USUARIO.ADMINISTRADOR);
+    metricasRepository.obtenerMetricas.mockResolvedValue(METRICAS);
+  });
+
+  it('devuelve los totales y los rankings del período pedido', async () => {
+    const res = await obtenerMetricas({ periodo: PERIODO_METRICAS.SIETE_DIAS });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body.data).toEqual({
+      periodo: PERIODO_METRICAS.SIETE_DIAS,
+      totales: METRICAS.totales,
+      rankings: {
+        ...METRICAS.rankings,
+        genero: {
+          watchlist: [{ id: 'comedia', nombre: 'Comedia', cantidad: 1215 }],
+          busquedas: [],
+        },
+      },
+    });
+    expect(metricasRepository.obtenerMetricas).toHaveBeenCalledWith({
+      desde: expect.any(String),
+      generos: expect.any(Object),
+    });
+  });
+
+  it('sin período usa los últimos 30 días', async () => {
+    const res = await obtenerMetricas();
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.periodo).toBe(PERIODO_METRICAS.TREINTA_DIAS);
+  });
+
+  it('con todo el período no limita la fecha', async () => {
+    await obtenerMetricas({ periodo: PERIODO_METRICAS.TODO });
+
+    expect(metricasRepository.obtenerMetricas).toHaveBeenCalledWith(
+      expect.objectContaining({ desde: null }),
+    );
+  });
+
+  it.each([
+    ['un período inválido', { periodo: '90d' }],
+    ['un parámetro desconocido', { orden: 'cantidad' }],
+  ])('responde 400 con %s', async (_caso, query) => {
+    const res = await obtenerMetricas(query);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
+    expect(metricasRepository.obtenerMetricas).not.toHaveBeenCalled();
+  });
+
+  it('responde 403 a un usuario sin rol de administrador', async () => {
+    perfilRepository.obtenerRol.mockResolvedValue(ROL_USUARIO.USUARIO);
+
+    const res = await obtenerMetricas();
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+    expect(metricasRepository.obtenerMetricas).not.toHaveBeenCalled();
+  });
+
+  it('responde 500 si falla la consulta de las métricas', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    metricasRepository.obtenerMetricas.mockRejectedValue(new DatabaseError(new Error('caída')));
+
+    const res = await obtenerMetricas();
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('DATABASE');
+    consoleError.mockRestore();
   });
 });

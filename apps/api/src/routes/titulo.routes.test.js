@@ -55,6 +55,7 @@ const detallePelicula = {
   posterUrl: 'https://image.tmdb.org/t/p/w500/dune.jpg',
   anio: 2021,
   puntuacion: 8.1,
+  generosTmdb: [878, 12],
 };
 
 const detalleSerie = {
@@ -65,6 +66,7 @@ const detalleSerie = {
   posterUrl: null,
   anio: 2005,
   puntuacion: null,
+  generosTmdb: null,
 };
 
 const plataformasActivas = [

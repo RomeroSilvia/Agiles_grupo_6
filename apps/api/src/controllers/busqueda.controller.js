@@ -1,8 +1,16 @@
 import * as busquedaService from '../services/busqueda.service.js';
+import * as registroBusquedaService from '../services/registroBusqueda.service.js';
 
 export async function buscar(req, res) {
-  const data = await busquedaService.buscarTitulos(req.validated.query);
+  const filtros = req.validated.query;
+  const data = await busquedaService.buscarTitulos(filtros);
   res.json({ data });
+
+  registroBusquedaService.registrarBusquedaSinEsperar({
+    filtros,
+    usuarioId: req.user?.id ?? null,
+    ip: req.ip,
+  });
 }
 
 export async function listarGeneros(_req, res) {

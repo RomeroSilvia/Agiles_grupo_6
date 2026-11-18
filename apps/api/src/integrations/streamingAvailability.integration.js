@@ -12,9 +12,43 @@ import { fetchJson } from '../utils/fetchJson.js';
 import { validateExternalResponse } from '../utils/validateExternalResponse.js';
 
 const SERVICE = 'Streaming Availability';
+const CODIGOS_IDIOMA_EXCLUIDOS = new Set(['und', 'zxx', 'mul', 'mis']);
+const nombresIdiomaEnEspanol = new Intl.DisplayNames(['es'], {
+  type: 'language',
+  fallback: 'none',
+});
 const limitarConcurrencia = createConcurrencyLimiter(
   STREAMING_AVAILABILITY_CONFIG.MAX_CONCURRENT_REQUESTS,
 );
+
+function formatearNombreIdioma(codigo) {
+  if (typeof codigo !== 'string') {
+    return null;
+  }
+  const base = codigo.trim().split(/[-_]/)[0].toLowerCase();
+  if (!/^[a-z]{2,3}$/.test(base) || CODIGOS_IDIOMA_EXCLUIDOS.has(base)) {
+    return null;
+  }
+
+  try {
+    const nombre = nombresIdiomaEnEspanol.of(base);
+    if (!nombre || nombre.toLowerCase() === base) {
+      return null;
+    }
+    return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+  } catch {
+    return null;
+  }
+}
+
+function normalizarIdiomas(items, extraerCodigo) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return [
+    ...new Set(items.map((item) => formatearNombreIdioma(extraerCodigo(item))).filter(Boolean)),
+  ];
+}
 
 async function consultar({ tipo, tmdbId, region }) {
   const ruta = RUTA_TMDB_POR_TIPO[tipo];
@@ -61,7 +95,16 @@ function normalizarOpciones(response, region) {
       const deepLink = httpUrlSchema.safeParse(opcion?.link).data;
 
       return typeof servicio === 'string' && tipoOferta && deepLink
-        ? { servicio, tipoOferta, deepLink }
+        ? {
+            servicio,
+            tipoOferta,
+            deepLink,
+            audios: normalizarIdiomas(opcion?.audios, (audio) => audio?.language),
+            subtitulos: normalizarIdiomas(
+              opcion?.subtitles,
+              (subtitulo) => subtitulo?.locale?.language ?? subtitulo?.language,
+            ),
+          }
         : null;
     })
     .filter(Boolean);

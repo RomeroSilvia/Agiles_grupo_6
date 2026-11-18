@@ -730,6 +730,126 @@ describe('PaginaDetalleTitulo', () => {
     });
   });
 
+  describe('Idiomas disponibles en la ficha (HU3)', () => {
+    it('muestra los idiomas de audio y de subtítulos en español para cada plataforma', async () => {
+      configurarFetch(
+        detallePelicula,
+        respuestaDisponibilidad('AR', [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+            deepLink: 'https://www.netflix.com/title/1',
+            audios: ['Español', 'Inglés'],
+            subtitulos: ['Español', 'Portugués'],
+          },
+          {
+            id: 2,
+            tmdbProviderId: 119,
+            nombre: 'Amazon Prime Video',
+            logoPath: '/prime.jpg',
+            urlHome: 'https://www.primevideo.com',
+            deepLink: 'https://www.primevideo.com/detail/1',
+            audios: ['Inglés'],
+            subtitulos: [],
+          },
+        ]),
+      );
+
+      renderDetalle();
+
+      const lista = await screen.findByRole('list', {
+        name: 'Plataformas disponibles: Suscripción',
+      });
+      const [itemNetflix, itemPrime] = within(lista).getAllByRole('listitem');
+
+      expect(within(itemNetflix).getByText('Netflix')).toBeInTheDocument();
+      expect(within(itemNetflix).getByText('Español, Inglés')).toBeInTheDocument();
+      expect(within(itemNetflix).getByText('Español, Portugués')).toBeInTheDocument();
+
+      expect(within(itemPrime).getByText('Amazon Prime Video')).toBeInTheDocument();
+      expect(within(itemPrime).getByText('Inglés')).toBeInTheDocument();
+      expect(within(itemPrime).getByText('No disponibles')).toBeInTheDocument();
+    });
+
+    it('muestra "Idiomas no disponibles" cuando una plataforma no tiene información de idiomas', async () => {
+      configurarFetch(
+        detallePelicula,
+        respuestaDisponibilidad('AR', [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+            deepLink: 'https://www.netflix.com/title/1',
+            audios: ['Español'],
+            subtitulos: ['Español'],
+          },
+          {
+            id: 2,
+            tmdbProviderId: 119,
+            nombre: 'Amazon Prime Video',
+            logoPath: '/prime.jpg',
+            urlHome: 'https://www.primevideo.com',
+            deepLink: null,
+            audios: [],
+            subtitulos: [],
+          },
+        ]),
+      );
+
+      renderDetalle();
+
+      const lista = await screen.findByRole('list', {
+        name: 'Plataformas disponibles: Suscripción',
+      });
+      const [itemNetflix, itemPrime] = within(lista).getAllByRole('listitem');
+
+      expect(within(itemNetflix).queryByText('Idiomas no disponibles')).not.toBeInTheDocument();
+      expect(within(itemPrime).getByText('Idiomas no disponibles')).toBeInTheDocument();
+    });
+
+    it('sigue mostrando la disponibilidad e indica que los idiomas no están disponibles por el momento cuando se alcanzó el límite diario', async () => {
+      configurarFetch(
+        detallePelicula,
+        respuestaDisponibilidad('AR', [
+          {
+            id: 1,
+            tmdbProviderId: 8,
+            nombre: 'Netflix',
+            logoPath: '/netflix.jpg',
+            urlHome: 'https://www.netflix.com',
+            deepLink: null,
+            audios: null,
+            subtitulos: null,
+          },
+          {
+            id: 2,
+            tmdbProviderId: 119,
+            nombre: 'Amazon Prime Video',
+            logoPath: '/prime.jpg',
+            urlHome: 'https://www.primevideo.com',
+            deepLink: null,
+            audios: null,
+            subtitulos: null,
+          },
+        ]),
+      );
+
+      renderDetalle();
+
+      expect(await screen.findByRole('link', { name: 'Ir a Netflix' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Ir a Amazon Prime Video' })).toBeInTheDocument();
+      expect(
+        screen.getByText('Los idiomas no están disponibles por el momento.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Idiomas no disponibles')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Plataformas propias en la disponibilidad', () => {
     const NETFLIX = {
       id: 1,

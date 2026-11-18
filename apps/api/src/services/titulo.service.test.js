@@ -39,7 +39,12 @@ const plataformasActivas = [
 async function sinDeepLinks({ ofertas }) {
   return ofertas.map(({ tipoOferta, plataformas }) => ({
     tipoOferta,
-    plataformas: plataformas.map((plataforma) => ({ ...plataforma, deepLink: null })),
+    plataformas: plataformas.map((plataforma) => ({
+      ...plataforma,
+      deepLink: null,
+      audios: [],
+      subtitulos: [],
+    })),
   }));
 }
 

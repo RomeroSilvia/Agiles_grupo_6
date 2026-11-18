@@ -84,4 +84,40 @@ describe('createTtlCache', () => {
 
     expect(cache.size).toBe(1);
   });
+
+  it('guarda y lee valores de forma sincrónica con set y get mientras no vencen', () => {
+    const reloj = crearReloj();
+    const cache = createTtlCache({ ttlMs: 1000, maxEntries: 2, now: reloj.now });
+
+    expect(cache.get('inexistente')).toBeUndefined();
+
+    cache.set('a', 'primero');
+    expect(cache.get('a')).toBe('primero');
+
+    reloj.avanzar(999);
+    expect(cache.get('a')).toBe('primero');
+
+    reloj.avanzar(1);
+    expect(cache.get('a')).toBeUndefined();
+    expect(cache.size).toBe(0);
+  });
+
+  it('respeta maxEntries y limpia vencidos al usar set', () => {
+    const reloj = crearReloj();
+    const cache = createTtlCache({ ttlMs: 1000, maxEntries: 2, now: reloj.now });
+
+    cache.set('a', 1);
+    cache.set('b', 2);
+    cache.set('c', 3);
+
+    expect(cache.size).toBe(2);
+    expect(cache.get('a')).toBeUndefined();
+    expect(cache.get('b')).toBe(2);
+    expect(cache.get('c')).toBe(3);
+
+    reloj.avanzar(1000);
+    cache.set('d', 4);
+    expect(cache.size).toBe(1);
+    expect(cache.get('d')).toBe(4);
+  });
 });

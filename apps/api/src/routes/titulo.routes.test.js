@@ -241,6 +241,8 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
                 logoPath: '/netflix.jpg',
                 urlHome: 'https://www.netflix.com',
                 deepLink: null,
+                audios: [],
+                subtitulos: [],
               },
               {
                 id: 2,
@@ -249,6 +251,8 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
                 logoPath: '/prime.jpg',
                 urlHome: 'https://www.primevideo.com',
                 deepLink: null,
+                audios: [],
+                subtitulos: [],
               },
             ],
           },
@@ -279,6 +283,8 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
                 logoPath: '/disney.jpg',
                 urlHome: 'https://www.disneyplus.com',
                 deepLink: null,
+                audios: [],
+                subtitulos: [],
               },
             ],
           },
@@ -357,18 +363,34 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     ]);
   });
 
-  it('incluye el deep link de cada plataforma en su oferta', async () => {
+  it('incluye el deep link y los idiomas de cada plataforma en su oferta', async () => {
     const enlaceNetflix = 'https://www.netflix.com/title/50';
     streamingAvailabilityIntegration.obtenerDeepLinks.mockResolvedValueOnce([
-      { servicio: 'netflix', tipoOferta: 'suscripcion', deepLink: enlaceNetflix },
+      {
+        servicio: 'netflix',
+        tipoOferta: 'suscripcion',
+        deepLink: enlaceNetflix,
+        audios: ['Español', 'Inglés'],
+        subtitulos: ['Español'],
+      },
     ]);
 
     const response = await request(createApp()).get('/api/titulos/pelicula/50/disponibilidad');
 
     expect(response.status).toBe(200);
     expect(response.body.data.ofertas[0].plataformas).toEqual([
-      expect.objectContaining({ nombre: 'Netflix', deepLink: enlaceNetflix }),
-      expect.objectContaining({ nombre: 'Amazon Prime Video', deepLink: null }),
+      expect.objectContaining({
+        nombre: 'Netflix',
+        deepLink: enlaceNetflix,
+        audios: ['Español', 'Inglés'],
+        subtitulos: ['Español'],
+      }),
+      expect.objectContaining({
+        nombre: 'Amazon Prime Video',
+        deepLink: null,
+        audios: [],
+        subtitulos: [],
+      }),
     ]);
     expect(streamingAvailabilityIntegration.obtenerDeepLinks).toHaveBeenCalledWith({
       tipo: 'pelicula',
@@ -377,7 +399,7 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
     });
   });
 
-  it('sigue mostrando la disponibilidad sin deep links si Streaming Availability falla', async () => {
+  it('sigue mostrando la disponibilidad e indica que los idiomas no están disponibles si Streaming Availability falla o alcanza el límite', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     streamingAvailabilityIntegration.obtenerDeepLinks.mockRejectedValueOnce(
       new ExternalServiceError('Streaming Availability', new Error('HTTP 429')),
@@ -387,8 +409,18 @@ describe('GET /api/titulos/:tipo/:tmdbId/disponibilidad', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data.ofertas[0].plataformas).toEqual([
-      expect.objectContaining({ nombre: 'Netflix', deepLink: null }),
-      expect.objectContaining({ nombre: 'Amazon Prime Video', deepLink: null }),
+      expect.objectContaining({
+        nombre: 'Netflix',
+        deepLink: null,
+        audios: null,
+        subtitulos: null,
+      }),
+      expect.objectContaining({
+        nombre: 'Amazon Prime Video',
+        deepLink: null,
+        audios: null,
+        subtitulos: null,
+      }),
     ]);
 
     consoleError.mockRestore();

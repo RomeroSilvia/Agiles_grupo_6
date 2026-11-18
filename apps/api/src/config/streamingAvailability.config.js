@@ -9,6 +9,8 @@ export const STREAMING_AVAILABILITY_CONFIG = Object.freeze({
   RAPIDAPI_HOST: 'streaming-availability.p.rapidapi.com',
   TIMEOUT_MS: 8000,
   MAX_REQUESTS_PER_DAY: 100,
+  // Tope para volver a consultar solo por idiomas; el resto del cupo queda para deep links nuevos.
+  MAX_REQUESTS_IDIOMAS_PER_DAY: 30,
   MAX_CONCURRENT_REQUESTS: 4,
   TMDB_PROVIDER_ID_POR_SERVICIO: Object.freeze({
     netflix: 8,

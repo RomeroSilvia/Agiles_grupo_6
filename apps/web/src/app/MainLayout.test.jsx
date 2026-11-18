@@ -69,7 +69,7 @@ describe('MainLayout', () => {
       within(explorar)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Cartelera', 'Cooltura']);
+    ).toEqual(['Según tu ánimo', 'Cartelera', 'Cooltura']);
     expect(screen.queryByRole('navigation', { name: 'Principal' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Mi watchlist' })).toHaveAttribute(
       'href',
@@ -87,7 +87,7 @@ describe('MainLayout', () => {
       within(menu)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Cartelera', 'Cooltura', 'Mi watchlist']);
+    ).toEqual(['Según tu ánimo', 'Cartelera', 'Cooltura', 'Mi watchlist']);
   });
 
   it('con sesión suma los enlaces de la cuenta, sin el panel si no es admin', () => {

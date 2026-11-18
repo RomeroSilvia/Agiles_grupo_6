@@ -165,6 +165,13 @@ async function buscarPagina(filtros) {
   const respuestas = await Promise.all(
     tipos.map((tipo) => buscarTipoPagina(filtros, tipo, filtros.pagina)),
   );
+
+  return combinarRespuestas(respuestas, filtros.pagina);
+}
+
+// Junta las respuestas de películas y series en una sola página ordenada por relevancia y
+// quita los campos internos que no se envían al cliente.
+export function combinarRespuestas(respuestas, pagina) {
   const resultados = respuestas
     .flatMap((respuesta) => respuesta.resultados)
     .sort((a, b) => b.relevancia - a.relevancia)
@@ -174,7 +181,7 @@ async function buscarPagina(filtros) {
 
   return validateExternalResponse(respuestaBusquedaSchema, {
     resultados,
-    pagina: filtros.pagina,
+    pagina,
     totalResultados: respuestas.reduce((total, respuesta) => total + respuesta.totalResultados, 0),
     totalPaginas: Math.max(...respuestas.map((respuesta) => respuesta.totalPaginas)),
   });

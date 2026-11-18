@@ -17,6 +17,7 @@ import { RUTAS } from './rutas.js';
 const NAV_GAP_CLASS_NAME = 'gap-3 sm:gap-5';
 
 const ENLACES = [
+  { to: RUTAS.ANIMO, label: 'Según tu ánimo', publico: true },
   { to: RUTAS.CARTELERA, label: 'Cartelera', publico: true },
   { to: RUTAS.EVENTOS, label: 'Cooltura', publico: true },
   { to: RUTAS.WATCHLIST, label: 'Mi watchlist', sinSesion: true },

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { busquedaRoutes } from './busqueda.routes.js';
 import { busquedaPropiasRoutes } from './busquedaPropias.routes.js';
+import { animoRoutes } from './animo.routes.js';
 import { authRoutes } from './auth.routes.js';
 import { regionRoutes } from './region.routes.js';
 import { tituloRoutes } from './titulo.routes.js';
@@ -14,6 +15,7 @@ export const routes = Router();
 
 routes.get('/health', (_req, res) => res.json({ data: { status: 'ok' } }));
 routes.use('/busqueda/propias', busquedaPropiasRoutes);
+routes.use('/busqueda/animo', animoRoutes);
 routes.use('/busqueda', busquedaRoutes);
 routes.use('/cartelera', carteleraRoutes);
 routes.use('/eventos', eventoRoutes);

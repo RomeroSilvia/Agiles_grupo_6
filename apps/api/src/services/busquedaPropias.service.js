@@ -15,11 +15,8 @@ function respuestaVacia(pagina) {
   };
 }
 
-async function filtrarPagina({ filtros, pagina, region, plataformas }) {
-  const { resultados, totalPaginas, totalResultados } = await busquedaService.buscarTitulos(
-    { ...filtros, pagina },
-    { avanzarSiVacio: false },
-  );
+async function filtrarPagina({ buscarPagina, pagina, region, plataformas }) {
+  const { resultados, totalPaginas, totalResultados } = await buscarPagina(pagina);
   const disponibilidades = await usuarioPlataformaService.obtenerPlataformasDelUsuarioPorTitulo({
     titulos: resultados,
     region,
@@ -40,24 +37,31 @@ async function filtrarPagina({ filtros, pagina, region, plataformas }) {
   };
 }
 
-export async function buscarTitulosEnPlataformasPropias({ filtros, usuarioId, region }) {
+// Recorre páginas de una búsqueda cualquiera (`buscarPagina`) y deja solo los títulos que están
+// en las plataformas del usuario, hasta juntar suficientes o llegar al límite de páginas.
+export async function filtrarEnPlataformasPropias({ buscarPagina, pagina, usuarioId, region }) {
   const plataformas =
     await usuarioPlataformaRepository.listarPlataformasActivasPorUsuario(usuarioId);
 
-  const respuesta = respuestaVacia(filtros.pagina);
+  const respuesta = respuestaVacia(pagina);
 
   if (plataformas.length === 0) {
     return respuesta;
   }
 
   for (
-    let pagina = filtros.pagina;
-    pagina < filtros.pagina + FILTRO_PLATAFORMAS.MAX_PAGINAS_POR_REQUEST;
-    pagina += 1
+    let paginaActual = pagina;
+    paginaActual < pagina + FILTRO_PLATAFORMAS.MAX_PAGINAS_POR_REQUEST;
+    paginaActual += 1
   ) {
-    const filtrada = await filtrarPagina({ filtros, pagina, region, plataformas });
+    const filtrada = await filtrarPagina({
+      buscarPagina,
+      pagina: paginaActual,
+      region,
+      plataformas,
+    });
 
-    respuesta.pagina = pagina;
+    respuesta.pagina = paginaActual;
     respuesta.totalPaginas = filtrada.totalPaginas;
     respuesta.totalResultados = filtrada.totalResultados;
     respuesta.verificacionIncompleta ||= filtrada.verificacionIncompleta;
@@ -66,11 +70,21 @@ export async function buscarTitulosEnPlataformasPropias({ filtros, usuarioId, re
     const ultimaPagina = Math.min(filtrada.totalPaginas, PAGINA_MAXIMA);
     if (
       respuesta.resultados.length >= FILTRO_PLATAFORMAS.RESULTADOS_OBJETIVO ||
-      pagina >= ultimaPagina
+      paginaActual >= ultimaPagina
     ) {
       break;
     }
   }
 
   return respuesta;
+}
+
+export function buscarTitulosEnPlataformasPropias({ filtros, usuarioId, region }) {
+  return filtrarEnPlataformasPropias({
+    buscarPagina: (pagina) =>
+      busquedaService.buscarTitulos({ ...filtros, pagina }, { avanzarSiVacio: false }),
+    pagina: filtros.pagina,
+    usuarioId,
+    region,
+  });
 }

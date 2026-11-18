@@ -44,6 +44,13 @@ describe('Cooltura en La Plata', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(screen.getByText('Gratis')).toBeInTheDocument();
   });
+  it('muestra la invitación a Plan B', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(http(crearRespuestaEventos())));
+    await act(async () => {
+      renderPagina();
+    });
+    expect(screen.getByRole('link', { name: /mejor con amigos: ir a Plan B/ })).toBeVisible();
+  });
   it('cambia filtros y reinicia la categoría al consultar por período', async () => {
     const fetchMock = vi.fn().mockResolvedValue(http(crearRespuestaEventos()));
     vi.stubGlobal('fetch', fetchMock);

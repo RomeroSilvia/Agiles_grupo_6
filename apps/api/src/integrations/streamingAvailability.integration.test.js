@@ -72,11 +72,53 @@ describe('streamingAvailability.integration', () => {
         servicio: 'netflix',
         tipoOferta: 'suscripcion',
         deepLink: 'https://www.netflix.com/title/1',
+        audios: [],
+        subtitulos: [],
       },
       {
         servicio: 'prime',
         tipoOferta: 'alquiler',
         deepLink: 'https://www.primevideo.com/detail/1',
+        audios: [],
+        subtitulos: [],
+      },
+    ]);
+  });
+
+  it('normaliza los idiomas de audio y subtítulos con su nombre en español sin duplicados ni códigos inválidos', async () => {
+    vi.stubGlobal(
+      'fetch',
+      responder({
+        ar: [
+          {
+            service: { id: 'netflix' },
+            type: 'subscription',
+            link: 'https://www.netflix.com/title/1',
+            audios: [
+              { language: 'eng' },
+              { language: 'spa', region: 'ARG' },
+              { language: 'spa', region: 'ESP' },
+              { language: 'und' },
+              { language: 'xyz' },
+            ],
+            subtitles: [
+              { closedCaptions: false, locale: { language: 'spa' } },
+              { closedCaptions: true, locale: { language: 'spa' } },
+              { closedCaptions: false, locale: { language: 'por', region: 'BRA' } },
+              { closedCaptions: false, locale: { language: 'zxx' } },
+            ],
+          },
+        ],
+      }),
+    );
+
+    await expect(obtenerDeepLinks({ tipo: 'pelicula', tmdbId: 1, region: 'AR' })).resolves.toEqual([
+      {
+        servicio: 'netflix',
+        tipoOferta: 'suscripcion',
+        deepLink: 'https://www.netflix.com/title/1',
+        audios: ['Inglés', 'Español'],
+        subtitulos: ['Español', 'Portugués'],
       },
     ]);
   });

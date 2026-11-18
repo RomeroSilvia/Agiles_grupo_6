@@ -20,6 +20,11 @@ const deepLinksCache = createTtlCache({
   maxEntries: STREAMING_AVAILABILITY_CONFIG.CACHE_MAX_ENTRIES,
 });
 
+const idiomasCache = createTtlCache({
+  ttlMs: STREAMING_AVAILABILITY_CONFIG.VIGENCIA_DEEP_LINK_MS,
+  maxEntries: STREAMING_AVAILABILITY_CONFIG.CACHE_MAX_ENTRIES,
+});
+
 function mensajeError(error) {
   return error instanceof Error ? error.message : 'Error desconocido';
 }
@@ -38,7 +43,12 @@ async function finalizarConsulta(sincronizacionId, error) {
   }
 }
 
-async function consultarConReserva({ tipo, tmdbId, region }) {
+async function consultarConReserva({
+  tipo,
+  tmdbId,
+  region,
+  limite = STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY,
+}) {
   // Sin credenciales no hay consulta externa que reservar.
   if (!env.STREAMING_AVAILABILITY_API_KEY) {
     return streamingAvailabilityIntegration.obtenerDeepLinks({ tipo, tmdbId, region });
@@ -54,15 +64,12 @@ async function consultarConReserva({ tipo, tmdbId, region }) {
       {
         inicio,
         fin,
-        limite: STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY,
+        limite,
       },
     );
 
     if (!reservada) {
-      errorConsulta =
-        'Límite diario de ' +
-        STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY +
-        ' consultas de disponibilidad alcanzado.';
+      errorConsulta = 'Límite diario de ' + limite + ' consultas de disponibilidad alcanzado.';
       return null;
     }
 
@@ -124,8 +131,8 @@ async function leerVigentes({ tipo, tmdbId, region, enlazables }) {
           deepLink: esDeepLinkDePlataforma(deepLink, plataformas.get(plataformaId))
             ? deepLink
             : null,
-          audios: [],
-          subtitulos: [],
+          audios: null,
+          subtitulos: null,
         },
       ]),
   );
@@ -135,6 +142,22 @@ async function leerVigentes({ tipo, tmdbId, region, enlazables }) {
 function estanCompletos(guardados, enlazables) {
   return enlazables.every(({ plataforma, tipoOferta }) =>
     guardados.has(claveOferta({ plataformaId: plataforma.id, tipoOferta })),
+  );
+}
+
+function combinarConIdiomas(guardados, idiomas) {
+  return new Map(
+    [...guardados.entries()].map(([clave, guardado]) => {
+      const datosIdiomas = idiomas.get(clave);
+      return [
+        clave,
+        {
+          deepLink: guardado.deepLink,
+          audios: datosIdiomas?.audios ?? [],
+          subtitulos: datosIdiomas?.subtitulos ?? [],
+        },
+      ];
+    }),
   );
 }
 
@@ -165,24 +188,33 @@ async function guardar({ tipo, tmdbId, region, enlazables, datosPorOferta }) {
 }
 
 async function resolverDeepLinks({ tipo, tmdbId, region, enlazables }) {
+  const clave = `${tipo}:${tmdbId}:${region}`;
   const guardados = await leerVigentes({ tipo, tmdbId, region, enlazables });
-  if (estanCompletos(guardados, enlazables)) {
-    return { datosPorOferta: guardados, idiomasDisponibles: true };
+  const completos = estanCompletos(guardados, enlazables);
+  const idiomas = idiomasCache.get(clave);
+
+  if (completos && idiomas) {
+    return { datosPorOferta: combinarConIdiomas(guardados, idiomas), idiomasDisponibles: true };
   }
+
+  const limite = completos
+    ? STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_IDIOMAS_PER_DAY
+    : STREAMING_AVAILABILITY_CONFIG.MAX_REQUESTS_PER_DAY;
 
   let opciones;
   try {
-    opciones = await consultarConReserva({ tipo, tmdbId, region });
+    opciones = await consultarConReserva({ tipo, tmdbId, region, limite });
   } catch (error) {
     if (error instanceof ExternalServiceError) {
       console.error(error);
-      return { datosPorOferta: new Map(), idiomasDisponibles: false };
+      return { datosPorOferta: guardados, idiomasDisponibles: false };
     }
     throw error;
   }
 
   if (opciones === null) {
-    return { datosPorOferta: new Map(), idiomasDisponibles: false };
+    // Se mantienen los deep links guardados; solo faltan los idiomas.
+    return { datosPorOferta: guardados, idiomasDisponibles: false };
   }
 
   const datosPorOferta = new Map(
@@ -191,6 +223,7 @@ async function resolverDeepLinks({ tipo, tmdbId, region, enlazables }) {
       elegirDatosOferta(oferta, opciones),
     ]),
   );
+  idiomasCache.set(clave, datosPorOferta);
 
   try {
     await guardar({ tipo, tmdbId, region, enlazables, datosPorOferta });
@@ -205,21 +238,12 @@ function asignarDeepLinks(ofertas, { datosPorOferta, idiomasDisponibles }) {
   return ofertas.map(({ tipoOferta, plataformas }) => ({
     tipoOferta,
     plataformas: plataformas.map((plataforma) => {
-      if (!idiomasDisponibles) {
-        return {
-          ...plataforma,
-          deepLink: null,
-          audios: null,
-          subtitulos: null,
-        };
-      }
-
       const datos = datosPorOferta.get(claveOferta({ plataformaId: plataforma.id, tipoOferta }));
       return {
         ...plataforma,
         deepLink: datos?.deepLink ?? null,
-        audios: datos?.audios ?? [],
-        subtitulos: datos?.subtitulos ?? [],
+        audios: idiomasDisponibles ? (datos?.audios ?? []) : null,
+        subtitulos: idiomasDisponibles ? (datos?.subtitulos ?? []) : null,
       };
     }),
   }));
@@ -247,5 +271,5 @@ export async function agregarDeepLinksGuardados({ tipo, tmdbId, region, ofertas 
   const datosPorOferta =
     enlazables.length === 0 ? new Map() : await leerVigentes({ tipo, tmdbId, region, enlazables });
 
-  return asignarDeepLinks(ofertas, { datosPorOferta, idiomasDisponibles: true });
+  return asignarDeepLinks(ofertas, { datosPorOferta, idiomasDisponibles: false });
 }

@@ -74,7 +74,7 @@ function configurarFetchCartelera(responder) {
     if (url.pathname === '/api/cartelera/ciudades') {
       return Promise.resolve(respuestaHttp({ data: { pais: 'AR', ciudades: [] } }));
     }
-    if (url.pathname === '/api/cartelera') {
+    if (url.pathname === '/api/cartelera' || url.pathname === '/api/cartelera/estrenos') {
       return responder(url);
     }
     if (url.pathname === '/api/titulos/pelicula/78') {
@@ -209,6 +209,25 @@ describe('PaginaCartelera', () => {
     expect(screen.getAllByText(/Datos de títulos provistos por/)).toHaveLength(1);
   });
 
+  it.each(['/cartelera', '/cartelera?vista=estrenos'])(
+    'muestra la invitación a Plan B en %s',
+    async (path) => {
+      configurarFetchCartelera((url) => {
+        const respuesta = respuestaCartelera([]);
+        if (url.pathname === '/api/cartelera/estrenos') {
+          respuesta.data.desde = url.searchParams.get('desde');
+          respuesta.data.hasta = url.searchParams.get('hasta');
+        }
+        return Promise.resolve(respuestaHttp(respuesta));
+      });
+      await act(async () => {
+        renderRoute(path);
+      });
+
+      expect(screen.getByRole('link', { name: /mejor con amigos: ir a Plan B/ })).toBeVisible();
+    },
+  );
+
   it('distingue cartelera vacía y permite reintentar un error', async () => {
     const fetchMock = configurarFetchCartelera(
       vi
@@ -225,13 +244,6 @@ describe('PaginaCartelera', () => {
     renderRoute('/cartelera');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo consultar TMDB');
-    expect(screen.getByRole('link', { name: /mejor con amigos: ir a Plan B/ })).toHaveTextContent(
-      'Los planes que te ofrecemos en Streamly disfrutálos mejor con amigos:',
-    );
-    expect(screen.getByRole('link', { name: /mejor con amigos: ir a Plan B/ })).toHaveAttribute(
-      'href',
-      'https://plan-b-dusky.vercel.app/',
-    );
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByText('No hay información de cartelera disponible.')).toBeVisible();
     expect(

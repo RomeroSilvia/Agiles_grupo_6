@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router';
-import { InvitacionPlanB } from '../../components/ui/InvitacionPlanB.jsx';
+import { InvitacionPlanB } from '../plan-b/InvitacionPlanB.jsx';
 import { SegmentedControl } from '../../components/ui/SegmentedControl.jsx';
 import { ListaCarteleraActual } from './ListaCarteleraActual.jsx';
 import { ListaProximosEstrenos } from './ListaProximosEstrenos.jsx';

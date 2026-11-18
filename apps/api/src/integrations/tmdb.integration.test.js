@@ -96,6 +96,35 @@ describe('llamadas de búsqueda a TMDB', () => {
     expect(url.pathname).toBe('/3/discover/movie');
     expect(url.searchParams.get('with_genres')).toBe('28|12');
     expect(url.searchParams.has('query')).toBe(false);
+    expect(url.searchParams.has('without_genres')).toBe(false);
+    expect(url.searchParams.has('vote_average.gte')).toBe(false);
+    expect(url.searchParams.has('vote_count.gte')).toBe(false);
+  });
+
+  it('descubre series excluyendo géneros y con puntuación y votos mínimos', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        respuestaFetch({ page: 2, results: [], total_results: 0, total_pages: 0 }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await descubrirTitulos({
+      tipo: TIPO_TITULO.SERIE,
+      generoIds: [35],
+      generosExcluidos: [10764, 10767],
+      puntuacionMinima: 6.5,
+      votosMinimos: 100,
+      pagina: 2,
+    });
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url.pathname).toBe('/3/discover/tv');
+    expect(url.searchParams.get('with_genres')).toBe('35');
+    expect(url.searchParams.get('without_genres')).toBe('10764,10767');
+    expect(url.searchParams.get('vote_average.gte')).toBe('6.5');
+    expect(url.searchParams.get('vote_count.gte')).toBe('100');
+    expect(url.searchParams.get('page')).toBe('2');
   });
 
   it('normaliza personas, créditos y géneros sin elegir roles en la integración', async () => {

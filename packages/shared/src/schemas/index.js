@@ -9,3 +9,4 @@ export * from './ciudadCine.schema.js';
 export * from './funcionCine.schema.js';
 export * from './enlaceCine.schema.js';
 export * from './evento.schema.js';
+export * from './animo.schema.js';

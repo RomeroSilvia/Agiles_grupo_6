@@ -178,20 +178,39 @@ export function buscarTitulosPorTexto({ tipo, q, anio, pagina }) {
   });
 }
 
-export function descubrirTitulos({ tipo, anio, generoIds, pagina }) {
+export function descubrirTitulos({
+  tipo,
+  anio,
+  generoIds,
+  generosExcluidos,
+  puntuacionMinima,
+  votosMinimos,
+  pagina,
+}) {
   const ruta = RUTA_TMDB_POR_TIPO[tipo];
   const parametros = {
     language: TMDB_LANGUAGE,
     include_adult: false,
     page: pagina,
     ...(anio === undefined ? {} : { [PARAMETRO_ANIO_POR_TIPO[tipo]]: anio }),
+    // En TMDB, `|` combina los géneros como «alguno de» y `,` como «todos».
     ...(generoIds === undefined ? {} : { with_genres: generoIds.join('|') }),
+    ...(generosExcluidos?.length ? { without_genres: generosExcluidos.join(',') } : {}),
+    'vote_average.gte': puntuacionMinima,
+    'vote_count.gte': votosMinimos,
   };
+  const clave = [
+    tipo,
+    anio ?? '',
+    generoIds?.join('|') ?? '',
+    generosExcluidos?.join(',') ?? '',
+    puntuacionMinima ?? '',
+    votosMinimos ?? '',
+    pagina,
+  ].join(':');
 
-  return busquedasCache.getOrSet(
-    `discover:${tipo}:${anio ?? ''}:${generoIds?.join('|') ?? ''}:${pagina}`,
-    async () =>
-      normalizarRespuestaBusqueda(await tmdbRequest(`/discover/${ruta}`, parametros), tipo),
+  return busquedasCache.getOrSet(`discover:${clave}`, async () =>
+    normalizarRespuestaBusqueda(await tmdbRequest(`/discover/${ruta}`, parametros), tipo),
   );
 }
 
